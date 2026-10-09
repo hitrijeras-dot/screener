@@ -80,7 +80,7 @@ textarea{width:100%;height:100px;margin-top:8px;border:1px solid var(--line);bac
 <textarea id="ta" readonly></textarea>
 </div>
 <div id="viewH" style="display:none"><div class="bar"><span id="hstat" class="lbl"></span><button class="chip" id="hclr">Počisti zgodovino</button></div><div class="card"><div id="hout" class="empty">Zgodovina je prazna.</div></div></div>
-<div class="note">Vstop šele po zaprti 5m sveči s potrjenim CISD. Ocena: RSI 1H/4H (70/30) +1,5/+2, divergenca 1H/4H +1,5/+2,5, trend 1H +1, potrjen 5m CISD +3, nepotrjen sweep ne šteje. 4H/D potrjen CISD v isti smeri +1,5/+2. Potrjen 5m CISD v London/NY killzone +0,5. Kalkulator: vstop limit na CISD levelu, SL za sweep ekstremom, TP 1R in 2R. Podatki iz Bybit javnega API-ja, zgodovina je shranjena samo v tvojem telefonu. Ni finančni nasvet.</div>
+<div class="note">Bias = barva včerajšnje dnevne sveče, trejdaš samo v tej smeri. CISD šteje samo v smeri biasa. Vstop šele po zaprti 5m sveči s potrjenim CISD. Ocena: RSI 1H/4H (70/30) +1,5/+2, divergenca 1H/4H +1,5/+2,5, trend 1H +1, potrjen 5m CISD +3, nepotrjen sweep ne šteje. 4H/D potrjen CISD v isti smeri +1,5/+2. Potrjen 5m CISD v London/NY killzone +0,5. Kalkulator: vstop limit na CISD levelu, SL za sweep ekstremom, TP 1R in 2R. Podatki iz Bybit javnega API-ja, zgodovina je shranjena samo v tvojem telefonu. Ni finančni nasvet.</div>
 </div>
 <script>
 (function(){
@@ -148,10 +148,10 @@ function score(r){
 var bu=0,be=0;
 if(r.r1<=30)bu+=1.5;if(r.r4<=30)bu+=2;if(r.d1==='bull')bu+=1.5;if(r.d4==='bull')bu+=2.5;if(r.tr==='up')bu+=1;
 if(r.r1>=70)be+=1.5;if(r.r4>=70)be+=2;if(r.d1==='bear')be+=1.5;if(r.d4==='bear')be+=2.5;if(r.tr==='down')be+=1;
-var cw=r.ca<=30?3:r.ca<=60?2:1;if(r.ct==='bull')bu+=cw;else if(r.ct==='bear')be+=cw;
-var h4=r.h4||{},hd=r.hd||{};if(h4.ct==='bull')bu+=1.5;if(h4.ct==='bear')be+=1.5;if(hd.ct==='bull')bu+=2;if(hd.ct==='bear')be+=2;
-if(sess.kz){if(r.ct==='bull')bu+=0.5;if(r.ct==='bear')be+=0.5}
-r.bu=bu;r.be=be;r.sd=bu===be?'-':bu>be?'long':'short';r.sc=Math.max(bu,be);return r}
+var cw=r.ca<=30?3:r.ca<=60?2:1;var L=r.bias==='long';r.al=(r.ct==='bull'&&L)||(r.ct==='bear'&&!L);if(r.al){if(L)bu+=cw;else be+=cw}
+var h4=r.h4||{},hd=r.hd||{};if(L){if(h4.ct==='bull')bu+=1.5;if(hd.ct==='bull')bu+=2}else{if(h4.ct==='bear')be+=1.5;if(hd.ct==='bear')be+=2}
+if(sess.kz&&r.al){if(L)bu+=0.5;else be+=0.5}
+r.bu=bu;r.be=be;r.sd=r.bias;r.sc=L?bu:be;return r}
 async function pool(items,fn,conc,cb){var i=0,done=0;await Promise.all(Array.from({length:conc},async function(){
 while(i<items.length){var it=items[i++];try{await fn(it)}catch(e){it.err=1}cb(++done)}}))}
 async function scan(){
@@ -167,14 +167,14 @@ var c1=k1.map(function(x){return x.c}),c4=k4.map(function(x){return x.c});
 var R1=rsi(c1),R4=rsi(c4);
 r.r1=Math.round(R1[R1.length-1]);r.r4=Math.round(R4[R4.length-1]);
 r.d1=diverge(k1,R1);r.d4=diverge(k4,R4);r.tr=trend(k1);
-var c=cisd(k5);r.ct=c.ct;r.cl=c.cl;r.ca=c.ca;r.sl=c.sl;r.t=c.t||0;r.h4=cisd(k4,240);r.hd=cisd(kD,1440);r.k5f=k5;
+var c=cisd(k5);r.ct=c.ct;r.cl=c.cl;r.ca=c.ca;r.sl=c.sl;r.t=c.t||0;r.h4=cisd(k4,240);r.hd=cisd(kD,1440);r.k5f=k5;var pd=kD[kD.length-2];r.bias=pd&&pd.c<pd.o?'short':'long';
 r.k1=k1.slice(-48);r.k5=k5.slice(-72);score(r)},4,function(d){pr.firstChild.style.width=Math.round(d/list.length*100)+'%'});
 rows=list.filter(function(r){return !r.err});ts=Date.now();
 var dt=new Date(ts);$('sub').textContent='Top '+rows.length+' po 24h volatilnosti · '+dt.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
 connect();logHist();await evalHist();banner();render();renderHist();setTimeout(markSeen,3000);
 }catch(e){$('out').className='empty';$('out').textContent='Napaka pri branju Bybit API: '+e.message+'. Poskusi znova.'}
 btn.disabled=false;btn.textContent='Osveži';pr.style.display='none';pr.firstChild.style.width='0'}
-function ctText(r){
+function ctText(r){var cb=(r.ct==='bear'||r.ct==='bull')&&!r.al;if(cb)return '<span class="mut">'+(r.ct==='bear'?'Bear':'Bull')+' CISD proti biasu · '+ago(r.ca)+'</span>';
 if(r.ct==='bear')return '<span class="dn conf">Bear CISD</span> <span class="mut">'+ago(r.ca)+' · '+fp(r.cl)+'</span>';
 if(r.ct==='bull')return '<span class="up conf">Bull CISD</span> <span class="mut">'+ago(r.ca)+' · '+fp(r.cl)+'</span>';
 if(r.ct==='sweep-hi')return '<span class="mut">sweep high (nepotrjen)</span>';
@@ -188,7 +188,7 @@ if(r.sc<parseFloat($('minsc').value||0))return false;
 if(sigs.rsi&&!(r.r1>=70||r.r1<=30||r.r4>=70||r.r4<=30))return false;
 if(sigs.div&&!(r.d1||r.d4))return false;
 if(sigs.trend&&!r.tr)return false;
-if(sigs.cisd&&!(r.ct==='bear'||r.ct==='bull'))return false;
+if(sigs.cisd&&!r.al)return false;
 if(sigs.htf&&!((r.h4&&(r.h4.ct==='bear'||r.h4.ct==='bull'))||(r.hd&&(r.hd.ct==='bear'||r.hd.ct==='bull'))))return false;return true}
 function candles(k,title,lv){
 var W=520,H=170,P=4,n=k.length,w=(W-2*P)/n,lo=1e99,hi=-1e99;
@@ -200,7 +200,7 @@ s+='<line x1="'+cx+'" x2="'+cx+'" y1="'+y(x.h)+'" y2="'+y(x.l)+'" stroke="'+c+'"
 (lv||[]).forEach(function(l){if(l.p){var yy=y(l.p);s+='<line x1="'+P+'" x2="'+(W-P)+'" y1="'+yy+'" y2="'+yy+'" stroke="'+l.c+'" stroke-dasharray="4 3"/><text x="'+(W-P-2)+'" y="'+(yy-3)+'" text-anchor="end" font-size="10" fill="'+l.c+'">'+l.t+'</text>'}});
 return s+'<text x="6" y="12" font-size="11" fill="var(--mut)">'+title+'</text><text x="6" y="'+(H-6)+'" font-size="10" fill="var(--mut)">'+fp(lo)+'</text><text x="'+(W-6)+'" y="12" text-anchor="end" font-size="10" fill="var(--mut)">'+fp(hi)+'</text></svg>'}
 function calc(r){var rk=parseFloat($('risk').value)||50;try{localStorage.setItem('risk',rk)}catch(e){}
-if(!(r.ct==='bull'||r.ct==='bear'))return '<div class="mut" style="margin-top:10px">Kalkulator: počakaj na potrjen 5m CISD (zaprta sveča).</div>';
+if(!r.al)return '<div class="mut" style="margin-top:10px">Kalkulator: čakaj na potrjen 5m CISD v smeri biasa ('+(r.bias==='long'?'včerajšnja D sveča zelena, samo long':'včerajšnja D sveča rdeča, samo short')+').</div>';
 var lg=r.ct==='bull',e=r.cl,sl=r.sl,d=Math.abs(e-sl);
 if(!sl||(lg&&sl>=e)||(!lg&&sl<=e))return '<div class="mut" style="margin-top:10px">Kalkulator: SL ni veljaven glede na CISD level.</div>';
 var q=rk/d,tp1=lg?e+d:e-d,tp2=lg?e+2*d:e-2*d;
@@ -213,7 +213,7 @@ if(!rows.length){out.className='empty';out.textContent='Pritisni Osveži.';retur
 var list=rows.filter(pass).sort(function(a,b){var x=a[sortK],y=b[sortK];if(typeof x==='string')return sortD*x.localeCompare(y);return sortD*((x-y)||(b.sc-a.sc))});
 if(!list.length){out.className='empty';out.textContent='Noben simbol ne ustreza filtrom.';return}
 out.className='';
-var h='<table><thead><tr><th data-k="s">Simbol</th><th class="l" data-k="sd">Smer</th><th data-k="sc">Ocena</th><th data-k="p">Cena</th><th data-k="ch">24h %</th><th data-k="to">Promet (M)</th><th data-k="r1">RSI 1H</th><th data-k="r4">RSI 4H</th><th class="l" data-k="d1">Div</th><th class="l" data-k="tr">Trend 1H</th><th class="l" data-k="ct">5m CISD</th><th class="l">4H / D CISD</th></tr></thead><tbody>';
+var h='<table><thead><tr><th data-k="s">Simbol</th><th class="l" data-k="sd">Bias / smer</th><th data-k="sc">Ocena</th><th data-k="p">Cena</th><th data-k="ch">24h %</th><th data-k="to">Promet (M)</th><th data-k="r1">RSI 1H</th><th data-k="r4">RSI 4H</th><th class="l" data-k="d1">Div</th><th class="l" data-k="tr">Trend 1H</th><th class="l" data-k="ct">5m CISD</th><th class="l">4H / D CISD</th></tr></thead><tbody>';
 list.forEach(function(r){
 var isNew=r.sc>=3&&!seen[key(r)];
 var dv=(r.d1?'1H '+(r.d1==='bear'?'<span class="dn">bear</span>':'<span class="up">bull</span>'):'')+(r.d1&&r.d4?' · ':'')+(r.d4?'4H '+(r.d4==='bear'?'<span class="dn">bear</span>':'<span class="up">bull</span>'):'')||'<span class="mut">-</span>';
@@ -228,7 +228,7 @@ var f=function(a){return a.map(function(r){return 'BYBIT:'+r.s+'USDT.P'}).join('
 $('ta').dataset.txt='###LONG,'+f(L)+',###SHORT,'+f(S)}
 function saveH(){try{localStorage.setItem('hist',JSON.stringify(hist.slice(-200)))}catch(e){}}
 function logHist(){rows.forEach(function(r){
-if(!((r.ct==='bull'||r.ct==='bear')&&r.sc>=4&&r.ca<=30&&r.sl))return;
+if(!(r.al&&r.sc>=4&&r.ca<=30&&r.sl))return;
 var lg=r.ct==='bull',id=r.s+'|'+r.ct+'|'+r.cl;if(hist.some(function(h){return h.id===id}))return;
 if((lg&&r.sl>=r.cl)||(!lg&&r.sl<=r.cl))return;
 hist.push({id:id,s:r.s,side:lg?'long':'short',e:r.cl,sl:r.sl,t:Date.now(),sc:r.sc,st:'pending',h1:0})});saveH()}
@@ -269,7 +269,7 @@ setInterval(function(){if(ws&&ws.readyState===1)ws.send(JSON.stringify({op:'ping
 setInterval(function(){var n=Date.now();if(!$('auto').checked||document.hidden||$('go').disabled)return;if(n-ts>=285000&&n%300000>=8000&&n%300000<60000)scan()},5000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&$('auto').checked&&!$('go').disabled&&Date.now()-ts>300000)scan()});
 function banner(){
-var n=rows.filter(function(r){return r.sc>=4&&(r.ct==='bear'||r.ct==='bull')&&!seen[key(r)]});var a=$('alert');
+var n=rows.filter(function(r){return r.sc>=4&&r.al&&!seen[key(r)]});var a=$('alert');
 if(n.length){a.className='alert show';a.textContent='Nov signal: '+n.map(function(r){return r.s+' '+r.sd.toUpperCase()+' ('+r.sc.toFixed(1)+')'}).join(', ');
 try{if(navigator.vibrate)navigator.vibrate(200)}catch(e){}}
 else a.className='alert'}
