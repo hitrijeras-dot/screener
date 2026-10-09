@@ -1,0 +1,526 @@
+<!doctype html><html lang="sl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0F0F10"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Plonkič"><meta name="description" content="Nastavitve fotoaparata in studijska svetloba na lutki."><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style><script>window.__PLONKIC_APP__=true</script><title>Plonkič</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a dark studio. The lit mannequin fills the top like a camera LCD; below it a floor plan where you drag lights, then the selected light's controls. Single dark look on purpose, like an editing suite. */
+:root{
+  color-scheme:dark;
+  --bg:#0F0F10; --surface:#18181A; --sunk:#202023; --ink:#EDEBE7; --muted:#9A968F; --line:#2C2B2E;
+  --accent:#FFB547; --accent-ink:#1B1204; --accent-soft:#3A2B12;
+  --good:#7BD88F; --warn:#FFB547; --bad:#FF7A6B;
+  --f-display:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-display);font-size:15.5px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:620px;margin:0 auto;padding-inline:16px;padding-block:12px 60px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-weight:800;font-size:21px;letter-spacing:.02em}
+.brand i{font-style:normal;color:var(--accent)}
+.store{font-size:12px;color:var(--muted)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:4px;margin-top:10px}
+.tabs button{border:0;background:transparent;padding:8px 2px;border-radius:8px;font-weight:600;font-size:14.5px;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+h2.sec{font-weight:800;font-size:19px;margin:20px 0 8px;letter-spacing:.01em}
+.meta{color:var(--muted);font-size:14px}
+
+/* studio */
+.lcd{margin-top:12px;position:relative;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line);aspect-ratio:4/5;max-height:62vh;margin-inline:auto;touch-action:none}
+.lcd canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;gap:8px;padding:8px 10px;background:linear-gradient(transparent,rgba(0,0,0,.75));font-family:var(--f-mono);font-size:12.5px;color:#EDEBE7;pointer-events:none}
+.hud b{color:var(--accent);font-weight:600}
+.badge{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700;pointer-events:none}
+.badge small{font-weight:500;color:#C9C5BE;margin-left:6px}
+.reset{position:absolute;right:10px;top:10px;background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:4px 10px;font-size:12.5px;color:#EDEBE7}
+.warn3d{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted)}
+.readout{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.ro{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+.ro span{display:block;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.ro b{font-family:var(--f-mono);font-weight:600;font-size:17px}
+.ro b.ok{color:var(--good)} .ro b.hi{color:var(--bad)} .ro b.lo{color:#8FB8FF}
+.ro small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.presets{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-top:12px}
+.presets button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-weight:600;font-size:13.5px}
+.presets button:hover{border-color:var(--accent)}
+.plan{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;touch-action:none}
+.plan svg{display:block;width:100%;height:auto}
+.plan .cap{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);gap:8px;flex-wrap:wrap}
+.addrow{display:flex;gap:6px;flex-wrap:wrap}
+.addrow button{border:1px dashed var(--muted);background:transparent;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600}
+.panel{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:12px}
+.lhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lhead b{font-size:16px}
+.lhead .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.mods{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mods button{border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:7px 2px;font-size:12px;font-weight:600;display:grid;justify-items:center;gap:3px}
+.mods button svg{width:26px;height:20px}
+.mods button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.ctl{display:grid;grid-template-columns:96px 1fr auto;align-items:center;gap:10px;font-size:14px}
+.ctl label{color:var(--muted)}
+.ctl input[type=range]{width:100%;accent-color:var(--accent)}
+.ctl output{font-family:var(--f-mono);min-width:72px;text-align:right}
+.stepper{display:flex;align-items:center;gap:6px;justify-content:flex-start}
+.stepper button{width:38px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--sunk);font-size:18px;font-weight:600}
+.stepper output{font-family:var(--f-mono);font-weight:600;font-size:17px;min-width:74px;text-align:center}
+.row2{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:8px 12px;font-weight:600;font-size:14px}
+.btn.acc{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.del{color:var(--bad)}
+.tip{background:var(--sunk);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;font-size:14px;color:#D6D2CB}
+.tip b{color:var(--ink)}
+.seg{display:flex;gap:4px;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:7px;padding:6px 4px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink)}
+
+/* plonkič */
+.cards{display:grid;gap:10px;margin-top:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.card>button{width:100%;border:0;background:transparent;text-align:left;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+.card h3{margin:0;font-size:16.5px;font-weight:700}
+.card .sub{grid-column:1;color:var(--muted);font-size:13.5px}
+.card .chev{grid-row:1 / span 2;grid-column:2;color:var(--muted);font-size:18px}
+.exif{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 14px 12px}
+.exif div{background:var(--sunk);border-radius:9px;padding:7px 8px}
+.exif span{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.exif b{font-family:var(--f-mono);font-size:14.5px;font-weight:600;color:var(--accent)}
+.more{border-top:1px solid var(--line);padding:12px 14px;display:grid;gap:8px;font-size:14.5px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 12px}
+.kv span:nth-child(odd){color:var(--muted)}
+.more ul{margin:0;padding-left:18px;display:grid;gap:5px}
+.more li::marker{color:var(--accent)}
+.rules{display:grid;gap:8px;margin-top:8px}
+.rule{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 14px;display:grid;gap:3px}
+.rule b{font-size:15px} .rule span{color:var(--muted);font-size:14px}
+.calc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:10px;margin-top:8px}
+.calc .res{font-family:var(--f-mono);font-size:20px;font-weight:600;color:var(--accent)}
+.calc select,.calc input{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.saved{display:grid;gap:8px;margin-top:10px}
+.sv{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center}
+.sv input{background:transparent;border:0;border-bottom:1px dashed var(--line);padding:2px 0;font-weight:600;font-size:15px;min-width:0;width:100%}
+.sv .meta{grid-column:1}
+.sv .acts{grid-row:1 / span 2;grid-column:2;display:flex;gap:6px}
+.empty{color:var(--muted);font-size:14.5px;padding:14px;background:var(--surface);border:1px dashed var(--line);border-radius:12px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+</head><body><div class="wrap" id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+const STANDALONE=!!window.__PLONKIC_APP__;
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmt1=v=>(Math.round(v*10)/10).toString().replace(".",",");
+
+// ================= Svetloba: podatki =================
+const MODS={
+  softbox:{n:"Softbox",size:.9,angle:48,pen:.85,rad:7},
+  umbrella:{n:"Dežnik",size:1.0,angle:58,pen:.95,rad:9},
+  beauty:{n:"Beauty dish",size:.55,angle:34,pen:.55,rad:3.2},
+  strip:{n:"Strip",size:.45,angle:40,pen:.7,rad:4},
+  bare:{n:"Reflektor",size:.18,angle:24,pen:.25,rad:1}
+};
+const ROLES={key:{n:"Glavna",c:"#FFB547"},fill:{n:"Polnilna",c:"#8FB8FF"},rim:{n:"Obrisna",c:"#E59CFF"},bg:{n:"Ozadje",c:"#7BD88F"}};
+const POWERS=[1/128,1/64,1/32,1/16,1/8,1/4,1/2,1];
+const pwLabel=i=>i>=7?"1/1":"1/"+Math.round(1/POWERS[i]);
+const FSTOPS=[1.4,2,2.8,4,5.6,8,11,16,22];
+const I0=40;           // svetilnost luči pri polni moči (cd)
+const REF=I0*(1/8)/(1.2*1.2); // osvetljenost obraza za pravilno osvetlitev pri f/8
+const WALLS={siva:"#77736E",bela:"#E8E6E2",crna:"#141414"};
+const SKINS={svetla:"#D9A184",srednja:"#B07A5A",temna:"#6E4632",lutka:"#E9E5DE"};
+let uid=1;
+const L=(role,mod,ang,dist,h,pw)=>({id:uid++,role,mod,ang,dist,h,pw,on:true});
+const PRESETS=[
+  {n:"Loop",tip:"Glavna luč 30–45° vstran in malo nad očmi. Senca nosu naredi majhno zanko na licu, ki se ne dotika sence obraza. Najbolj vsestranska portretna svetloba.",
+   lights:()=>[L("key","softbox",-35,1.2,.35,4),L("fill","umbrella",35,2.2,.05,4)],wall:"siva"},
+  {n:"Rembrandt",tip:"Glavna luč višje in bolj vstran (~45–60°). Na senčnem licu ostane svetel trikotnik pod očesom. Dramatičen, slikarski videz.",
+   lights:()=>[L("key","softbox",-52,1.1,.55,4),L("fill","umbrella",40,2.6,0,4)],wall:"siva"},
+  {n:"Butterfly",tip:"Glavna luč naravnost spredaj in visoko. Pod nosom nastane senca v obliki metulja. Lepo poudari ličnice, zelo glamurozno.",
+   lights:()=>[L("key","beauty",0,1.2,.65,4)],wall:"siva"},
+  {n:"Clamshell",tip:"Beauty dish zgoraj, odbojnik ali šibkejša luč spodaj, kot odprta školjka. Skoraj brez senc, idealno za beauty in kožo.",
+   lights:()=>[L("key","beauty",0,1.0,.55,3),L("fill","softbox",0,.9,-.45,1)],wall:"bela"},
+  {n:"Split",tip:"Luč točno ob strani (90°). Polovica obraza je osvetljena, polovica v senci. Močan, moški, skrivnosten videz.",
+   lights:()=>[L("key","strip",-90,1.2,.1,4)],wall:"crna"},
+  {n:"Low key",tip:"Temno ozadje, glavna luč vstran, obrisna luč zadaj loči ramena in lase od ozadja.",
+   lights:()=>[L("key","softbox",-55,1.2,.4,4),L("rim","strip",145,1.3,.35,4)],wall:"crna"},
+  {n:"High key",tip:"Svetlo ozadje osvetljeno z ločeno lučjo, mehka glavna luč skoraj spredaj in nizko razmerje. Svetla, čista slika.",
+   lights:()=>[L("key","softbox",-15,1.4,.3,4),L("fill","umbrella",30,2.0,0,4),L("bg","bare",180,1.2,-.1,6)],wall:"bela"}
+];
+
+// ================= Stanje =================
+const LS="plonkic-state-v1";
+const lsx={get(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const S={view:"studio",sel:null,openCard:null,store:"connecting",msg:"",
+  saved:(lsx.get(LS)||{v:1,setups:[]}),
+  scene:{lights:PRESETS[0].lights(),fstop:5,turn:0,wall:"siva",skin:"svetla",preset:"Loop"}};
+S.sel=S.scene.lights[0].id;
+
+// ---- shramba (oblak v Claudu, telefon v appu) ----
+let docRef=null,writing=false,dirty=false;
+async function flush(){if(!docRef)return;dirty=true;if(writing)return;writing=true;
+  while(dirty){dirty=false;try{await docRef.set(clone(S.saved));}catch(e){if(e&&e.code==="unavailable"){await new Promise(r=>setTimeout(r,800));try{await docRef.set(clone(S.saved));}catch(e2){}}else{docRef=null;S.store="local";}}}
+  writing=false;}
+function saveSaved(){lsx.set(LS,S.saved);flush();}
+(async function(){try{
+  if(STANDALONE||!window.claude||!window.claude.use){S.store="local";renderTop();return;}
+  const db=await window.claude.use("db");if(!db){S.store="local";renderTop();return;}
+  docRef=db.doc("app/state");S.store="cloud";
+  docRef.onSnapshot(s=>{if(writing||dirty||(s.metadata&&s.metadata.hasPendingWrites))return;
+    if(s.exists){const d=s.data();if(d&&d.v){S.saved=clone(d);lsx.set(LS,S.saved);if(S.view==="mine")render();}}
+    else if(S.saved.setups.length)flush();renderTop();},()=>{docRef=null;S.store="local";renderTop();});
+  renderTop();}catch(e){S.store="local";renderTop();}})();
+
+// ================= Izračuni =================
+const lumOf=l=>l.on&&l.role!=="bg"?I0*POWERS[l.pw]/(l.dist*l.dist):0;
+function analysis(){
+  const sc=S.scene,front=sc.lights.filter(l=>l.on&&l.role!=="bg"&&l.role!=="rim");
+  const key=front.slice().sort((a,b)=>lumOf(b)-lumOf(a))[0];
+  if(!key) return {pattern:"Ni glavne luči",note:"Dodaj glavno luč.",ev:null,ratio:null};
+  const f=FSTOPS[sc.fstop],Lk=lumOf(key);
+  // skupna osvetljenost obraza (glavna + polovica polnilne)
+  const tot=front.reduce((s,l)=>s+lumOf(l)*(l===key?1:.6),0);
+  const ev=Math.log2(tot*(8/f)*(8/f)/REF);
+  const fill=front.filter(l=>l!==key).sort((a,b)=>lumOf(b)-lumOf(a))[0];
+  const ratio=fill?(Lk+lumOf(fill))/lumOf(fill):null;
+  const rel=((key.ang-sc.turn)+540)%360-180, a=Math.abs(rel), h=key.h;
+  let pattern,note;
+  if(h<-.2){pattern="Od spodaj";note="Luč od spodaj deluje grozljivo. Kot polnilo je v redu (clamshell), kot glavna luč redko.";}
+  else if(a<14&&h>.3){pattern="Butterfly";note="Senca metulja pod nosom.";}
+  else if(a<14){pattern="Ploska";note="Malo senc, obraz deluje ploščat. Dvigni luč ali jo premakni vstran.";}
+  else if(a<42){pattern="Loop";note="Majhna senca nosu na licu.";}
+  else if(a<70){pattern=h>.2?"Rembrandt":"Loop / Rembrandt";note=h>.2?"Svetel trikotnik na senčnem licu.":"Dvigni luč za čisti Rembrandtov trikotnik.";}
+  else if(a<110){pattern="Split";note="Pol obraza v senci.";}
+  else {pattern="Protisvetloba";note="Glavna luč je za osebo. Dodaj luč spredaj.";}
+  let side="";
+  if(Math.abs(sc.turn)>=10&&a>=14&&a<110) side=(Math.sign(key.ang)===Math.sign(sc.turn))?"short":"broad";
+  return {pattern,side,note,ev,ratio,key,f};
+}
+function suggestF(ev,f){const want=f*Math.pow(2,ev/2);let best=FSTOPS[0];FSTOPS.forEach(x=>{if(Math.abs(Math.log(x/want))<Math.abs(Math.log(best/want)))best=x;});return best;}
+
+// ================= 3D =================
+let R=null;
+function smooth(a,b,x){const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);}
+function makeHead(mat){
+  const g=new THREE.SphereGeometry(1,140,110),p=g.attributes.position,G=(a,b,s)=>Math.exp(-(a*a+b*b)/(2*s*s));
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+    const low=smooth(-.1,-.95,y);
+    let sx=.078*(1-.2*low),sy=.112*(1-.06*smooth(.5,1,y)),sz=.098*(1-.1*low);
+    if(z<0)sz*=1+.1*clamp(y+.3,0,1);
+    let X=x*sx,Y=y*sy,Z=z*sz;
+    const fr=smooth(.25,.95,z);
+    Z-=fr*.011*(1-Math.abs(y));
+    let d=0;
+    d+=.020*G(x,(y+.12)/1.8,.068)*fr;      // hrbet nosu
+    d+=.011*G(x,(y+.31)*1.2,.075)*fr;      // konica nosu
+    d+=.006*G(x/1.8,(y+.36)*1.6,.06)*fr;   // nosnice
+    [1,-1].forEach(s=>{
+      d-=.011*G(x-s*.33,y-.07,.11)*fr;      // očesni jamici
+      d+=.0045*G(x-s*.33,y-.06,.06)*fr;     // zrkli
+      d+=.005*G(x-s*.34,(y-.25)*1.4,.12)*fr;// obrvni lok
+      d+=.005*G(x-s*.56,y+.14,.14)*fr;      // ličnici
+    });
+    d+=.007*G(x/1.7,(y+.47)*1.5,.08)*fr;   // ustnice
+    d-=.003*G(x/2.4,(y+.5)*3.4,.05)*fr;    // usta
+    d+=.007*G(x/1.4,y+.8,.12)*fr;          // brada
+    Z+=d;
+    p.setXYZ(i,X,Y,Z);
+  }
+  g.computeVertexNormals();
+  const head=new THREE.Mesh(g,mat);head.castShadow=head.receiveShadow=true;
+  const grp=new THREE.Group();grp.add(head);
+  [1,-1].forEach(s=>{const e=new THREE.Mesh(new THREE.SphereGeometry(1,24,18),mat);e.scale.set(.008,.027,.017);e.position.set(s*.075,-.012,-.012);e.rotation.y=s*.25;e.castShadow=e.receiveShadow=true;grp.add(e);});
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.052,.06,.14,40),mat);neck.position.set(0,-.15,-.018);neck.castShadow=neck.receiveShadow=true;grp.add(neck);
+  const sh=new THREE.Mesh(new THREE.SphereGeometry(1,64,40),mat);sh.scale.set(.21,.085,.12);sh.position.set(0,-.25,-.03);sh.castShadow=sh.receiveShadow=true;grp.add(sh);
+  return grp;
+}
+function initThree(canvas){
+  if(!window.THREE) return null;
+  let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true});}catch(e){return null;}
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
+  renderer.physicallyCorrectLights=true;renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  const scene=new THREE.Scene();scene.background=new THREE.Color("#050505");
+  const cam=new THREE.PerspectiveCamera(18,4/5,.1,30);
+  const skinMat=new THREE.MeshStandardMaterial({color:SKINS.svetla,roughness:.62,metalness:0});
+  const head=makeHead(skinMat);scene.add(head);
+  const wallMat=new THREE.MeshStandardMaterial({color:WALLS.siva,roughness:.95});
+  const wall=new THREE.Mesh(new THREE.PlaneGeometry(8,5),wallMat);wall.position.set(0,.3,-1.5);wall.receiveShadow=true;scene.add(wall);
+  const bounce=new THREE.HemisphereLight(0xffffff,0x303030,.06);scene.add(bounce);
+  const target=new THREE.Object3D();target.position.set(0,.01,0);scene.add(target);
+  const wallTarget=new THREE.Object3D();wallTarget.position.set(0,.05,-1.5);scene.add(wallTarget);
+  return {renderer,scene,cam,head,skinMat,wallMat,target,wallTarget,objs:new Map(),yaw:0,pitch:0,need:true};
+}
+function modMesh(mod,col){
+  const m=new THREE.MeshBasicMaterial({color:col});let g;
+  if(mod==="softbox")g=new THREE.BoxGeometry(.6,.6,.04);
+  else if(mod==="strip")g=new THREE.BoxGeometry(.25,.9,.04);
+  else if(mod==="umbrella")g=new THREE.CylinderGeometry(.5,.5,.03,32).rotateX(Math.PI/2);
+  else if(mod==="beauty")g=new THREE.CylinderGeometry(.27,.27,.08,32).rotateX(Math.PI/2);
+  else g=new THREE.CylinderGeometry(.08,.11,.12,20).rotateX(Math.PI/2);
+  const mesh=new THREE.Mesh(g,m);mesh.userData.mod=mod;return mesh;
+}
+function lightPos(l){const a=l.ang*Math.PI/180;return new THREE.Vector3(Math.sin(a)*l.dist,.03+l.h,Math.cos(a)*l.dist);}
+function syncThree(){
+  if(!R)return;const sc=S.scene;
+  R.skinMat.color.set(SKINS[sc.skin]);R.wallMat.color.set(WALLS[sc.wall]);
+  R.head.rotation.y=sc.turn*Math.PI/180;
+  const f=FSTOPS[sc.fstop];R.renderer.toneMappingExposure=1.15*(8/f)*(8/f);
+  const ids=new Set(sc.lights.map(l=>l.id));
+  for(const [id,o] of R.objs){if(!ids.has(id)){R.scene.remove(o.spot);R.scene.remove(o.mesh);o.spot.shadow.map&&o.spot.shadow.map.dispose();o.spot.dispose&&o.spot.dispose();R.objs.delete(id);}}
+  sc.lights.forEach(l=>{
+    let o=R.objs.get(l.id);
+    if(!o){const spot=new THREE.SpotLight(0xffffff,1,0,.5,.5,2);spot.castShadow=true;spot.shadow.mapSize.set(1024,1024);spot.shadow.bias=-.0004;spot.shadow.normalBias=.012;spot.shadow.camera.near=.2;spot.shadow.camera.far=7;
+      R.scene.add(spot);o={spot,mesh:null,mod:null};R.objs.set(l.id,o);}
+    if(o.mod!==l.mod){if(o.mesh)R.scene.remove(o.mesh);o.mesh=modMesh(l.mod,ROLES[l.role].c);R.scene.add(o.mesh);o.mod=l.mod;}
+    const M=MODS[l.mod],pos=lightPos(l);
+    o.spot.position.copy(pos);o.spot.target=l.role==="bg"?R.wallTarget:R.target;
+    o.spot.angle=M.angle*Math.PI/180;o.spot.penumbra=M.pen;
+    o.spot.intensity=l.on?I0*POWERS[l.pw]:0;o.spot.visible=l.on;
+    o.spot.shadow.radius=Math.max(1,M.rad*1.2/l.dist);
+    o.mesh.position.copy(pos);o.mesh.lookAt(l.role==="bg"?R.wallTarget.position:R.target.position);o.mesh.visible=l.on;
+    o.mesh.material.color.set(l.on?ROLES[l.role].c:"#555");
+  });
+  placeCam();R.need=true;
+}
+function placeCam(){const r=1.6,y=R.yaw,p=R.pitch;R.cam.position.set(Math.sin(y)*Math.cos(p)*r,-.03+Math.sin(p)*r,Math.cos(y)*Math.cos(p)*r);R.cam.lookAt(0,-.04,0);
+  const orb=Math.abs(y)>.25||Math.abs(p)>.2;for(const o of R.objs.values()){if(o.mesh)o.mesh.visible=orb&&o.spot.visible;}}
+function resize3d(){if(!R)return;const c=R.renderer.domElement,w=c.clientWidth,h=c.clientHeight;if(!w||!h)return;const dpr=Math.min(2,window.devicePixelRatio||1);
+  if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){R.renderer.setPixelRatio(dpr);R.renderer.setSize(w,h,false);R.cam.aspect=w/h;R.cam.updateProjectionMatrix();R.need=true;}}
+function loop(){if(R&&R.renderer.domElement.isConnected){resize3d();if(R.need){R.renderer.render(R.scene,R.cam);R.need=false;}}requestAnimationFrame(loop);}
+
+// ================= Izris =================
+function renderTop(){const el=document.getElementById("storeLbl");if(el)el.textContent=STANDALONE?"Shranjeno v telefonu":S.store==="cloud"?"Shranjeno v oblaku":S.store==="local"?"Samo na tej napravi":"";}
+function render(){
+  const tabs=[["studio","Studio"],["cheat","Plonkič"],["mine","Moje"]];
+  let h=`<div class="top"><div class="brand">Plonk<i>i</i>č</div><div class="store" id="storeLbl"></div></div>
+  <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button type="button" role="tab" aria-selected="${S.view===k}" data-act="tab" data-v="${k}">${l}</button>`).join("")}</div>`;
+  h+=S.view==="studio"?viewStudio():S.view==="cheat"?viewCheat():viewMine();
+  const app=document.getElementById("app");
+  // ohrani platno 3D, da se ne ustvarja znova
+  const keep=R?R.renderer.domElement:null;
+  app.innerHTML=h;
+  if(S.view==="studio"){
+    const slot=document.getElementById("lcd");
+    if(keep){slot.prepend(keep);}
+    else{const c=document.createElement("canvas");slot.prepend(c);R=initThree(c);
+      if(!R){slot.insertAdjacentHTML("beforeend",`<div class="warn3d">3D prikaz se ne more naložiti. Preveri internetno povezavo in odpri znova.</div>`);}else bindOrbit(c);}
+    syncThree();updateStudioInfo();
+  }
+  renderTop();
+}
+const modIcon=m=>({softbox:`<svg viewBox="0 0 26 20"><rect x="5" y="2" width="16" height="16" rx="1.5" fill="currentColor" opacity=".85"/></svg>`,
+  umbrella:`<svg viewBox="0 0 26 20"><path d="M2 12 Q13 -4 24 12 Z" fill="currentColor" opacity=".85"/><line x1="13" y1="12" x2="13" y2="19" stroke="currentColor" stroke-width="1.6"/></svg>`,
+  beauty:`<svg viewBox="0 0 26 20"><ellipse cx="13" cy="10" rx="10" ry="8" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="13" cy="10" r="3" fill="currentColor"/></svg>`,
+  strip:`<svg viewBox="0 0 26 20"><rect x="10" y="1" width="6" height="18" rx="1.5" fill="currentColor" opacity=".85"/></svg>`,
+  bare:`<svg viewBox="0 0 26 20"><path d="M8 5 L18 2 L18 18 L8 15 Z" fill="currentColor" opacity=".85"/></svg>`})[m];
+function viewStudio(){
+  const sc=S.scene,l=sc.lights.find(x=>x.id===S.sel);
+  let h=`<div class="lcd" id="lcd"><div class="badge" id="pattern"></div><button type="button" class="reset" data-act="camreset">Pogled kamere</button><div class="hud" id="hud"></div></div>
+  <div class="readout" id="readout"></div>
+  <div class="presets" role="group" aria-label="Postavitve">${PRESETS.map((p,i)=>`<button type="button" data-act="preset" data-v="${i}">${esc(p.n)}</button>`).join("")}</div>
+  <div class="tip" style="margin-top:10px" id="ptip"></div>
+  <div class="plan"><svg id="plan" viewBox="0 0 340 330" aria-label="Tloris studia: povleci luči">${planSvg()}</svg>
+   <div class="cap"><span>Povleci luč. Kamera je spodaj.</span><div class="addrow">${Object.keys(ROLES).map(r=>`<button type="button" data-act="add" data-v="${r}">+ ${ROLES[r].n}</button>`).join("")}</div></div></div>`;
+  if(l){const M=MODS[l.mod];
+    h+=`<section class="panel"><div class="lhead"><b><span class="dot" style="background:${ROLES[l.role].c}"></span>${ROLES[l.role].n} luč · ${esc(M.n)}</b>
+      <div class="row2"><button type="button" class="btn" data-act="toggle">${l.on?"Izklopi":"Vklopi"}</button><button type="button" class="btn del" data-act="del">Odstrani</button></div></div>
+      <div class="mods" role="group" aria-label="Modifikator">${Object.keys(MODS).map(m=>`<button type="button" aria-pressed="${l.mod===m}" data-act="mod" data-v="${m}">${modIcon(m)}${esc(MODS[m].n)}</button>`).join("")}</div>
+      <div class="ctl"><label>Moč</label><div class="stepper"><button type="button" data-act="pw-" aria-label="Manj moči">−</button><output class="mono" id="pwOut">${pwLabel(l.pw)}</output><button type="button" data-act="pw+" aria-label="Več moči">+</button></div><span></span></div>
+      <div class="ctl"><label for="rAng">Kot</label><input id="rAng" type="range" min="-180" max="180" step="1" value="${Math.round(l.ang)}" data-rng="ang"><output id="oAng">${angLabel(l.ang)}</output></div>
+      <div class="ctl"><label for="rDist">Razdalja</label><input id="rDist" type="range" min="0.5" max="3.5" step="0.05" value="${l.dist}" data-rng="dist"><output id="oDist">${fmt1(l.dist)} m</output></div>
+      <div class="ctl"><label for="rH">Višina</label><input id="rH" type="range" min="-0.6" max="1.4" step="0.05" value="${l.h}" data-rng="h"><output id="oH">${hLabel(l.h)}</output></div>
+    </section>`;}
+  h+=`<section class="panel"><div class="ctl"><label>Zaslonka</label><div class="stepper"><button type="button" data-act="f-" aria-label="Odpri zaslonko">−</button><output class="mono" id="fOut">f/${String(FSTOPS[sc.fstop]).replace(".",",")}</output><button type="button" data-act="f+" aria-label="Zapri zaslonko">+</button></div><span class="meta mono">ISO 100 · 1/160</span></div>
+    <div class="ctl"><label for="rTurn">Obrat glave</label><input id="rTurn" type="range" min="-40" max="40" step="1" value="${sc.turn}" data-rng="turn"><output id="oTurn">${sc.turn===0?"naravnost":(Math.abs(sc.turn)+"° "+(sc.turn>0?"desno":"levo"))}</output></div>
+    <div class="ctl"><label>Ozadje</label><div class="seg">${Object.keys(WALLS).map(k=>`<button type="button" aria-pressed="${sc.wall===k}" data-act="wall" data-v="${k}">${k==="crna"?"črna":k}</button>`).join("")}</div><span></span></div>
+    <div class="ctl"><label>Koža</label><div class="seg">${Object.keys(SKINS).map(k=>`<button type="button" aria-pressed="${sc.skin===k}" data-act="skin" data-v="${k}">${k}</button>`).join("")}</div><span></span></div>
+    <div class="row2"><button type="button" class="btn acc" data-act="save">Shrani postavitev</button>${S.msg?`<span class="meta" style="align-self:center">${esc(S.msg)}</span>`:""}</div></section>`;
+  return h;
+}
+const angLabel=a=>{a=Math.round(a);if(a===0)return "spredaj";if(Math.abs(a)===180)return "zadaj";return Math.abs(a)+"° "+(a<0?"levo":"desno");};
+const hLabel=h=>Math.abs(h)<.03?"v višini oči":(h>0?"+":"−")+Math.round(Math.abs(h)*100)+" cm";
+function planSvg(){
+  const cx=170,cy=150,Sc=44,sc=S.scene;
+  let s=`<rect x="0" y="0" width="340" height="330" fill="#18181A"/>`;
+  s+=`<rect x="10" y="${cy-1.5*Sc-6}" width="320" height="6" fill="${WALLS[sc.wall]}" opacity=".9"/><text x="14" y="${cy-1.5*Sc-10}" fill="#9A968F" font-size="10" font-family="IBM Plex Mono">ozadje</text>`;
+  [1,2,3].forEach(m=>{s+=`<circle cx="${cx}" cy="${cy}" r="${m*Sc}" fill="none" stroke="#2C2B2E" stroke-dasharray="3 4"/><text x="${cx+m*Sc*.71+3}" y="${cy-m*Sc*.71}" fill="#5E5A55" font-size="9.5" font-family="IBM Plex Mono">${m} m</text>`;});
+  const t=sc.turn*Math.PI/180,nx=cx+Math.sin(t)*16,ny=cy+Math.cos(t)*16;
+  s+=`<line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="#EDEBE7" stroke-width="3" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="11" fill="#EDEBE7"/><circle cx="${nx}" cy="${ny}" r="3.5" fill="#EDEBE7"/>`;
+  const camY=cy+1.95*Sc;s+=`<g transform="translate(${cx},${Math.min(camY,318)})"><rect x="-13" y="-7" width="26" height="15" rx="3" fill="#9A968F"/><circle cx="0" cy="-8" r="6" fill="#9A968F"/></g>`;
+  sc.lights.forEach(l=>{const a=l.ang*Math.PI/180,x=cx+Math.sin(a)*l.dist*Sc,y=cy+Math.cos(a)*l.dist*Sc,col=ROLES[l.role].c,sel=l.id===S.sel;
+    const ang=Math.atan2(cx-x,y-cy)*180/Math.PI;
+    s+=`<line x1="${x}" y1="${y}" x2="${cx}" y2="${cy}" stroke="${col}" stroke-opacity="${l.on?.35:.12}" stroke-width="1.5"/>`;
+    s+=`<g data-light="${l.id}" style="cursor:grab" transform="translate(${x},${y}) rotate(${ang})" opacity="${l.on?1:.4}"><circle r="20" fill="transparent"/>`;
+    s+=l.mod==="umbrella"?`<path d="M-15 4 Q0 -14 15 4 Z" fill="${col}"/>`:l.mod==="beauty"?`<circle r="10" fill="none" stroke="${col}" stroke-width="4"/>`:l.mod==="strip"?`<rect x="-14" y="-3" width="28" height="7" rx="2" fill="${col}"/>`:l.mod==="bare"?`<path d="M-6 -6 L6 -6 L9 6 L-9 6 Z" fill="${col}"/>`:`<rect x="-13" y="-4" width="26" height="9" rx="2" fill="${col}"/>`;
+    if(sel)s+=`<circle r="19" fill="none" stroke="#EDEBE7" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    s+=`</g>`;});
+  return s;
+}
+function updateStudioInfo(){
+  const A=analysis(),sc=S.scene,el=id=>document.getElementById(id);
+  if(!el("pattern"))return;
+  el("pattern").innerHTML=`${esc(A.pattern)}${A.side?`<small>${A.side==="short"?"short (ozka stran)":"broad (široka stran)"}</small>`:""}`;
+  const f=FSTOPS[sc.fstop];
+  el("hud").innerHTML=`<span>ISO <b>100</b></span><span><b>1/160</b> s</span><span><b>f/${String(f).replace(".",",")}</b></span><span>85 mm</span>`;
+  let evTxt="—",evCls="",evSub="";
+  if(A.ev!=null){const e=Math.round(A.ev*10)/10;evTxt=(e>0?"+":e<0?"−":"±")+fmt1(Math.abs(e))+" EV";evCls=Math.abs(e)<=.4?"ok":e>0?"hi":"lo";
+    const sf=suggestF(A.ev,f);evSub=Math.abs(e)<=.4?"pravilno":`daj f/${String(sf).replace(".",",")}`;}
+  let rTxt="—",rSub="brez polnila";
+  if(A.ratio){const r=A.ratio;rTxt=(r<10?fmt1(r):Math.round(r))+":1";rSub=r<2.5?"mehko, ploskvato":r<5?"klasično":r<9?"dramatično":"zelo kontrastno";}
+  el("readout").innerHTML=`<div class="ro"><span>Osvetlitev</span><b class="${evCls}">${evTxt}</b><small>${evSub}</small></div>
+   <div class="ro"><span>Razmerje</span><b>${rTxt}</b><small>${rSub}</small></div>
+   <div class="ro"><span>Glavna</span><b>${A.key?pwLabel(A.key.pw):"—"}</b><small>${A.key?fmt1(A.key.dist)+" m · "+esc(MODS[A.key.mod].n):""}</small></div>`;
+  const pre=PRESETS.find(p=>p.n===sc.preset);
+  el("ptip").innerHTML=`<b>${esc(A.pattern)}.</b> ${esc(A.note)}${pre?` ${esc(pre.tip)}`:""} ${softTip(A)}`;
+}
+function softTip(A){if(!A.key)return "";const M=MODS[A.key.mod],rel=M.size/A.key.dist;
+  return esc(rel>.6?"Luč je blizu in velika, zato so sence mehke.":rel>.3?"Sence so srednje mehke. Bližje = mehkejše.":"Luč je majhna ali daleč, sence so trde. Približaj jo ali vzemi večji modifikator.");}
+
+// ---- vrtenje pogleda ----
+function bindOrbit(c){
+  let dn=null;
+  c.addEventListener("pointerdown",e=>{dn={x:e.clientX,y:e.clientY,yaw:R.yaw,pitch:R.pitch};c.setPointerCapture(e.pointerId);});
+  c.addEventListener("pointermove",e=>{if(!dn)return;R.yaw=dn.yaw-(e.clientX-dn.x)*.008;R.pitch=clamp(dn.pitch+(e.clientY-dn.y)*.006,-.6,.9);placeCam();R.need=true;});
+  const up=()=>{dn=null;};c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);
+}
+// ---- vlečenje luči v tlorisu ----
+let drag=null;
+document.addEventListener("pointerdown",e=>{const g=e.target.closest&&e.target.closest("[data-light]");if(!g)return;
+  const id=+g.dataset.light;S.sel=id;drag={id};const svg=document.getElementById("plan");svg.setPointerCapture&&svg.setPointerCapture(e.pointerId);e.preventDefault();
+  S.scene.preset="";render();});
+document.addEventListener("pointermove",e=>{if(!drag)return;const svg=document.getElementById("plan");if(!svg)return;
+  const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());
+  const dx=(p.x-170)/44,dz=(p.y-150)/44,l=S.scene.lights.find(x=>x.id===drag.id);if(!l)return;
+  l.dist=clamp(Math.hypot(dx,dz),.5,3.5);l.ang=Math.round(Math.atan2(dx,dz)*180/Math.PI);
+  svg.innerHTML=planSvg();syncThree();updateStudioInfo();syncSliders(l);});
+document.addEventListener("pointerup",()=>{if(drag){drag=null;}});
+function syncSliders(l){const a=document.getElementById("rAng"),d=document.getElementById("rDist");if(a){a.value=l.ang;document.getElementById("oAng").textContent=angLabel(l.ang);}if(d){d.value=l.dist;document.getElementById("oDist").textContent=fmt1(l.dist)+" m";}}
+
+document.addEventListener("input",e=>{
+  const k=e.target.dataset&&e.target.dataset.rng;
+  if(k){const sc=S.scene,v=+e.target.value;
+    if(k==="turn"){sc.turn=v;document.getElementById("oTurn").textContent=v===0?"naravnost":(Math.abs(v)+"° "+(v>0?"desno":"levo"));}
+    else{const l=sc.lights.find(x=>x.id===S.sel);if(!l)return;l[k]=v;
+      if(k==="ang")document.getElementById("oAng").textContent=angLabel(v);
+      if(k==="dist")document.getElementById("oDist").textContent=fmt1(v)+" m";
+      if(k==="h")document.getElementById("oH").textContent=hLabel(v);}
+    sc.preset="";const svg=document.getElementById("plan");if(svg)svg.innerHTML=planSvg();syncThree();updateStudioInfo();return;}
+  const sv=e.target.dataset&&e.target.dataset.name;
+  if(sv){const s=S.saved.setups.find(x=>x.id===sv);if(s){s.name=e.target.value.slice(0,40);lsx.set(LS,S.saved);clearTimeout(nameT);nameT=setTimeout(flush,1000);}}
+});
+let nameT=null;
+
+// ================= Plonkič =================
+const CHEAT=[
+ {n:"Portret na prostem",s:"Dnevna svetloba, mehko ozadje",ex:{Zaslonka:"f/1.8–2.8",Čas:"1/250+",ISO:"100–400",Objektiv:"85 mm"},
+  kv:[["Fokus","AF-C, zaznava oči"],["Merjenje","matrično, +0,3 do +0,7 EV za kožo"],["Beli balans","dnevna svetloba ali oblačno (toplejše)"],["Način","A (prednost zaslonke)"]],
+  tips:["Postavi osebo v odprto senco (rob sence drevesa ali stavbe): mehka svetloba brez žmerjenja.","Ozadje naj bo vsaj nekaj metrov za osebo, potem se lepo zamegli.","Ob močnem soncu sonce za osebo in odbojnik spredaj."]},
+ {n:"Portret v studiu z bliskavicami",s:"Popoln nadzor svetlobe",ex:{Zaslonka:"f/8",Čas:"1/160",ISO:"100",Objektiv:"85–105 mm"},
+  kv:[["Način","M (ročno)"],["Fokus","AF-S, ena točka na bližnje oko"],["Beli balans","bliskavica ali 5500 K"],["Format","RAW"]],
+  tips:["Začni samo z glavno lučjo, nato dodajaj polnilo, obrisno in ozadje.","Čas ne vpliva na bliskavico: s časom urejaš ambient, z zaslonko ali močjo bliskavico.","Dvakrat dlje = štirikrat manj svetlobe (2 zaslonki). Glej zavihek Studio."]},
+ {n:"Poroka: obred v cerkvi",s:"Malo svetlobe, brez bliskavice",ex:{Zaslonka:"f/1.8–2.8",Čas:"1/125–1/250",ISO:"auto do 12800",Objektiv:"24–70, 70–200"},
+  kv:[["Fokus","AF-C, zaznava oči"],["Zaklop","tihi / elektronski"],["Beli balans","ročno po Kelvinih (3200–4500 K)"],["Način","M + auto ISO"]],
+  tips:["Bliskavica med obredom praviloma ni dovoljena. Vprašaj župnika ali matičarja vnaprej.","Prstane in poljub fotografiraj v zaporedju, oči se hitro zaprejo.","Raje šum kot zamegljena slika: pri gibanju ne pojdi pod 1/125."]},
+ {n:"Poroka: zabava in prvi ples",s:"Bliskavica, odbita od stropa",ex:{Zaslonka:"f/2.8–4",Čas:"1/30–1/125",ISO:"800–3200",Objektiv:"24–70 mm"},
+  kv:[["Bliskavica","TTL, odbito v strop ali steno za tabo"],["Fokus","AF-C"],["Beli balans","bliskavica, gel CTO za toplino"],["Način","M"]],
+  tips:["Daljši čas (1/30) ujame luči in vzdušje v ozadju, bliskavica zamrzne ljudi.","Pri temnem ali visokem stropu uporabi mali odbojnik na bliskavici.","Za prvi ples poskusi tudi luč zadaj (druga bliskavica ali reflektor) za obrisno svetlobo."]},
+ {n:"Skupinske slike",s:"Vsi ostri, vsi z odprtimi očmi",ex:{Zaslonka:"f/5.6–8",Čas:"1/200",ISO:"100–400",Objektiv:"35–70 mm"},
+  kv:[["Fokus","na prvo vrsto, 1/3 v globino"],["Kamera","malo nad višino oči"],["Zaporedje","3–5 posnetkov naenkrat"],["Način","A ali M"]],
+  tips:["Večja skupina = bolj zaprta zaslonka. Za dve vrsti vsaj f/5.6.","Ljudi postavi tesno skupaj, rame za ramo, in brado rahlo naprej.","Glasno štej in fotografiraj med štetjem, ne samo na tri."]},
+ {n:"Detajli (prstani, obleka)",s:"Makro in drobnarije",ex:{Zaslonka:"f/4–8",Čas:"1/200+",ISO:"100–800",Objektiv:"100 mm makro"},
+  kv:[["Fokus","ena točka ali ročno"],["Globina","pri makro zelo plitva, zapri zaslonko"],["Svetloba","okno ali LED z boka"],["Ozadje","mirno, enobarvno"]],
+  tips:["Prstane postavi na zanimivo podlago: rože, vabilo, čevlje.","Luč z boka poudari strukturo in sijaj.","Pri makru se raje premakni ti kot obroč za fokus."]},
+ {n:"Zlata ura in protisvetloba",s:"Toplo, sanjsko",ex:{Zaslonka:"f/1.8–2.8",Čas:"1/500+",ISO:"100–200",Objektiv:"50–85 mm"},
+  kv:[["Merjenje","točkovno na obraz, +0,7 do +1 EV"],["Beli balans","oblačno ali 6000 K"],["Sonce","nizko za osebo"],["Način","A ali M"]],
+  tips:["Zlata ura je približno uro pred sončnim zahodom.","Za obsijane lase postavi sonce za glavo, obraz osvetli z odbojnikom.","Za odbleske delno zakrij sonce z robom glave ali vej."]},
+ {n:"Gibanje, šport, otroci",s:"Zamrzni trenutek",ex:{Zaslonka:"f/2.8–4",Čas:"1/500–1/1000",ISO:"auto",Objektiv:"70–200 mm"},
+  kv:[["Fokus","AF-C, sledenje"],["Zaklop","zaporedno hitro"],["Način","S ali M + auto ISO"],["Stabilizacija","vklopljena"]],
+  tips:["Pri otrocih se spusti v višino njihovih oči.","Za občutek hitrosti poskusi panning: 1/30 in sledi gibanju.","Fokusiraj na oči, ne na telo."]},
+ {n:"Pokrajina",s:"Vse ostro od spredaj do zadaj",ex:{Zaslonka:"f/8–11",Čas:"po merjenju",ISO:"100",Objektiv:"16–35 mm"},
+  kv:[["Stativ","da, samosprožilec 2 s"],["Fokus","tretjino v kader (hiperfokalno)"],["Merjenje","matrično, pazi na nebo"],["Filtri","polarizacijski, ND za vodo"]],
+  tips:["Najboljša svetloba je ob zori in zatonu.","V kader postavi nekaj v ospredje za globino.","Pri vodi z ND filtrom in dolgim časom dobiš mehko vodo."]},
+ {n:"Nočno nebo in zvezde",s:"Mlečna cesta",ex:{Zaslonka:"f/1.8–2.8",Čas:"15–25 s",ISO:"1600–3200",Objektiv:"14–24 mm"},
+  kv:[["Fokus","ročno na neskončno (povečaj na zvezdo)"],["Stativ","nujno"],["Beli balans","3800–4200 K"],["Čas","pravilo 500 / goriščna"]],
+  tips:["Pojdi stran od mestnih luči in izberi noč brez lune.","Pri 20 mm: 500/20 = 25 s, daljše pa zvezde postanejo črtice.","Ospredje lahko osvetliš z rahlo svetilko med osvetlitvijo."]}
+];
+const RULES=[
+ ["Ena zaslonka = dvakrat svetloba","f/2,8 → f/4 prepusti pol svetlobe. Enako 1/250 → 1/125 da dvakrat več."],
+ ["Dvakrat dlje = štirikrat manj svetlobe","Če luč odmakneš z 1 m na 2 m, izgubiš 2 zaslonki. Bližja luč je tudi mehkejša."],
+ ["Najdaljši čas iz roke","1 / (goriščna × crop). Pri 85 mm na APS-C (1,5×) to je približno 1/125."],
+ ["Sončno 16","Na soncu: f/16, čas = 1/ISO. Pri ISO 100 torej f/16 in 1/100."],
+ ["Sinhronizacija bliskavice","Največ 1/160–1/250 (odvisno od fotoaparata). Hitreje samo s HSS."],
+ ["Velikost luči","Večja luč glede na osebo = mehkejše sence. Softbox blizu je mehak, isti softbox daleč je trd."]
+];
+function viewCheat(){
+  let h=`<h2 class="sec">Nastavitve po situacijah</h2><div class="cards">`;
+  CHEAT.forEach((c,i)=>{const open=S.openCard===i;
+    h+=`<article class="card"><button type="button" data-act="card" data-v="${i}" aria-expanded="${open}"><h3>${esc(c.n)}</h3><span class="sub">${esc(c.s)}</span><span class="chev">${open?"−":"+"}</span></button>
+    <div class="exif">${Object.entries(c.ex).map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}</div>`;
+    if(open)h+=`<div class="more"><div class="kv">${c.kv.map(([k,v])=>`<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")}</div><ul>${c.tips.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`;
+    h+=`</article>`;});
+  h+=`</div><h2 class="sec">Hitri izračun: najdaljši čas iz roke</h2>
+  <div class="calc"><div class="row2"><label class="meta" for="cf">Goriščna</label><input id="cf" type="number" min="8" max="800" value="${S.cf||85}" style="width:90px"> <span class="meta" style="align-self:center">mm</span>
+   <label class="meta" for="cc" style="margin-left:8px">Senzor</label><select id="cc">${[["1","polni format"],["1.5","APS-C (Nikon, Sony, Fuji)"],["1.6","APS-C (Canon)"],["2","MFT"]].map(([v,n])=>`<option value="${v}" ${String(S.cc||"1")===v?"selected":""}>${n}</option>`).join("")}</select></div>
+   <div class="res" id="cres"></div><div class="meta">S stabilizacijo lahko greš 2–3 zaslonke daljše, a oseba se mora tudi sama ne premikati.</div></div>
+  <h2 class="sec">Pravila, ki jih vedno rabiš</h2><div class="rules">${RULES.map(([a,b])=>`<div class="rule"><b>${esc(a)}</b><span>${esc(b)}</span></div>`).join("")}</div>`;
+  return h;
+}
+function calcShutter(){const f=+(document.getElementById("cf")||{}).value||85,c=+(document.getElementById("cc")||{}).value||1;S.cf=f;S.cc=String(c);
+  const t=1/(f*c),std=[30,40,50,60,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000];const d=std.find(x=>x>=1/t)||Math.ceil(1/t);
+  const el=document.getElementById("cres");if(el)el.textContent=`1/${d} s ali hitreje`;}
+function viewMine(){
+  let h=`<h2 class="sec">Moje postavitve</h2>`;
+  if(!S.saved.setups.length)h+=`<div class="empty">Tukaj se shranijo postavitve luči iz Studia. V Studiu nastavi luči in pritisni <b>Shrani postavitev</b>.</div>`;
+  else h+=`<div class="saved">${S.saved.setups.slice().reverse().map(s=>`<div class="sv"><input aria-label="Ime postavitve" data-name="${esc(s.id)}" value="${esc(s.name)}"><span class="meta mono">${s.lights.length} luči · f/${String(FSTOPS[s.fstop]).replace(".",",")} · ${esc(s.date||"")}</span>
+    <div class="acts"><button type="button" class="btn acc" data-act="load" data-v="${esc(s.id)}">Odpri</button><button type="button" class="btn del" data-act="delsave" data-v="${esc(s.id)}" aria-label="Izbriši">✕</button></div></div>`).join("")}</div>`;
+  if(STANDALONE)h+=`<h2 class="sec">Varnostna kopija</h2><div class="row2"><button type="button" class="btn" data-act="export">Shrani kopijo</button><button type="button" class="btn" data-act="import">Naloži kopijo</button></div><input type="file" id="importFile" accept="application/json,.json" hidden>${S.msg?`<div class="meta" style="margin-top:8px">${esc(S.msg)}</div>`:""}`;
+  return h;
+}
+
+// ================= Akcije =================
+function cur(){return S.scene.lights.find(x=>x.id===S.sel);}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act,v=b.dataset.v,sc=S.scene,l=cur();
+  const refresh=()=>{sc.preset=sc.preset||"";render();};
+  if(a==="tab"){S.view=v;S.msg="";render();if(v==="cheat")calcShutter();window.scrollTo(0,0);return;}
+  if(a==="preset"){const p=PRESETS[+v];sc.lights=p.lights();sc.wall=p.wall;sc.turn=0;sc.preset=p.n;S.sel=sc.lights[0].id;S.msg="";render();return;}
+  if(a==="add"){if(sc.lights.length>=5){S.msg="Največ 5 luči.";render();return;}
+    const d={key:[-40,1.2,.35,4,"softbox"],fill:[40,2,.05,2,"umbrella"],rim:[145,1.3,.35,3,"strip"],bg:[180,1.2,-.1,4,"bare"]}[v];
+    const n=L(v,d[4],d[0],d[1],d[2],d[3]);sc.lights.push(n);S.sel=n.id;sc.preset="";render();return;}
+  if(a==="camreset"){if(R){R.yaw=0;R.pitch=0;placeCam();R.need=true;}return;}
+  if(a==="card"){S.openCard=S.openCard===+v?null:+v;render();calcShutter();return;}
+  if(a==="load"){const s=S.saved.setups.find(x=>x.id===v);if(!s)return;sc.lights=s.lights.map(x=>Object.assign({},x,{id:uid++}));sc.fstop=s.fstop;sc.turn=s.turn;sc.wall=s.wall;sc.skin=s.skin;sc.preset="";S.sel=sc.lights[0]?sc.lights[0].id:null;S.view="studio";render();window.scrollTo(0,0);return;}
+  if(a==="delsave"){S.saved.setups=S.saved.setups.filter(x=>x.id!==v);saveSaved();render();return;}
+  if(a==="save"){const A=analysis(),n=S.saved.setups.length+1,d=new Date();
+    S.saved.setups.push({id:"s"+Date.now(),name:(A.pattern||"Postavitev")+" "+n,date:`${d.getDate()}. ${d.getMonth()+1}.`,lights:sc.lights.map(x=>({role:x.role,mod:x.mod,ang:x.ang,dist:x.dist,h:x.h,pw:x.pw,on:x.on})),fstop:sc.fstop,turn:sc.turn,wall:sc.wall,skin:sc.skin});
+    if(S.saved.setups.length>60)S.saved.setups=S.saved.setups.slice(-60);saveSaved();S.msg="Shranjeno v Moje.";render();return;}
+  if(a==="f-"||a==="f+"){sc.fstop=clamp(sc.fstop+(a==="f+"?1:-1),0,FSTOPS.length-1);document.getElementById("fOut").textContent="f/"+String(FSTOPS[sc.fstop]).replace(".",",");syncThree();updateStudioInfo();return;}
+  if(a==="wall"){sc.wall=v;render();return;}
+  if(a==="skin"){sc.skin=v;render();return;}
+  if(a==="export"){const name="plonkic-kopija.json",txt=JSON.stringify(S.saved);
+    try{const file=new File([txt],name,{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file]}).catch(()=>{});return;}}catch(err){}
+    const u=URL.createObjectURL(new Blob([txt],{type:"application/json"})),x=document.createElement("a");x.href=u;x.download=name;document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);S.msg="Kopija shranjena v Prenose.";render();return;}
+  if(a==="import"){const f=document.getElementById("importFile");if(f)f.click();return;}
+  if(!l)return;
+  if(a==="mod"){l.mod=v;sc.preset="";render();return;}
+  if(a==="pw-"||a==="pw+"){l.pw=clamp(l.pw+(a==="pw+"?1:-1),0,POWERS.length-1);sc.preset="";document.getElementById("pwOut").textContent=pwLabel(l.pw);syncThree();updateStudioInfo();return;}
+  if(a==="toggle"){l.on=!l.on;sc.preset="";render();return;}
+  if(a==="del"){sc.lights=sc.lights.filter(x=>x!==l);S.sel=sc.lights[0]?sc.lights[0].id:null;sc.preset="";render();return;}
+});
+document.addEventListener("change",e=>{
+  if(e.target.id==="cf"||e.target.id==="cc"){calcShutter();return;}
+  if(e.target.id==="importFile"&&e.target.files[0]){const fr=new FileReader();fr.onload=()=>{try{const d=JSON.parse(fr.result);if(!d||d.v!==1||!Array.isArray(d.setups))throw 0;S.saved=d;saveSaved();S.msg=`Naloženo: ${d.setups.length} postavitev.`;}catch(err){S.msg="Te datoteke ne morem prebrati.";}render();};fr.readAsText(e.target.files[0]);}
+});
+document.addEventListener("keyup",e=>{if(e.target.id==="cf")calcShutter();});
+if(STANDALONE&&"serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+render();requestAnimationFrame(loop);
+})();
+</script>
+</body></html>
