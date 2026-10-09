@@ -1,0 +1,498 @@
+<!doctype html><html lang="sl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#16171A"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Kader"><meta name="description" content="Nasveti za boljšo fotografijo in poze."><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style><script>window.__KADER_APP__=true</script><title>Kader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone column. Every pose sits inside a viewfinder frame (AF corners + thirds grid), tips are cards with small diagrams. */
+:root{
+  --bg:#F2F1EE; --surface:#FFFFFF; --sunk:#ECEBE7; --ink:#16171A; --muted:#62646B; --line:#DCDAD4;
+  --accent:#2E5CE6; --accent-ink:#FFFFFF; --accent-soft:#E2E9FD;
+  --figA:#2A2E36; --figB:#8C9AB9; --figK:#B9825C; --dress:#FFFFFF; --prop:#C9C6BE; --vf:#F7F6F3; --grid:rgba(0,0,0,.08); --hl:#2E5CE6;
+  --good:#1E8E4E;
+  --f-display:"Bricolage Grotesque","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101113; --surface:#18191C; --sunk:#202125; --ink:#ECECEE; --muted:#9C9EA6; --line:#2B2C31;
+  --accent:#7C9BFF; --accent-ink:#0B1638; --accent-soft:#1D2747;
+  --figA:#E4E6EA; --figB:#7E8BA8; --figK:#D2996F; --dress:#F4F2EE; --prop:#3A3C42; --vf:#151619; --grid:rgba(255,255,255,.07); --hl:#7C9BFF;
+  --good:#5ED08A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101113; --surface:#18191C; --sunk:#202125; --ink:#ECECEE; --muted:#9C9EA6; --line:#2B2C31;
+  --accent:#7C9BFF; --accent-ink:#0B1638; --accent-soft:#1D2747;
+  --figA:#E4E6EA; --figB:#7E8BA8; --figK:#D2996F; --dress:#F4F2EE; --prop:#3A3C42; --vf:#151619; --grid:rgba(255,255,255,.07); --hl:#7C9BFF;
+  --good:#5ED08A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15.5px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:620px;margin:0 auto;padding-inline:16px;padding-block:12px 70px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--f-display);font-weight:800;font-size:24px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.brand .rec{width:10px;height:10px;border-radius:50%;background:#E5483A;box-shadow:0 0 0 3px rgba(229,72,58,.2)}
+.store{font-size:12px;color:var(--muted)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:4px;margin-top:10px}
+.tabs button{border:0;background:transparent;padding:8px 2px;border-radius:8px;font-weight:700;font-size:14.5px;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+h1{font-family:var(--f-display);font-weight:800;font-size:34px;line-height:1.02;margin:18px 0 4px;letter-spacing:-.02em;text-wrap:balance}
+h2.sec{font-family:var(--f-display);font-weight:800;font-size:21px;margin:22px 0 8px;letter-spacing:-.01em}
+.lede{color:var(--muted);margin:0}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin-top:12px}
+.chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-weight:700;font-size:14px}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips button .n{opacity:.55;font-weight:600;margin-left:4px}
+.daily{margin-top:14px;background:var(--accent);color:var(--accent-ink);border-radius:16px;padding:16px;display:grid;gap:6px}
+.daily small{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:11.5px;opacity:.85}
+.daily b{font-family:var(--f-display);font-size:21px;line-height:1.15}
+.daily button{justify-self:start;border:1px solid currentColor;background:transparent;color:inherit;border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px}
+.tips{display:grid;gap:10px;margin-top:10px}
+.tip{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:start}
+.tip h3{margin:0;font-size:16px;font-weight:700;line-height:1.3}
+.tip p{margin:0;color:var(--muted);font-size:14.5px;grid-column:1}
+.tip .why{grid-column:1;font-size:13.5px;color:var(--ink);opacity:.85}
+.tip .why b{color:var(--accent)}
+.tip svg{grid-row:1 / span 3;grid-column:2;width:88px;height:66px;border-radius:8px;background:var(--vf);border:1px solid var(--line)}
+.poses{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+@media (max-width:380px){.poses{grid-template-columns:1fr}}
+.pose{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:grid;text-align:left;padding:0}
+.pose .vf{position:relative;background:var(--vf);border-bottom:1px solid var(--line)}
+.pose .vf svg{display:block;width:100%;height:auto}
+.pose .star{position:absolute;right:8px;top:8px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;font-size:17px;line-height:1}
+.pose .star[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pose .meta{padding:10px 12px 12px;display:grid;gap:3px}
+.pose h3{margin:0;font-size:15px;font-weight:700;line-height:1.25}
+.pose .s{color:var(--muted);font-size:13px}
+.detail{grid-column:1 / -1;background:var(--surface);border:1.5px solid var(--accent);border-radius:16px;overflow:hidden;display:grid}
+.detail .vf{background:var(--vf);border-bottom:1px solid var(--line);position:relative}
+.detail .vf svg{display:block;width:100%;max-width:420px;margin:0 auto;height:auto}
+.detail .body{padding:14px;display:grid;gap:12px}
+.detail h3{margin:0;font-family:var(--f-display);font-size:22px;font-weight:800;line-height:1.1}
+.steps{margin:0;padding-left:22px;display:grid;gap:5px}
+.steps li::marker{font-weight:800;color:var(--accent)}
+.say{background:var(--sunk);border-radius:12px;padding:10px 12px;font-size:15px}
+.say b{display:block;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.ptip{font-size:14px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:8px 13px;font-weight:700;font-size:14px}
+.btn.acc{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.note{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:11px 14px;font-size:14.5px;color:var(--muted);margin-top:12px}
+.note b{color:var(--ink)}
+.list{display:grid;gap:8px;margin-top:10px}
+.li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center}
+.li svg{width:64px;height:auto;border-radius:8px;background:var(--vf)}
+.li b{font-size:15px;display:block;line-height:1.25}
+.li span{color:var(--muted);font-size:13px}
+.li.done{opacity:.55}
+.li.done b{text-decoration:line-through}
+.chk{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:transparent;font-size:16px;font-weight:800;display:grid;place-items:center}
+.chk[aria-pressed="true"]{background:var(--good);border-color:var(--good);color:#fff}
+.empty{color:var(--muted);font-size:15px;padding:14px;background:var(--surface);border:1px dashed var(--line);border-radius:12px;margin-top:10px}
+.src{display:grid;gap:6px;margin-top:8px;font-size:14px}
+.src a{color:var(--accent);text-decoration:underline;text-underline-offset:3px;word-break:break-word}
+</style>
+
+</head><body><div class="wrap" id="app"></div>
+
+<script>
+(function(){
+"use strict";
+const STANDALONE=!!window.__KADER_APP__;
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// ================= Figure (2D pogled) =================
+const dir=a=>[Math.cos(a*Math.PI/180),Math.sin(a*Math.PI/180)];
+const add=(p,a,l)=>{const d=dir(a);return [p[0]+d[0]*l,p[1]+d[1]*l];};
+const GY=s=>205-75*s;
+// osnovna stoječa figura; o prepiše privzete vrednosti
+const ST=(x,o={})=>{const s=o.s||1;return Object.assign({x,y:GY(s),s,to:-90,hd:0,tw:1,la:[100,95],ra:[80,85],ll:[94,90],rl:[86,90],c:"A"},o);};
+const P2=p=>p.toFixed(1);
+function figSvg(f){
+  const s=f.s,col=f.c==="B"?"var(--figB)":f.c==="K"?"var(--figK)":"var(--figA)";
+  const hip=[f.x,f.y],n=f.to+90,sw=16*s*f.tw,hw=12*s*f.tw;
+  const shC=add(hip,f.to,52*s),shL=add(shC,n+180,sw),shR=add(shC,n,sw),hipL=add(hip,n+180,hw),hipR=add(hip,n,hw);
+  const head=add(shC,f.to+(f.hd||0),14*s);
+  const arm=(sh,a)=>{const e=add(sh,a[0],26*s),w=add(e,a[1],24*s);return [sh,e,w];};
+  const leg=(h,l)=>{const k=add(h,l[0],36*s),an=add(k,l[1],36*s),toe=add(an,l[2]!=null?l[2]:(Math.abs(((l[1]%360)+360)%360-90)<45?0:l[1]+90),9*s);return [h,k,an,toe];};
+  const LA=arm(shL,f.la),RA=arm(shR,f.ra),LL=leg(add(hip,n+180,hw*.55),f.ll),RL=leg(add(hip,n,hw*.55),f.rl);
+  const line=(pts,w,c,op)=>`<polyline points="${pts.map(p=>P2(p[0])+","+P2(p[1])).join(" ")}" fill="none" stroke="${c||col}" stroke-width="${(w*s).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"${op?` opacity="${op}"`:""}/>`;
+  let h="";
+  if(f.hair==="long"){const hb=add(head,f.to+180,2*s);h+=`<ellipse cx="${P2(hb[0])}" cy="${P2(hb[1]+9*s)}" rx="${P2(11.5*s)}" ry="${P2(17*s)}" fill="${col}" opacity=".55" transform="rotate(${(f.to+90).toFixed(0)} ${P2(hb[0])} ${P2(hb[1])})"/>`;}
+  // zadnja okončina (bledejša)
+  const back=f.front==="L"?[RA,RL]:[LA,LL],frontL=f.front==="L"?[LA,LL]:[RA,RL];
+  h+=line(back[1].slice(0,3),9,null,.6)+line(back[1].slice(2),4.5,null,.6);
+  h+=line(frontL[1].slice(0,3),9.5)+line(frontL[1].slice(2),4.5);
+  if(f.dress){const w1=add(hip,n+180,hw*1.05),w2=add(hip,n,hw*1.05),b1=[hip[0]-28*s,GY(s)+70*s],b2=[hip[0]+28*s,GY(s)+70*s];
+    const yb=f.y+(f.seat?30*s:72*s);h+=`<path d="M${P2(w1[0])} ${P2(w1[1])} L${P2(w2[0])} ${P2(w2[1])} L${P2(f.x+30*s)} ${P2(yb)} Q${P2(f.x)} ${P2(yb+6*s)} ${P2(f.x-30*s)} ${P2(yb)} Z" fill="var(--dress)" stroke="${col}" stroke-width="${(1.6*s).toFixed(1)}" stroke-linejoin="round"/>`;}
+  h+=line(back[0],7,null,.6);
+  h+=`<path d="M${P2(hipL[0])} ${P2(hipL[1])} L${P2(hipR[0])} ${P2(hipR[1])} L${P2(shR[0])} ${P2(shR[1])} L${P2(shL[0])} ${P2(shL[1])} Z" fill="${col}" stroke="${col}" stroke-width="${(7*s).toFixed(1)}" stroke-linejoin="round"/>`;
+  if(f.dress){const w1=add(hip,n+180,hw*1.05),w2=add(hip,n,hw*1.05);h+=`<path d="M${P2(hipL[0])} ${P2(hipL[1])} L${P2(hipR[0])} ${P2(hipR[1])} L${P2(shR[0])} ${P2(shR[1])} L${P2(shL[0])} ${P2(shL[1])} Z" fill="var(--dress)" stroke="${col}" stroke-width="${(1.6*s).toFixed(1)}" stroke-linejoin="round"/>`;}
+  h+=line([shC,head],6);
+  h+=`<circle cx="${P2(head[0])}" cy="${P2(head[1])}" r="${P2(10*s)}" fill="${col}"/>`;
+  if(f.veil){h+=`<path d="M${P2(head[0]-6*s)} ${P2(head[1]-8*s)} Q${P2(head[0]-26*s)} ${P2(head[1]+30*s)} ${P2(head[0]-18*s)} ${P2(head[1]+70*s)}" fill="none" stroke="var(--dress)" stroke-width="${(5*s).toFixed(1)}" opacity=".85" stroke-linecap="round"/>`;}
+  h+=line(frontL[0],7.5);
+  if(f.prop==="bouquet"){const w=frontL[0][2];h+=`<circle cx="${P2(w[0])}" cy="${P2(w[1])}" r="${P2(8*s)}" fill="var(--hl)" opacity=".9"/><circle cx="${P2(w[0]-4*s)}" cy="${P2(w[1]-3*s)}" r="${P2(4*s)}" fill="var(--dress)" opacity=".9"/>`;}
+  if(f.prop==="toy"){const w=frontL[0][2];h+=`<rect x="${P2(w[0]-6*s)}" y="${P2(w[1]-6*s)}" width="${P2(12*s)}" height="${P2(12*s)}" rx="${P2(3*s)}" fill="var(--hl)"/>`;}
+  return h;
+}
+// rekviziti
+const PROP={
+  stool:(x,y)=>`<rect x="${x-20}" y="${y}" width="40" height="6" rx="3" fill="var(--prop)"/><line x1="${x-14}" y1="${y+6}" x2="${x-18}" y2="205" stroke="var(--prop)" stroke-width="4"/><line x1="${x+14}" y1="${y+6}" x2="${x+18}" y2="205" stroke="var(--prop)" stroke-width="4"/>`,
+  chair:(x,y)=>`<rect x="${x-22}" y="${y}" width="44" height="7" rx="3" fill="var(--prop)"/><rect x="${x-26}" y="${y-48}" width="7" height="55" rx="3" fill="var(--prop)"/><line x1="${x-20}" y1="${y+7}" x2="${x-20}" y2="205" stroke="var(--prop)" stroke-width="4"/><line x1="${x+18}" y1="${y+7}" x2="${x+18}" y2="205" stroke="var(--prop)" stroke-width="4"/>`,
+  bed:y=>`<rect x="8" y="${y}" width="184" height="16" rx="6" fill="var(--prop)"/><rect x="8" y="${y+16}" width="184" height="${205-y-16}" fill="var(--prop)" opacity=".45"/><rect x="14" y="${y-9}" width="38" height="11" rx="5" fill="var(--prop)" opacity=".8"/>`,
+  wall:x=>`<rect x="${x}" y="40" width="10" height="165" fill="var(--prop)"/>`,
+  window:x=>`<rect x="${x}" y="30" width="34" height="120" rx="3" fill="none" stroke="var(--prop)" stroke-width="5"/><line x1="${x+17}" y1="30" x2="${x+17}" y2="150" stroke="var(--prop)" stroke-width="3"/><path d="M${x+34} 40 L${x+90} 120 L${x+90} 170 L${x+34} 150 Z" fill="var(--hl)" opacity=".12"/>`,
+  table:(x,y)=>`<rect x="${x-34}" y="${y}" width="68" height="7" rx="3" fill="var(--prop)"/><line x1="${x-26}" y1="${y+7}" x2="${x-26}" y2="205" stroke="var(--prop)" stroke-width="4"/><line x1="${x+26}" y1="${y+7}" x2="${x+26}" y2="205" stroke="var(--prop)" stroke-width="4"/>`,
+  floor:()=>``,
+  bench:(x,y,w)=>`<rect x="${x-w/2}" y="${y}" width="${w}" height="8" rx="3" fill="var(--prop)"/><line x1="${x-w/2+8}" y1="${y+8}" x2="${x-w/2+8}" y2="205" stroke="var(--prop)" stroke-width="4"/><line x1="${x+w/2-8}" y1="${y+8}" x2="${x+w/2-8}" y2="205" stroke="var(--prop)" stroke-width="4"/>`
+};
+function viewfinder(inner){
+  return `<svg viewBox="0 0 200 220" role="img"><rect width="200" height="220" fill="var(--vf)"/>
+  <g stroke="var(--grid)" stroke-width="1"><line x1="66.7" y1="0" x2="66.7" y2="220"/><line x1="133.3" y1="0" x2="133.3" y2="220"/><line x1="0" y1="73.3" x2="200" y2="73.3"/><line x1="0" y1="146.7" x2="200" y2="146.7"/></g>
+  <line x1="6" y1="205" x2="194" y2="205" stroke="var(--prop)" stroke-width="2"/><g transform="translate(100 205) scale(1.14) translate(-100 -205)">${inner}</g>
+  <g fill="none" stroke="var(--hl)" stroke-width="2.2" stroke-linecap="round" opacity=".8"><path d="M8 22 V8 H22"/><path d="M178 8 H192 V22"/><path d="M8 198 V212 H22"/><path d="M178 212 H192 V198"/></g></svg>`;
+}
+const sitY=y=>y; // hip height when seated
+// sedeča figura (pogled 3/4 od strani): hip na sedežu, stegna naprej, golen dol
+const SIT=(x,y,o={})=>Object.assign({x,y,s:1,to:-92,hd:0,tw:.75,la:[100,95],ra:[80,85],ll:[-4,90],rl:[4,92],c:"A",seat:1},o);
+
+// ================= Poze =================
+const CATS=[
+ {k:"zenska",n:"Portret ženske"},{k:"moski",n:"Portret moškega"},{k:"pari",n:"Pari"},{k:"poroka",n:"Poroka"},
+ {k:"druzina",n:"Družina"},{k:"otroci",n:"Otroci"},{k:"skupine",n:"Skupine"},{k:"boudoir",n:"Boudoir"}];
+const POSES=[
+ // ---- ženska
+ {id:"z1",k:"zenska",n:"S-linija, teža na zadnji nogi",s:"Najbolj laskava osnovna poza",
+  how:["Teža na zadnjo nogo, sprednje koleno rahlo upogni proti drugemu.","Boke potisni malo vstran, zgornji del telesa rahlo naprej.","Ena roka mehko na bok, druga sproščeno ob telesu."],
+  say:"»Prenesi težo na zadnjo nogo in mi pokaži malo boka.«",tip:"Telo pod kotom ~30° glede na kamero, obraz proti kameri.",
+  fig:()=>[ST(100,{to:-96,hd:-8,hair:"long",ll:[80,98],rl:[96,90],ra:[38,160]})]},
+ {id:"z2",k:"zenska",n:"Roka v laseh",s:"Sproščeno, ženstveno",
+  how:["Ena roka gre počasi v lase, kot da jih popravlja.","Komolec naj ne kaže naravnost v kamero.","Druga roka mehko ob telesu ali na pasu."],
+  say:"»Popravi si lase za ušesom in ne glej v kamero.«",tip:"Fotografiraj med gibom, ne ko roka obmiruje.",
+  fig:()=>[ST(100,{to:-93,hd:10,hair:"long",la:[-120,8],ll:[84,96],front:"L"})]},
+ {id:"z3",k:"zenska",n:"Sede, nagnjena naprej",s:"Na stolu ali stolčku",
+  how:["Sede na sprednji rob stolčka, hrbet raven.","Nagni se rahlo naprej proti kameri.","Podlakti na kolena, roke mehke."],
+  say:"»Nagni se proti meni, kot da mi boš povedala skrivnost.«",tip:"Kamera malo nad višino oči.",
+  fig:()=>[{prop:PROP.stool(96,150)},SIT(96,146,{to:-70,hd:-10,hair:"long",la:[55,10],ra:[60,5]})]},
+ {id:"z4",k:"zenska",n:"Ob steni",s:"Naslonjena z ramo",
+  how:["Z ramo se nasloni na steno, telo pod kotom.","Noge prekriži v gležnjih.","Roka ob steni ali v žepu."],
+  say:"»Nasloni se, kot da nekoga čakaš.«",tip:"Stena daje oporo in sprosti držo.",
+  fig:()=>[{prop:PROP.wall(52)},ST(92,{to:-82,hd:-6,hair:"long",tw:.8,la:[150,110],ll:[96,84],rl:[80,98],front:"R"})]},
+ {id:"z5",k:"zenska",n:"Pogled čez ramo",s:"Hrbet proti kameri",
+  how:["Obrni se s hrbtom proti kameri.","Glavo obrni čez ramo nazaj.","Rame spusti, brada proti rami."],
+  say:"»Hodi stran od mene in se na moj znak ozri.«",tip:"Lepo s tančico, obleko z odprtim hrbtom ali lasmi.",
+  fig:()=>[ST(100,{to:-90,hd:18,hair:"long",tw:.85,la:[105,95],ra:[75,88]})]},
+ // ---- moški
+ {id:"m1",k:"moski",n:"Roke v žepih",s:"Samozavestno, preprosto",
+  how:["Stoj vzravnano, teža enakomerno na obeh nogah.","Roke v žepe, palca ostaneta zunaj.","Ramena rahlo nazaj, brada naprej."],
+  say:"»Daj roke v žepe in se postavi, kot da je to tvoj prostor.«",tip:"Palec zunaj žepa deluje bolj naravno.",
+  fig:()=>[ST(100,{la:[110,60],ra:[70,120],ll:[96,90],rl:[84,90]})]},
+ {id:"m2",k:"moski",n:"Prekrižane roke",s:"Moč in zaupanje",
+  how:["Prekriži roke na prsih, a ne pretesno.","Eno ramo obrni rahlo stran od kamere.","Brada naprej in rahel nasmeh."],
+  say:"»Prekriži roke in se nasmehni s pogledom, ne z usti.«",tip:"Pretesno prekrižane roke delujejo zaprto.",
+  fig:()=>[ST(100,{tw:.9,la:[112,8],ra:[68,172],ll:[98,88],rl:[82,92]})]},
+ {id:"m3",k:"moski",n:"Sede, komolci na kolenih",s:"Sproščeno, prijazno",
+  how:["Sede na stol ali stopnico, noge razmaknjene.","Komolci na kolena, roke ohlapno skupaj.","Nagni se rahlo naprej proti kameri."],
+  say:"»Usedi se, kot da gledaš tekmo.«",tip:"Kamera malo nad njim in kolena obrnjena stran od kamere.",
+  fig:()=>[{prop:PROP.stool(96,150)},SIT(96,146,{to:-68,la:[58,8],ra:[62,170]})]},
+ {id:"m4",k:"moski",n:"Naslon na steno",s:"Ena noga ob steni",
+  how:["S hrbtom se nasloni na steno.","Eno nogo pokrči in stopalo nasloni na steno.","Roke v žepih ali prekrižane."],
+  say:"»Nasloni se in poglej proti vratom.«",tip:"Lepo za ulične in poslovne portrete.",
+  fig:()=>[{prop:PROP.wall(70)},ST(98,{to:-93,la:[110,60],ra:[70,120],ll:[60,140],rl:[88,90]})]},
+ {id:"m5",k:"moski",n:"Za mizo, roka ob bradi",s:"Poslovni portret",
+  how:["Sede za mizo, komolca na mizi.","Ena roka ohlapno ob bradi, ne podpira glave.","Rame obrnjene rahlo stran."],
+  say:"»Pomisli, kako bi razložil svoje delo prijatelju.«",tip:"Roka se le dotika, teža glave ne sme biti na njej.",
+  fig:()=>[{prop:PROP.table(122,148)},SIT(84,150,{to:-80,ra:[30,-80],la:[60,15]})]},
+ // ---- pari
+ {id:"p1",k:"pari",n:"V-poza",s:"Osnova za vse pare",
+  how:["Postavita se tesno skupaj, obrnjena drug proti drugemu.","Ramena in boki tvorijo črko V proti kameri.","Notranji roki okoli pasu, zunanji prosti."],
+  say:"»Stopita skupaj, kot da se vrata odpirajo proti meni.«",tip:"Iz te poze z malimi spremembami dobiš 10 različnih slik.",
+  fig:()=>[ST(78,{to:-93,hd:8,c:"B",ra:[25,5],la:[100,92],ll:[95,90],rl:[85,90]}),ST(122,{to:-87,hd:-8,hair:"long",la:[155,178],ra:[80,88]})]},
+ {id:"p2",k:"pari",n:"Čelo ob čelu",s:"Zaprta, intimna poza",
+  how:["Obrneta se drug proti drugemu, boki skupaj.","Nasloni čelo na čelo, oči zaprte ali navzdol.","Njene roke na njegovih prsih, njegove okoli nje."],
+  say:"»Zaprita oči in dihajta skupaj.«",tip:"Pazi, da med njima ni praznega prostora.",
+  fig:()=>[ST(88,{to:-86,hd:24,c:"B",ra:[15,-30],la:[105,92]}),ST(112,{to:-94,hd:-24,hair:"long",la:[-170,150],ra:[78,90]})]},
+ {id:"p3",k:"pari",n:"Objem od zadaj",s:"On za njo",
+  how:["On stopi za njo in jo objame okoli pasu.","Ona položi roke na njegove.","Njegova brada ob njeni glavi ali rami."],
+  say:"»Objemi jo in ji povej, kaj ti je pri njej najbolj všeč.«",tip:"Njegov obraz naj ne bo povsem skrit za njeno glavo.",
+  fig:()=>[ST(108,{to:-92,hd:-14,c:"B",la:[150,20],ra:[120,170]}),ST(98,{to:-88,hd:6,hair:"long",la:[80,20],ra:[100,160]})]},
+ {id:"p4",k:"pari",n:"Sprehod z roko v roki",s:"Gibanje, naravni nasmehi",
+  how:["Primeta se za roke in hodita proti kameri ali vstran.","Hodita počasneje kot običajno.","Pogledata se med hojo."],
+  say:"»Hodita do drevesa in nazaj, en drugega malo porinita z bokom.«",tip:"Fotografiraj v zaporedju, najboljši korak je, ko je sprednja noga iztegnjena.",
+  fig:()=>[ST(80,{tw:.6,c:"B",hd:14,ll:[70,105],rl:[115,80],ra:[40,30],la:[120,110]}),ST(122,{tw:.6,hair:"long",hd:-10,ll:[115,80],rl:[70,105],la:[140,150],ra:[60,80]})]},
+ {id:"p5",k:"pari",n:"Skoraj poljub",s:"Napetost pred dotikom",
+  how:["Približata obraza, kot da se bosta poljubila.","Ustavita se tik pred dotikom.","Oči zaprte ali gledata v usta."],
+  say:"»Počasi proti poljubu … stop. Zdržita.«",tip:"Pogosto lepše kot pravi poljub, kjer se obraza zlijeta.",
+  fig:()=>[ST(90,{to:-84,hd:20,c:"B",ra:[30,30],la:[100,92]}),ST(110,{to:-96,hd:-18,hair:"long",la:[-150,160],ra:[80,88]})]},
+ {id:"p6",k:"pari",n:"Zavrti jo",s:"Ples in smeh",
+  how:["Primeta se za roke, on dvigne roko.","Ona se zavrti pod njegovo roko.","Ponovita 3–4-krat, fotografiraj zaporedno."],
+  say:"»Zavrti jo, kot na zabavi!«",tip:"Čas 1/500 ali hitreje, da zamrzneš krilo in lase.",
+  fig:()=>[ST(80,{to:-92,c:"B",ra:[-60,-80],la:[100,92]}),ST(122,{to:-80,hair:"long",tw:.7,la:[-110,-100],ra:[40,60],ll:[100,90],rl:[60,120]})]},
+ // ---- poroka
+ {id:"r1",k:"poroka",n:"Mladoporočenca v V-pozi",s:"Klasičen portret para",
+  how:["Postavita se v V-pozo, nevesta na strani, kjer je šopek lepše viden.","Šopek nizko, v višini pasu.","Najprej pogled v kamero, nato drug v drugega."],
+  say:"»Poglejta mene … zdaj pa drug drugega.«",tip:"Šopek naj ne zakriva obleke ali pasu.",
+  fig:()=>[ST(84,{to:-93,hd:6,c:"B",ra:[30,10]}),ST(118,{to:-88,hd:-8,hair:"long",dress:1,veil:1,la:[150,170],ra:[100,60],prop:"bouquet"})]},
+ {id:"r2",k:"poroka",n:"Ženin šepeta",s:"Pristen nasmeh neveste",
+  how:["Ženin stopi tik za nevesto, rahlo vstran.","Približa usta njenemu ušesu.","Nevesta gleda v kamero ali navzdol."],
+  say:"(ženinu, tiho) »Povej ji nekaj, česar ne bi rekel pred mamo.«",tip:"Fokus na nevestine oči.",
+  fig:()=>[ST(112,{to:-98,hd:-28,c:"B",la:[160,20]}),ST(96,{hd:4,hair:"long",dress:1,veil:1,ra:[100,60],prop:"bouquet"})]},
+ {id:"r3",k:"poroka",n:"Nevesta s šopkom ob boku",s:"Portret neveste",
+  how:["Telo pod kotom, teža na zadnji nogi.","Šopek nizko ob boku, drugo roko na šopek.","Brada naprej in rahlo dol."],
+  say:"»Zadihaj globoko in izdihni skozi nos.«",tip:"Pokaži obliko obleke: korak nazaj in fotografiraj celo postavo.",
+  fig:()=>[ST(100,{to:-95,hd:-8,hair:"long",dress:1,veil:1,ra:[95,70],la:[80,30],prop:"bouquet"})]},
+ {id:"r4",k:"poroka",n:"Ženin popravlja manšeto",s:"Detajl in samozavest",
+  how:["Ženin z eno roko popravlja manšeto druge.","Roke v višini prsi, telo pod kotom.","Pogled navzdol na roke ali stran."],
+  say:"»Kot da se pripravljaš na najpomembnejši sestanek.«",tip:"Lepo tudi s kravato, gumbi suknjiča ali uro.",
+  fig:()=>[ST(100,{tw:.85,la:[80,-20],ra:[110,190],hd:10})]},
+ {id:"r5",k:"poroka",n:"Hoja proti kameri",s:"Po obredu ali na sprehodu",
+  how:["Primeta se za roke in hodita počasi proti tebi.","Med hojo se pogovarjata in pogledata.","Ti hodiš vzvratno ali stojiš z dolgim objektivom."],
+  say:"»Hodita, kot da imata ves čas na svetu.«",tip:"AF-C s sledenjem, čas vsaj 1/320.",
+  fig:()=>[ST(82,{c:"B",ll:[80,98],rl:[100,84],ra:[40,30]}),ST(118,{hair:"long",dress:1,veil:1,ll:[100,84],rl:[80,98],la:[140,150],ra:[95,60],prop:"bouquet"})]},
+ // ---- družina
+ {id:"d1",k:"druzina",n:"Klasična trikotna",s:"Varnostna slika na začetku",
+  how:["Starša zadaj, otroci spredaj.","Glave na različnih višinah, v obliki trikotnikov.","Vsi se dotikajo: roke na ramenih."],
+  say:"»Stisnite se skupaj, kot da je zelo mraz!«",tip:"Prvo naredi to sliko, dokler so otroci še potrpežljivi.",
+  fig:()=>[ST(76,{c:"B",ra:[60,30]}),ST(124,{hair:"long",la:[120,150]}),ST(90,{s:.58,c:"K"}),ST(112,{s:.5,c:"K",hair:"long"})]},
+ {id:"d2",k:"druzina",n:"Otrok na ramenih",s:"Igrivo, dinamično",
+  how:["Oče ali mama vzame otroka na ramena.","Otrok se drži za glavo ali dvigne roke.","Drugi starš ob strani gleda gor proti otroku."],
+  say:"»Kdo je najvišji v družini?«",tip:"Fotografiraj iz malo nižjega položaja.",
+  fig:()=>[ST(88,{c:"B",la:[-110,-80],ra:[-70,-100]}),{x:88,y:72,s:.55,to:-90,hd:0,tw:.8,la:[-120,-100],ra:[-60,-80],ll:[150,90],rl:[30,90],c:"K"},ST(130,{hair:"long",hd:-20,la:[120,100],ra:[70,85]})]},
+ {id:"d3",k:"druzina",n:"Sprehod v vrsti",s:"Za roke, naravno",
+  how:["Vsi se primejo za roke v vrsto.","Hodijo proti kameri ali stran.","Otroci lahko skačejo in vlečejo starše."],
+  say:"»Kdo bo prvi pri meni? Ampak počasi!«",tip:"Fotografiraj zaporedno, ena slika bo popolna.",
+  fig:()=>[ST(40,{c:"B",ll:[80,98],rl:[100,84],ra:[30,20]}),ST(78,{s:.55,c:"K",la:[150,160],ra:[30,20]}),ST(112,{s:.5,c:"K",hair:"long",la:[150,160],ra:[30,20]}),ST(152,{hair:"long",la:[150,160],ll:[100,84],rl:[80,98]})]},
+ {id:"d4",k:"druzina",n:"Velik objem",s:"Vsi skupaj, smeh",
+  how:["Vsi se objamejo v krogu ali kupčku.","Otroci v sredini.","Povej nekaj smešnega, preden pritisneš."],
+  say:"»Skupinski objem! Še bolj stisnite … še bolj!«",tip:"Fotografiraj od blizu, s širšim objektivom.",
+  fig:()=>[ST(78,{c:"B",to:-80,hd:20,ra:[10,40]}),ST(122,{hair:"long",to:-100,hd:-20,la:[170,140]}),ST(100,{s:.55,c:"K",la:[150,170],ra:[30,10]})]},
+ {id:"d5",k:"druzina",n:"Sede na tleh",s:"Odeja v parku",
+  how:["Vsi sedejo na odejo, starša zadaj.","Otroci v naročju ali spredaj.","Pogled drug v drugega namesto v kamero."],
+  say:"»Kdo ima najbolj smešen smeh v družini?«",tip:"Spusti se v višino otrok.",
+  fig:()=>[SIT(52,190,{c:"B",to:-90,ll:[-10,80],rl:[0,70],ra:[40,30]}),SIT(122,190,{hair:"long",to:-88,ll:[-10,80],rl:[0,70],la:[140,150]}),SIT(96,196,{s:.55,c:"K",ll:[-10,80],rl:[0,70]})]},
+ // ---- otroci
+ {id:"o1",k:"otroci",n:"V višini njihovih oči",s:"Spusti se na kolena",
+  how:["Spusti se na višino otrokovih oči.","Naj sedi ali se igra na tleh.","Pogovarjaj se z njim, ne ukazuj."],
+  say:"»Uganeš, kakšne barve so moje oči skozi objektiv?«",tip:"Slike od zgoraj otroka zmanjšajo, v višini oči pokažejo njegov svet.",
+  fig:()=>[SIT(100,192,{s:.6,c:"K",to:-90,ll:[-10,80],rl:[0,70],la:[60,0],ra:[120,180],prop:"toy",front:"L"})]},
+ {id:"o2",k:"otroci",n:"Skok",s:"Energija in veselje",
+  how:["Na tri naj skoči čim višje.","Roke gor!","Ponovi nekajkrat, vsakič je bolj sproščen."],
+  say:"»Ali skočiš višje od mene?«",tip:"Čas 1/1000, zaporedno, fotografiraj z nizkega kota.",
+  fig:()=>[ST(100,{s:.62,c:"K",y:GY(.62)-26,la:[-125,-110],ra:[-55,-70],ll:[60,140],rl:[120,40]})]},
+ {id:"o3",k:"otroci",n:"Vrtenje",s:"Krila, lasje, smeh",
+  how:["Naj se zavrti z iztegnjenimi rokami.","Po dveh krogih naj se hitro usede.","Fotografiraj med vrtenjem in na koncu."],
+  say:"»Zavrti se dvakrat in hitro sedi!«",tip:"Pri malo daljšem času (1/60) dobiš lep občutek gibanja.",
+  fig:()=>[ST(100,{s:.62,c:"K",hair:"long",la:[190,180],ra:[-10,0],ll:[100,86],rl:[80,94]})]},
+ {id:"o4",k:"otroci",n:"Z najljubšo igračo",s:"Otrok pozabi na kamero",
+  how:["Naj prinese najljubšo igračo.","Naj ti pove ali pokaže, kaj zna igrača.","Fotografiraj, ko se zatopi v igro."],
+  say:"»Mi pokažeš, kaj zna tvoj medo?«",tip:"Igrača daje rokam opravilo in odpravi tremo.",
+  fig:()=>[ST(100,{s:.62,c:"K",la:[80,-30],ra:[100,-150],prop:"toy",front:"L",hd:10})]},
+ {id:"o5",k:"otroci",n:"Šepet staršu",s:"Bližina z mamo ali očetom",
+  how:["Starš poklekne v višino otroka.","Otrok mu šepeta na uho.","Starš se nasmehne ali zapre oči."],
+  say:"(otroku) »Povej mami na uho, kaj imaš najraje za večerjo.«",tip:"Fokus na obraz starša ali otroka, ne na sredino.",
+  fig:()=>[{x:122,y:150,s:1,to:-88,hd:-10,tw:.8,la:[110,95],ra:[70,85],ll:[90,175],rl:[30,95],c:"A",hair:"long"},ST(88,{s:.6,c:"K",hd:20,ra:[-30,-80]})]},
+ // ---- skupine
+ {id:"s1",k:"skupine",n:"Trikotnik",s:"Najvišji v sredini",
+  how:["Najvišji v sredino, nižji proti robovom.","Glave v obliki trikotnikov, ne v ravni črti.","Rame se dotikajo, ni lukenj."],
+  say:"»Stopite tako skupaj, da vas boli!«",tip:"Zaslonka f/5,6–8, da so vsi ostri.",
+  fig:()=>[ST(40,{s:.9}),ST(70,{s:.96,c:"B",hair:"long"}),ST(100,{s:1.04}),ST(130,{s:.96,c:"B",hair:"long"}),ST(160,{s:.88})]},
+ {id:"s2",k:"skupine",n:"Dve vrsti",s:"Nižji spredaj, višji zadaj",
+  how:["Nižji stojijo ali sedijo spredaj.","Višji stojijo zadaj na stopnici, med glavami prve vrste.","Glave zamaknjene, da se vidi vsak obraz."],
+  say:"»Če ne vidiš objektiva, te tudi on ne vidi.«",tip:"Fokus na prvo vrsto, 1/3 v globino.",
+  fig:()=>[{prop:`<rect x="20" y="191" width="160" height="14" rx="3" fill="var(--prop)"/>`},ST(52,{s:.95,c:"B",hair:"long",y:GY(.95)-14}),ST(100,{s:1.02,y:GY(1.02)-14}),ST(148,{s:.95,c:"B",hair:"long",y:GY(.95)-14}),ST(76,{s:.9}),ST(124,{s:.88,c:"B",hair:"long"})]},
+ {id:"s3",k:"skupine",n:"Para v sredini",s:"Poročna skupinska",
+  how:["Mladoporočenca v sredini v V-pozi.","Ostali na straneh, obrnjeni rahlo proti njima.","Simetrično levo in desno."],
+  say:"»Vsi pogledajo mladoporočenca … zdaj mene!«",tip:"Pripravi seznam skupin vnaprej in ga daj priči, da kliče ljudi.",
+  fig:()=>[ST(30,{s:.92,to:-85}),ST(58,{s:.95,c:"B",hair:"long",to:-86}),ST(90,{c:"B",to:-93,ra:[30,10]}),ST(112,{hair:"long",dress:1,veil:1,to:-87,la:[150,170],prop:"bouquet",ra:[100,60]}),ST(144,{s:.95,c:"B",hair:"long",to:-94}),ST(172,{s:.92,to:-95})]},
+ // ---- boudoir
+ {id:"b1",k:"boudoir",n:"Na boku, roka nad glavo",s:"Na postelji, mehke linije",
+  how:["Uleže se na bok, obrnjena proti kameri.","Zgornja roka nad glavo, spodnja podpira glavo ali leži.","Kolena rahlo pokrčena, zgornja noga naprej."],
+  say:"»Raztegni se kot mačka zjutraj.«",tip:"Kamera nizko, v višini postelje. Objektiv 50–85 mm.",
+  fig:()=>[{prop:PROP.bed(150)},{x:118,y:142,s:1,to:184,hd:-14,tw:.7,la:[200,250],ra:[160,110],ll:[8,40],rl:[-4,30],c:"A",hair:"long",front:"R"}]},
+ {id:"b2",k:"boudoir",n:"Sede na robu postelje",s:"Lahka poza za začetek",
+  how:["Sede na rob postelje, hrbet raven.","Roke na kolena ali ob telesu na postelji.","Glava rahlo nagnjena, pogled mimo kamere."],
+  say:"»Samo sedi in zadihaj. Začneva počasi.«",tip:"Prve slike naj bodo preproste, da se stranka sprosti.",
+  fig:()=>[{prop:PROP.bed(150)},SIT(92,146,{hair:"long",to:-94,hd:-12,la:[70,30],ra:[60,20],ll:[0,94],rl:[8,98]})]},
+ {id:"b3",k:"boudoir",n:"Na trebuhu, oprta na podlakti",s:"Noge pokrčene navzgor",
+  how:["Uleže se na trebuh, oprta na podlakti.","Spodnji del nog dvigne in prekriža v gležnjih.","Brada proti kameri, rame sproščene."],
+  say:"»Kot da bereš najboljšo knjigo.«",tip:"Kamera v višini oči ali malo nižje.",
+  fig:()=>[{prop:PROP.bed(150)},{x:110,y:144,s:1,to:194,hd:-30,tw:.7,la:[100,180],ra:[95,175],ll:[2,-70],rl:[-2,-50],c:"A",hair:"long"}]},
+ {id:"b4",k:"boudoir",n:"Ob oknu, roke v laseh",s:"Mehka okenska svetloba",
+  how:["Postavi se ob okno, telo pod kotom, obraz proti svetlobi.","Obe roki v lase, komolci stran od kamere.","Teža na zadnji nogi, rahel lok v hrbtu."],
+  say:"»Zapri oči in obrni obraz proti soncu.«",tip:"Svetloba z boka poudari obliko. Merjenje na svetlo stran obraza.",
+  fig:()=>[{prop:PROP.window(16)},ST(110,{to:-96,hd:-18,hair:"long",tw:.75,la:[-150,30],ra:[-110,150],ll:[80,98],rl:[96,90]})]},
+ {id:"b5",k:"boudoir",n:"Kleče, sede na petah",s:"Na postelji ali tleh",
+  how:["Poklekne in se usede na pete.","Boke potisne malo vstran, roke na stegna.","Pogled čez ramo ali navzdol."],
+  say:"»Usedi se na pete in poglej proti oknu.«",tip:"Lepo tudi s hrbtom proti kameri in pogledom čez ramo.",
+  fig:()=>[{prop:PROP.bed(160)},{x:98,y:144,s:1,to:-96,hd:-10,tw:.75,la:[70,10],ra:[60,0],ll:[8,172,180],rl:[14,176,180],c:"A",hair:"long"}]},
+ {id:"b6",k:"boudoir",n:"Na hrbtu, kolena pokrčena",s:"Glava proti kameri",
+  how:["Uleže se na hrbet, glava bližje kameri.","Kolena pokrči, stopala na postelji.","Roke nad glavo ali v laseh."],
+  say:"»Spusti ramena in samo leži.«",tip:"Fotografiraj iz višine glave, rahlo od zgoraj.",
+  fig:()=>[{prop:PROP.bed(150)},{x:120,y:144,s:1,to:184,hd:0,tw:.7,la:[200,160],ra:[210,150],ll:[-50,60],rl:[-40,64],c:"A",hair:"long"}]}
+];
+function poseSvg(p){const parts=p.fig();let h="";parts.forEach(x=>{if(x.prop!==undefined&&x.to===undefined)h+=x.prop;});parts.forEach(x=>{if(x.to!==undefined)h+=figSvg(x);});return viewfinder(h);}
+
+// ================= Nasveti =================
+const TCATS=[{k:"svetloba",n:"Svetloba"},{k:"kompozicija",n:"Kompozicija"},{k:"nastavitve",n:"Nastavitve"},{k:"ljudje",n:"Delo z ljudmi"},{k:"roke",n:"Roke in obraz"}];
+const D={ // mini diagrami
+ thirds:`<g stroke="var(--grid)" stroke-width="1.2"><line x1="29" y1="0" x2="29" y2="66"/><line x1="59" y1="0" x2="59" y2="66"/><line x1="0" y1="22" x2="88" y2="22"/><line x1="0" y1="44" x2="88" y2="44"/></g><circle cx="59" cy="22" r="6" fill="var(--hl)"/>`,
+ lead:`<path d="M10 66 L48 24 M78 66 L52 24" stroke="var(--prop)" stroke-width="3"/><circle cx="50" cy="20" r="5" fill="var(--hl)"/>`,
+ frame:`<rect x="8" y="6" width="72" height="54" fill="none" stroke="var(--prop)" stroke-width="8"/><circle cx="44" cy="33" r="7" fill="var(--hl)"/>`,
+ neg:`<circle cx="70" cy="46" r="6" fill="var(--hl)"/>`,
+ lookroom:`<circle cx="26" cy="33" r="7" fill="var(--hl)"/><path d="M36 33 H70" stroke="var(--hl)" stroke-width="2" stroke-dasharray="3 3"/><path d="M66 29 L72 33 L66 37" fill="none" stroke="var(--hl)" stroke-width="2"/>`,
+ joints:`<circle cx="44" cy="14" r="7" fill="var(--figA)"/><rect x="34" y="22" width="20" height="30" rx="4" fill="var(--figA)"/><line x1="8" y1="38" x2="80" y2="38" stroke="#E5483A" stroke-width="2" stroke-dasharray="4 3"/><line x1="8" y1="58" x2="80" y2="58" stroke="var(--good)" stroke-width="2"/>`,
+ height:`<circle cx="60" cy="30" r="8" fill="var(--figA)"/><circle cx="16" cy="22" r="4" fill="var(--hl)"/><line x1="20" y1="23" x2="52" y2="29" stroke="var(--hl)" stroke-width="2"/>`,
+ fg:`<circle cx="14" cy="56" r="14" fill="var(--prop)" opacity=".8"/><circle cx="58" cy="30" r="7" fill="var(--hl)"/>`,
+ edges:`<rect x="4" y="4" width="80" height="58" fill="none" stroke="#E5483A" stroke-width="2" stroke-dasharray="4 3"/><circle cx="44" cy="33" r="7" fill="var(--hl)"/>`,
+ sym:`<line x1="44" y1="0" x2="44" y2="66" stroke="var(--grid)" stroke-width="1.5"/><rect x="16" y="20" width="16" height="30" fill="var(--prop)"/><rect x="56" y="20" width="16" height="30" fill="var(--prop)"/><circle cx="44" cy="35" r="6" fill="var(--hl)"/>`,
+ shade:`<path d="M0 0 H88 V20 Q60 30 30 20 Q10 14 0 20 Z" fill="var(--prop)"/><circle cx="44" cy="44" r="7" fill="var(--figA)"/><path d="M70 6 L82 0" stroke="#F2B544" stroke-width="3"/>`,
+ window:`<rect x="6" y="8" width="18" height="44" fill="none" stroke="var(--prop)" stroke-width="3"/><path d="M24 12 L60 36 L24 50 Z" fill="var(--hl)" opacity=".18"/><circle cx="56" cy="34" r="8" fill="var(--figA)"/>`,
+ backlight:`<circle cx="70" cy="14" r="8" fill="#F2B544"/><circle cx="44" cy="36" r="8" fill="var(--figA)"/><rect x="14" y="40" width="4" height="20" fill="var(--prop)"/><path d="M18 42 L36 38" stroke="var(--hl)" stroke-width="2"/>`,
+ catch:`<circle cx="44" cy="33" r="18" fill="var(--figA)"/><circle cx="44" cy="33" r="8" fill="var(--vf)"/><circle cx="48" cy="29" r="3" fill="#fff"/>`
+};
+const TIPS=[
+ // svetloba
+ {k:"svetloba",t:"Najprej poišči odprto senco",d:"Rob sence ob stavbi, drevesu ali pod nadstreškom: oseba je v senci, pred njo pa je odprt svetel prostor.",w:"Mehka svetloba brez žmerjenja in z lepimi odsevi v očeh.",i:"shade"},
+ {k:"svetloba",t:"Okno s strani, oseba malo za njim",d:"Postavi osebo ob okno tako, da svetloba pada pod kotom s strani, ne naravnost.",w:"Senca na drugi strani obraza da globino. Večje okno = mehkejša svetloba.",i:"window"},
+ {k:"svetloba",t:"Protisvetloba + odbojnik",d:"Sonce za osebo, obraz osvetli z odbojnikom ali belo steno spredaj.",w:"Obsijani lasje in toplina, obraz pa ni v temi. Merjenje na obraz, +0,7 do +1 EV.",i:"backlight"},
+ {k:"svetloba",t:"Lovi odsev v očeh",d:"Preveri, ali se v očeh vidi svetla lisa (okno, nebo, softbox). Če je ni, naj oseba dvigne obraz ali se obrne.",w:"Oči brez odseva delujejo mrtve.",i:"catch"},
+ {k:"svetloba",t:"Opoldne pojdi pod streho",d:"Ob ostrem soncu uporabi vhod, nadstrešek, most ali senco drevesa.",w:"Streha zapre svetlobo od zgoraj, zato ni temnih senc pod očmi.",i:"shade"},
+ {k:"svetloba",t:"Zlata ura in tik po zatonu",d:"Uro pred zatonom je svetloba topla in nizka. 10–15 minut po zatonu je mehka in nežna.",w:"Nizka svetloba laska koži in da dolge sence.",i:"backlight"},
+ {k:"svetloba",t:"Odbojnik pod brado",d:"Bel ali srebrn odbojnik drži pod obrazom pod kotom, proti svetlobi.",w:"Odpre sence pod očmi in brado. Naravna različica clamshell svetlobe.",i:"window"},
+ // kompozicija
+ {k:"kompozicija",t:"Pravilo tretjin",d:"Oči ali osebo postavi na presečišče črt, ki razdelijo kader na tretjine.",w:"Slika deluje bolj živahno kot z osebo točno na sredini.",i:"thirds"},
+ {k:"kompozicija",t:"Prostor v smeri pogleda",d:"Če oseba gleda ali hodi v levo, pusti več prostora na levi strani.",w:"Gledalec gre s pogledom za osebo in kader ne deluje utesnjen.",i:"lookroom"},
+ {k:"kompozicija",t:"Vodilne črte",d:"Pot, ograja, rob stavbe ali vrsta dreves naj vodi pogled do osebe.",w:"Oko samo najde glavni motiv.",i:"lead"},
+ {k:"kompozicija",t:"Okvir v okviru",d:"Fotografiraj skozi vrata, okno, veje ali lok, ki objamejo osebo.",w:"Doda globino in usmeri pogled. Okvir naj bo rahlo neoster.",i:"frame"},
+ {k:"kompozicija",t:"Prazen prostor",d:"Postavi majhno osebo v veliko prazno nebo, steno ali pokrajino.",w:"Občutek miru, osamljenosti ali velikosti prostora.",i:"neg"},
+ {k:"kompozicija",t:"Ne reži v sklepih",d:"Ne odreži kadra pri kolenih, komolcih, zapestjih ali gležnjih. Reži med njimi.",w:"Rez v sklepu deluje kot da manjka del telesa.",i:"joints"},
+ {k:"kompozicija",t:"Višina kamere",d:"Za portret drži kamero v višini oči ali malo nad. Otroke fotografiraj v višini njihovih oči.",w:"Od spodaj postane brada večja, od zelo visoko oseba deluje majhna.",i:"height"},
+ {k:"kompozicija",t:"Nekaj v ospredje",d:"Rože, trava ali rob mize tik pred objektivom, neostro.",w:"Doda globino in občutek, da si v prizoru.",i:"fg"},
+ {k:"kompozicija",t:"Preglej robove kadra",d:"Pred posnetkom s pogledom obkroži robove: veja iz glave, kos avta, nagnjen horizont.",w:"Najpogostejše napake so na robovih, ne v sredini.",i:"edges"},
+ {k:"kompozicija",t:"Simetrija",d:"Hodnik, vrata, cerkveni prehod: postavi osebo točno na sredino.",w:"Simetrija deluje mirno in elegantno, tu sredina ni napaka.",i:"sym"},
+ // nastavitve
+ {k:"nastavitve",t:"ISO dvigni zadnji",d:"Najprej več svetlobe, nato večja zaslonka, nato daljši čas, šele nato ISO.",w:"Ostra slika s šumom je vedno boljša od zamegljene."},
+ {k:"nastavitve",t:"Čas glede na gibanje",d:"Portret 1/200, hoja 1/320–1/500, otroci in šport 1/1000.",w:"Čas, ne zaslonka, odloča, ali je oseba ostra."},
+ {k:"nastavitve",t:"Zaslonka glede na število ljudi",d:"En obraz f/1,8–2,8, par f/2,8–4, skupina v dveh vrstah f/5,6–8.",w:"Pri f/1,8 je pri paru pogosto oster samo eden."},
+ {k:"nastavitve",t:"Fokus na bližnje oko",d:"Vklopi zaznavo oči in AF-C. Brez nje: ena točka na bližnje oko.",w:"Če je oko ostro, slika deluje ostra."},
+ {k:"nastavitve",t:"Merjenje na kožo",d:"Pri svetli koži in ozadju dodaj +0,3 do +0,7 EV.",w:"Fotoaparat temni svetle prizore. Rahlo svetlejša koža deluje lepše."},
+ {k:"nastavitve",t:"Fotografiraj v RAW",d:"Vklopi RAW ali RAW+JPEG.",w:"Popraviš beli balans in osvetlitev brez izgube kakovosti."},
+ {k:"nastavitve",t:"Ročni beli balans pri mešani svetlobi",d:"V cerkvi in dvoranah nastavi Kelvine ročno (3200–4500 K).",w:"Samodejni beli balans skače od slike do slike, zato je urejanje težje."},
+ // ljudje
+ {k:"ljudje",t:"Govori ves čas",d:"Tišina ob kameri je najhujša. Sprašuj, hvali, pripoveduj.",w:"Ljudje se sprostijo, ko jih zaposliš z mislimi."},
+ {k:"ljudje",t:"Pokaži pozo sam",d:"Namesto razlage se postavi v pozo in reci: »Tako kot jaz.«",w:"Hitreje in bolj zabavno, kot da jih premikaš z besedami."},
+ {k:"ljudje",t:"Namesto »smeh« uporabi stavke",d:"Reci nekaj, kar sproži pravo čustvo: šepet, šala, vprašanje.",w:"Narejen nasmeh se takoj vidi, pravega ne moreš ponarediti."},
+ {k:"ljudje",t:"Brada naprej in rahlo dol",d:"Naj obraz pomakne malo proti kameri in brado rahlo spusti.",w:"Izgine dvojna brada, linija čeljusti je jasnejša."},
+ {k:"ljudje",t:"Teža na zadnjo nogo",d:"Pri stoječih pozah naj teža gre na nogo, ki je dlje od kamere.",w:"Telo se sprosti in dobi lepšo linijo."},
+ {k:"ljudje",t:"Izdihni pred posnetkom",d:"Prosi za globok vdih in počasen izdih, pritisni med izdihom.",w:"Rame se spustijo, obraz se sprosti."},
+ {k:"ljudje",t:"Fotografiraj med pozami",d:"Ne nehaj, ko poza razpade: smeh, pogled, popravljanje las.",w:"Najboljše slike so pogosto vmesni trenutki."},
+ {k:"ljudje",t:"Začni z lahkimi pozami",d:"Najprej preprosto stoje ali sede, zahtevnejše poze kasneje.",w:"Stranka dobi samozavest in zaupanje vate."},
+ // roke
+ {k:"roke",t:"Dlan z robom proti kameri",d:"Naj se kamera vidi rob roke, ne hrbet ali dlan.",w:"Roka deluje manjša in bolj elegantna."},
+ {k:"roke",t:"Mehke roke, ne pesti",d:"Naj stisne roke in jih potem sprosti, ali pomiga s prsti.",w:"Stisnjene roke izdajo tremo."},
+ {k:"roke",t:"Rahlo upognjeno zapestje",d:"Zapestje ne sme biti povsem ravno.",w:"Upognjeno zapestje doda obliko in življenje."},
+ {k:"roke",t:"Rokam daj opravilo",d:"Šopek, ovratnik, lasje, žep, partnerjeva roka.",w:"Roke, ki visijo, so najpogostejša napaka pri pozah."},
+ {k:"roke",t:"Ne »odreži« prstov",d:"Pazi, da ena roka ne skrije prstov druge.",w:"Na sliki je videti, kot da prsti manjkajo."},
+ {k:"roke",t:"Pri parih dotik",d:"Roka na licu, na prsih, na zapestju partnerja.",w:"Dotik naredi pristno povezavo med njima."}
+];
+const SOURCES=[
+ ["Digital Photography School: 5 hitrih nasvetov za poziranje","https://digital-photography-school.com/5-quick-portrait-posing-tips-to-flatter-your-subject/"],
+ ["Digital Photography School: 6 nasvetov za roke","https://digital-photography-school.com/6-tips-posing-hands-wedding-portrait-photography/"],
+ ["Digital Photography School: poziranje moških","https://digital-photography-school.com/21-sample-poses-to-get-you-started-with-photographing-men/"],
+ ["Digital Photography School: skupinski portreti","https://digital-photography-school.com/pose-people-group-portraits/"],
+ ["Digital Photography School: »gentle posing« prompti","https://digital-photography-school.com/tips-gentle-posing-prompts-get-started/"],
+ ["Digital Photography School: okenska svetloba","https://digital-photography-school.com/portraits-with-window-light/"],
+ ["Digital Photography School: 5 mest za naravno svetlobo","https://digital-photography-school.com/five-places-perfect-natural-portrait-lighting/"],
+ ["Adorama: 10 poročnih poz","https://www.adorama.com/alc/?p=67812"],
+ ["Adorama: družinski portreti","https://www.adorama.com/alc/family-portrait-poses"],
+ ["Adorama: skupinske slike","https://www.adorama.com/alc/group-photo-poses"],
+ ["Adorama: protisvetloba","https://www.adorama.com/alc/5-simple-tips-for-shooting-backlit-portraits-outdoors/"],
+ ["ExpertPhotography: popoln vodnik po pozah","https://expertphotography.com/posing-people-in-photographs"],
+ ["Shotkit: boudoir poze","https://shotkit.com/boudoir-poses/"],
+ ["Unsplash: vodnik po kompoziciji","https://help.unsplash.com/en/articles/7897234-photography-composition-guide"]
+];
+
+// ================= Stanje =================
+const LS="kader-state-v1";
+const lsx={get(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const S={view:"tips",tcat:"svetloba",pcat:"zenska",open:null,store:"",daily:Math.floor(Date.now()/864e5)%TIPS.length,msg:"",
+  data:Object.assign({v:1,fav:[],done:{}},lsx.get(LS)||{})};
+let docRef=null,writing=false,dirty=false;
+async function flush(){if(!docRef)return;dirty=true;if(writing)return;writing=true;
+  while(dirty){dirty=false;try{await docRef.set(clone(S.data));}catch(e){if(e&&e.code==="unavailable"){await new Promise(r=>setTimeout(r,800));try{await docRef.set(clone(S.data));}catch(e2){}}else{docRef=null;S.store="local";}}}
+  writing=false;}
+function save(){lsx.set(LS,S.data);flush();}
+(async function(){try{
+  if(STANDALONE||!window.claude||!window.claude.use){S.store="local";renderTop();return;}
+  const db=await window.claude.use("db");if(!db){S.store="local";renderTop();return;}
+  docRef=db.doc("app/state");S.store="cloud";
+  docRef.onSnapshot(s=>{if(writing||dirty||(s.metadata&&s.metadata.hasPendingWrites))return;
+    if(s.exists){const d=s.data();if(d&&d.v){S.data=Object.assign({v:1,fav:[],done:{}},clone(d));lsx.set(LS,S.data);render();}}
+    else if(S.data.fav.length)flush();renderTop();},()=>{docRef=null;S.store="local";renderTop();});
+  renderTop();}catch(e){S.store="local";renderTop();}})();
+
+// ================= Izris =================
+function renderTop(){const el=document.getElementById("storeLbl");if(el)el.textContent=STANDALONE?"Shranjeno v telefonu":S.store==="cloud"?"Shranjeno v oblaku":S.store==="local"?"Samo na tej napravi":"";}
+function render(){
+  const nf=S.data.fav.length;
+  const tabs=[["tips","Nasveti"],["poses","Poze"],["list","Moj seznam"+(nf?` (${nf})`:"")]];
+  let h=`<div class="top"><div class="brand"><span class="rec" aria-hidden="true"></span>Kader</div><div class="store" id="storeLbl"></div></div>
+  <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button type="button" role="tab" aria-selected="${S.view===k}" data-act="tab" data-v="${k}">${esc(l)}</button>`).join("")}</div>`;
+  h+=S.view==="tips"?viewTips():S.view==="poses"?viewPoses():viewList();
+  document.getElementById("app").innerHTML=h;renderTop();
+}
+const tipSvg=i=>i&&D[i]?`<svg viewBox="0 0 88 66" aria-hidden="true">${D[i]}</svg>`:"";
+function viewTips(){
+  const t=TIPS[S.daily];
+  let h=`<h1>Za boljšo fotko</h1><p class="lede">Kratki nasveti o svetlobi, kompoziciji, nastavitvah in delu z ljudmi, zbrani iz fotografskih vodnikov.</p>
+  <section class="daily" aria-live="polite"><small>Nasvet dneva · ${esc((TCATS.find(c=>c.k===t.k)||{}).n)}</small><b>${esc(t.t)}</b><span>${esc(t.d)}</span><button type="button" data-act="nexttip">Naslednji nasvet</button></section>
+  <div class="chips" role="group" aria-label="Področja">${TCATS.map(c=>`<button type="button" aria-pressed="${S.tcat===c.k}" data-act="tcat" data-v="${c.k}">${esc(c.n)}<span class="n">${TIPS.filter(x=>x.k===c.k).length}</span></button>`).join("")}</div>
+  <div class="tips">${TIPS.filter(x=>x.k===S.tcat).map(x=>`<article class="tip"><h3>${esc(x.t)}</h3>${tipSvg(x.i)}<p>${esc(x.d)}</p><div class="why"><b>Zakaj:</b> ${esc(x.w)}</div></article>`).join("")}</div>
+  <h2 class="sec">Viri</h2><div class="src">${SOURCES.map(([n,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a>`).join("")}</div>`;
+  return h;
+}
+function poseCard(p){const fav=S.data.fav.includes(p.id);
+  return `<article class="pose"><div class="vf">${poseSvg(p)}<button type="button" class="star" aria-pressed="${fav}" aria-label="${fav?"Odstrani s seznama":"Dodaj na seznam"}" data-act="fav" data-v="${p.id}">${fav?"★":"☆"}</button></div>
+   <button type="button" class="meta" style="border:0;background:transparent;text-align:left" data-act="open" data-v="${p.id}"><h3>${esc(p.n)}</h3><span class="s">${esc(p.s)}</span></button></article>`;}
+function poseDetail(p){const fav=S.data.fav.includes(p.id);
+  return `<article class="detail" id="det"><div class="vf">${poseSvg(p)}</div><div class="body"><h3>${esc(p.n)}</h3>
+   <ol class="steps">${p.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
+   <div class="say"><b>Reci jim</b>${esc(p.say)}</div><div class="ptip">${esc(p.tip)}</div>
+   <div class="row"><button type="button" class="btn ${fav?"":"acc"}" data-act="fav" data-v="${p.id}">${fav?"★ Na seznamu":"☆ Dodaj na seznam"}</button><button type="button" class="btn" data-act="open" data-v="${p.id}">Zapri</button></div></div></article>`;}
+function viewPoses(){
+  const list=POSES.filter(p=>p.k===S.pcat);
+  let h=`<h1>Poze</h1><p class="lede">Izberi vrsto fotografiranja. Klikni pozo za navodila, z zvezdico jo dodaš na svoj seznam za fotografiranje.</p>
+  <div class="chips" role="group" aria-label="Vrsta fotografiranja">${CATS.map(c=>`<button type="button" aria-pressed="${S.pcat===c.k}" data-act="pcat" data-v="${c.k}">${esc(c.n)}<span class="n">${POSES.filter(x=>x.k===c.k).length}</span></button>`).join("")}</div>`;
+  if(S.pcat==="boudoir")h+=`<div class="note"><b>Boudoir je zaupanje.</b> Pred fotografiranjem se pogovori o tem, kaj si stranka želi in česa ne. Začni oblečeno in s preprostimi pozami, nikoli ne pritiskaj na pozo, ki ji ni prijetna. Slike hrani zasebno in jih objavi samo s pisnim dovoljenjem.</div>`;
+  h+=`<div class="poses">`;
+  list.forEach(p=>{h+=S.open===p.id?poseDetail(p):poseCard(p);});
+  return h+`</div>`;
+}
+function viewList(){
+  const fav=S.data.fav.map(id=>POSES.find(p=>p.id===id)).filter(Boolean);
+  let h=`<h1>Moj seznam</h1><p class="lede">Poze, ki si jih označil. Na fotografiranju jih odkljukaš, ko jih imaš.</p>`;
+  if(!fav.length)return h+`<div class="empty">Seznam je prazen. V zavihku Poze pritisni zvezdico na pozah, ki jih želiš narediti na naslednjem fotografiranju.</div>`;
+  const done=fav.filter(p=>S.data.done[p.id]).length;
+  h+=`<div class="row" style="margin-top:12px;justify-content:space-between"><span class="lede">${done} od ${fav.length} narejenih</span><div class="row"><button type="button" class="btn" data-act="resetdone">Počisti kljukice</button><button type="button" class="btn" data-act="clearfav">Izprazni seznam</button></div></div><div class="list">`;
+  fav.forEach(p=>{const d=!!S.data.done[p.id];
+    h+=`<div class="li ${d?"done":""}">${poseSvg(p).replace("<svg ","<svg aria-hidden=\"true\" ")}<button type="button" style="border:0;background:transparent;text-align:left;padding:0" data-act="goto" data-v="${p.id}"><b>${esc(p.n)}</b><span>${esc((CATS.find(c=>c.k===p.k)||{}).n)} · ${esc(p.say)}</span></button><button type="button" class="chk" aria-pressed="${d}" aria-label="Narejeno" data-act="done" data-v="${p.id}">✓</button></div>`;});
+  return h+`</div>${S.msg?`<div class="note">${esc(S.msg)}</div>`:""}`;
+}
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act,v=b.dataset.v;
+  if(a==="tab"){S.view=v;S.msg="";render();window.scrollTo(0,0);return;}
+  if(a==="tcat"){S.tcat=v;render();return;}
+  if(a==="pcat"){S.pcat=v;S.open=null;render();return;}
+  if(a==="nexttip"){S.daily=(S.daily+1)%TIPS.length;render();return;}
+  if(a==="open"){S.open=S.open===v?null:v;render();if(S.open){const d=document.getElementById("det");if(d)d.scrollIntoView({block:"nearest"});}return;}
+  if(a==="fav"){const f=S.data.fav;S.data.fav=f.includes(v)?f.filter(x=>x!==v):f.concat(v);save();render();return;}
+  if(a==="done"){S.data.done[v]=!S.data.done[v];save();render();return;}
+  if(a==="resetdone"){S.data.done={};save();render();return;}
+  if(a==="clearfav"){if(S.msg!=="Pritisni še enkrat za potrditev."){S.msg="Pritisni še enkrat za potrditev.";render();return;}S.data.fav=[];S.data.done={};S.msg="";save();render();return;}
+  if(a==="goto"){const p=POSES.find(x=>x.id===v);if(p){S.view="poses";S.pcat=p.k;S.open=p.id;render();window.scrollTo(0,0);}return;}
+});
+if(STANDALONE&&"serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+render();
+})();
+</script>
+</body></html>
