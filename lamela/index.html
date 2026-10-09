@@ -1,0 +1,670 @@
+<!doctype html><html lang="sl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#12151A"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Lamela"><meta name="description" content="Fitnes trening z animacijami vaj in predlogom teže."><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style><script>window.__LAMELA_APP__=true</script><title>Lamela</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone column. A dark "gym signage" hero, then exercise cards: looping side-view demo on the left, weight on the right. */
+:root{
+  --bg:#E9ECEF; --surface:#FFFFFF; --sunk:#F2F4F6; --ink:#12151A; --muted:#5A616E; --line:#D3D8DF;
+  --hero:#12151A; --hero-ink:#F3F4F6; --hero-muted:#9AA2AF;
+  --accent:#E25A0C; --accent-ink:#FFFFFF; --accent-soft:#FCE5D6;
+  --good:#1E8E4E; --good-soft:#DCF1E4; --bad:#C93434; --bad-soft:#F8E0E0;
+  --stage:#F4F5F7; --fig:#1C2129; --frame:#59616D; --pad:#2F3540; --plate:#B9C0CA; --steel:#8B939E; --floor:#C9CED6;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0C0E11; --surface:#161A1F; --sunk:#1D2127; --ink:#ECEEF2; --muted:#9CA3AF; --line:#2A2F37;
+  --hero:#1B1F25; --hero-ink:#F3F4F6; --hero-muted:#9AA2AF;
+  --accent:#FF7A2E; --accent-ink:#1A0D04; --accent-soft:#3B2214;
+  --good:#3CC57A; --good-soft:#14301F; --bad:#FF6B6B; --bad-soft:#3A1A1A;
+  --stage:#1D2127; --fig:#E6E9EE; --frame:#7D8692; --pad:#3E4652; --plate:#4A525E; --steel:#6F7884; --floor:#323842; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C0E11; --surface:#161A1F; --sunk:#1D2127; --ink:#ECEEF2; --muted:#9CA3AF; --line:#2A2F37;
+  --hero:#1B1F25; --hero-ink:#F3F4F6; --hero-muted:#9AA2AF;
+  --accent:#FF7A2E; --accent-ink:#1A0D04; --accent-soft:#3B2214;
+  --good:#3CC57A; --good-soft:#14301F; --bad:#FF6B6B; --bad-soft:#3A1A1A;
+  --stage:#1D2127; --fig:#E6E9EE; --frame:#7D8692; --pad:#3E4652; --plate:#4A525E; --steel:#6F7884; --floor:#323842; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:580px;margin:0 auto;padding-inline:16px;padding-block:12px 120px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+canvas{display:block;width:100%;height:auto}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--f-display);font-weight:800;font-size:22px;letter-spacing:.14em;text-transform:uppercase}
+.brand i{font-style:normal;color:var(--accent)}
+.store{font-size:12px;color:var(--muted);text-align:right}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:4px;margin-top:10px}
+.tabs button{border:0;background:transparent;padding:8px 2px;border-radius:8px;font-weight:600;font-size:14.5px;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+.hero{margin-top:14px;background:var(--hero);color:var(--hero-ink);border-radius:18px;padding:18px 16px 16px;display:grid;gap:12px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-30px;top:-30px;width:150px;height:150px;border-radius:50%;border:22px solid var(--accent);opacity:.18}
+.hero .meta{color:var(--hero-muted)}
+.hero h1{font-family:var(--f-display);font-weight:800;font-size:46px;line-height:.92;margin:0;letter-spacing:.005em;text-wrap:balance;text-transform:uppercase;position:relative}
+.meta{color:var(--muted);font-size:14.5px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600}
+.hero .chip{background:transparent;border-color:rgba(255,255,255,.18);color:var(--hero-ink)}
+.hero .chip.phase{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.mode{display:grid;grid-template-columns:repeat(3,44px) 1fr;gap:6px;position:relative}
+.mode button{height:42px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:var(--hero-ink);font-family:var(--f-display);font-weight:700;font-size:21px}
+.mode button[aria-pressed="true"]{background:var(--hero-ink);color:var(--hero);border-color:var(--hero-ink)}
+.mode .mus{font-family:var(--f-body);font-size:15px;font-weight:600;padding-inline:10px}
+.bar{height:6px;background:rgba(255,255,255,.14);border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .3s}
+.hero .count{font-size:14px;color:var(--hero-muted)}
+
+.picker{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:12px}
+.picker h2{margin:0;font-family:var(--f-display);font-size:24px;text-transform:uppercase;letter-spacing:.02em}
+.presets{display:flex;gap:8px;flex-wrap:wrap}
+.presets button{border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:7px 12px;font-weight:600;font-size:14px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.mt{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:10px;text-align:left;display:grid;gap:2px;min-height:58px}
+.mt b{font-size:15.5px}
+.mt span{font-size:12px;color:var(--muted)}
+.mt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.mt[aria-pressed="true"] b::before{content:"✓ ";color:var(--accent)}
+.go{border:0;border-radius:12px;padding:14px;background:var(--accent);color:var(--accent-ink);font-family:var(--f-display);font-weight:800;font-size:21px;letter-spacing:.05em;text-transform:uppercase}
+.go:disabled{opacity:.35;cursor:default}
+
+.note{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:12px 14px;font-size:14.5px;color:var(--muted);margin-top:12px}
+.note b{color:var(--ink)}
+
+.list{display:grid;gap:10px;margin-top:14px}
+.ex{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.ex.done{border-color:var(--good)}
+.exhead{display:grid;grid-template-columns:92px 1fr auto;gap:12px;align-items:center;width:100%;border:0;background:transparent;text-align:left;padding:10px 12px 10px 10px}
+.thumb{border-radius:10px;background:var(--stage);overflow:hidden}
+.exname{font-weight:700;font-size:16.5px;line-height:1.2}
+.exsub{color:var(--muted);font-size:13px;margin-top:3px}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.tag{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+.tag.p{background:var(--accent-soft);color:var(--ink);border-color:transparent}
+.kg{text-align:right}
+.kg b{font-family:var(--f-display);font-weight:800;font-size:32px;line-height:1}
+.kg small{display:block;color:var(--muted);font-size:11.5px}
+.why{padding:0 12px 10px 12px;font-size:13.5px;color:var(--muted);display:flex;gap:10px;justify-content:space-between;align-items:center}
+.dots{display:flex;gap:4px;flex:none}
+.dots i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted)}
+.dots i.f{background:var(--good);border-color:var(--good)}
+.body{border-top:1px solid var(--line);padding:12px;display:grid;gap:14px;background:var(--sunk)}
+.stage{border-radius:14px;background:var(--stage);border:1px solid var(--line);overflow:hidden;position:relative}
+.stage .tempo{position:absolute;left:10px;top:8px;font-size:12px;font-weight:600;color:var(--muted);background:var(--surface);border-radius:999px;padding:2px 8px;border:1px solid var(--line)}
+.howto{margin:0;padding-left:22px;display:grid;gap:6px;font-size:15px}
+.howto li::marker{font-family:var(--f-display);font-weight:800;color:var(--accent)}
+.seat{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+.seat input{flex:1;min-width:0;max-width:260px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 10px;font:inherit;font-size:14px}
+.sets{display:grid;gap:6px}
+.set{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:15px}
+.set .f{font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:999px}
+.f-easy{background:var(--good-soft);color:var(--good)} .f-ok{background:var(--accent-soft);color:var(--ink)} .f-hard{background:var(--bad-soft);color:var(--bad)}
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px;display:grid;gap:4px;text-align:center}
+.step label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.step .ctl{display:grid;grid-template-columns:44px 1fr 44px;align-items:center}
+.step button{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--sunk);font-size:22px;font-weight:600}
+.step output{font-family:var(--f-display);font-weight:800;font-size:30px}
+.feel{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.feel button{border-radius:12px;padding:10px 4px;border:1.5px solid var(--line);background:var(--surface);display:grid;gap:1px}
+.feel button b{font-size:15px} .feel button span{font-size:11.5px;color:var(--muted)}
+.feel .b-easy{border-color:var(--good)} .feel .b-hard{border-color:var(--bad)}
+.feel .b-ok{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)} .feel .b-ok span{color:var(--accent-ink);opacity:.85}
+.hint{font-size:13.5px;color:var(--muted)}
+.links{display:flex;gap:16px;flex-wrap:wrap}
+.link{border:0;background:none;padding:0;color:var(--accent);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.finish{margin-top:16px;width:100%;border:0;border-radius:14px;padding:16px;background:var(--ink);color:var(--bg);font-family:var(--f-display);font-weight:800;font-size:22px;letter-spacing:.05em;text-transform:uppercase}
+.finish:disabled{opacity:.3;cursor:default}
+.confirm{margin-top:10px;display:grid;gap:8px;grid-template-columns:1fr 1fr}
+.confirm button{border-radius:12px;padding:12px;border:1px solid var(--line);background:var(--surface);font-weight:600}
+.confirm .yes{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+.summary{background:var(--surface);border:1.5px solid var(--good);border-radius:16px;padding:16px;display:grid;gap:10px;margin-top:14px}
+.summary h2{font-family:var(--f-display);font-size:28px;margin:0;text-transform:uppercase}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--sunk);border-radius:10px;padding:10px}
+.stat b{font-family:var(--f-display);font-size:26px;display:block;line-height:1}
+.stat span{font-size:12px;color:var(--muted)}
+
+.rest{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);display:flex;align-items:center;gap:12px;z-index:5}
+.rest .t{font-family:var(--f-display);font-weight:800;font-size:34px;min-width:84px}
+.rest .lbl{font-size:13px;opacity:.75;flex:1;min-width:0}
+.rest button{border:1px solid currentColor;background:transparent;color:inherit;border-radius:9px;padding:8px 10px;font-weight:600;font-size:14px}
+.rest.over{background:var(--good);color:#fff}
+.restbar{position:absolute;left:0;top:0;height:3px;background:var(--accent)}
+
+h2.sec{font-family:var(--f-display);font-weight:800;font-size:25px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.02em}
+.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-top:14px}
+.filters button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:600;font-size:14px}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.prog{display:grid;gap:10px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.pcard h3{margin:0 0 8px;font-family:var(--f-display);font-size:24px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;text-transform:uppercase}
+.pcard h3 small{font-family:var(--f-body);font-size:13px;color:var(--muted);font-weight:500;text-transform:none;text-align:right}
+.pl{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:15px}
+.pl span:nth-child(even){color:var(--muted);text-align:right}
+.rules{display:grid;gap:8px;font-size:15px;padding-left:18px;margin:0}
+.rules li::marker{color:var(--accent)}
+.hist{display:grid;gap:8px}
+.hrow{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:1fr 96px;gap:4px 12px;align-items:center}
+.hrow .n{font-weight:600} .hrow .s{color:var(--muted);font-size:13.5px}
+.hrow svg{grid-row:1 / span 2;grid-column:2;width:96px;height:36px}
+.up{color:var(--good);font-weight:600}
+.log{display:grid;gap:6px}
+.lrow{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;border-bottom:1px solid var(--line);padding:8px 2px}
+.lrow span:last-child{color:var(--muted)}
+.empty{color:var(--muted);font-size:15px;padding:14px;background:var(--surface);border:1px dashed var(--line);border-radius:12px}
+.addbtn{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:12px;padding:11px;font-weight:700}
+</style>
+
+</head><body><div class="wrap" id="app"></div>
+<div id="restRoot"></div>
+
+<script>
+(function(){
+"use strict";
+// ================= Mišice =================
+const MUS=[
+ {k:"prsa",n:"Prsa",big:1},{k:"hrbet",n:"Hrbet",big:1},{k:"ramena",n:"Ramena"},{k:"biceps",n:"Biceps"},{k:"triceps",n:"Triceps"},
+ {k:"kvad",n:"Noge spredaj",big:1},{k:"zadnja",n:"Noge zadaj"},{k:"zadnjica",n:"Zadnjica"},{k:"meca",n:"Meča",tiny:1},{k:"trebuh",n:"Trebuh",tiny:1},{k:"krizni",n:"Spodnji hrbet",tiny:1}];
+const MN=Object.fromEntries(MUS.map(m=>[m.k,m.n]));
+const PRESETS=[{n:"Prsa + triceps",m:["prsa","triceps"]},{n:"Hrbet + biceps",m:["hrbet","biceps"]},{n:"Noge",m:["kvad","zadnja","zadnjica","meca"]},{n:"Ramena + roke",m:["ramena","biceps","triceps"]},{n:"Zgornji del",m:["prsa","hrbet","ramena"]}];
+
+// ================= Katalog vaj z animacijami =================
+// Poze (pogled od strani, obrnjen desno). Koti v stopinjah: 0 = desno, 90 = dol, -90 = gor.
+// root: 'hip' (sedeče/ležeče), 'ankle' ali 'toe' (stoje). el/wr = odmik komolca od rame / zapestja od komolca.
+const EX={
+ chestpress:{n:"Chest Press",t:"tg",mus:["prsa","triceps","ramena"],sets:3,lo:8,hi:12,rest:120,st:5,d:30,
+  how:["Sedež nastavi tako, da so ročaji v višini sredine prsi.","Hrbet ob naslonu, lopatice stisni skupaj in navzdol.","Potisni naprej v 1 sekundi, komolcev ne zakleni.","Nazaj spuščaj počasi, 2 sekundi, dokler ne čutiš raztega v prsih."],
+  a:{root:"hip",A:{x:150,y:148,to:-98,th:-4,sh:88,ft:0,el:[-14,6],wr:[24,-2]},B:{el:[29,4],wr:[28,0]},hl:["up","ua"],scene:"chestpress"}},
+ dbbench:{n:"Potisk z ročkama, ravna klop",t:"fw",mus:["prsa","triceps","ramena"],sets:3,lo:8,hi:12,rest:120,st:2,d:16,
+  how:["Uleži se na klop, stopala trdno na tleh.","Lopatice stisni ob klop, ročki držiš nad prsmi.","Spuščaj počasi do višine prsi, komolci ~45° od telesa.","Potisni navzgor in malo skupaj."],
+  a:{root:"hip",A:{x:175,y:144,to:180,th:4,sh:100,ft:0,el:[0,28],wr:[1,-28]},B:{el:[0,-30],wr:[0,-28]},hl:["up","ua"],scene:"dbbench"}},
+ inclinedb:{n:"Potisk z ročkama, poševna klop",t:"fw",mus:["prsa","ramena","triceps"],sets:3,lo:8,hi:12,rest:120,st:2,d:14,
+  how:["Naslon nastavi na približno 30°.","Ročki začneta ob zgornjem delu prsi.","Potisni navzgor nad ramena.","Spuščaj počasi, hrbet ostane ob naslonu."],
+  a:{root:"hip",A:{x:178,y:144,to:208,th:4,sh:100,ft:0,el:[0,28],wr:[3,-27]},B:{el:[4,-29],wr:[3,-27]},hl:["up","ua"],scene:"inclinedb"}},
+ armext:{n:"Arm Extension",t:"tg",mus:["triceps"],sets:2,lo:10,hi:15,rest:75,st:5,d:15,
+  how:["Sedež nastavi tako, da komolci ležijo na blazini v višini osi naprave.","Primi ročaja, komolci ostanejo na blazini.","Iztegni roke do konca in stisni triceps.","Vrni se počasi, ne udari z utežmi."],
+  a:{root:"hip",A:{x:128,y:148,to:-90,th:0,sh:90,ft:0,ua:28,fa:-75},B:{fa:45},hl:["ua"],scene:"armext"}},
+ ohext:{n:"Francoski potisk z ročko",t:"fw",mus:["triceps"],sets:2,lo:10,hi:15,rest:75,st:2,d:10,
+  how:["Sedi na klop z naslonom, ročko drži z obema rokama nad glavo.","Komolci kažejo navzgor in ostanejo na mestu.","Spusti ročko za glavo, dokler ne čutiš raztega.","Iztegni nazaj navzgor."],
+  a:{root:"hip",A:{x:140,y:148,to:-90,th:0,sh:90,ft:0,ua:-96,fa:100},B:{fa:268},hl:["ua"],scene:"ohext"}},
+ latmachine:{n:"Lat Machine",t:"tg",mus:["hrbet","biceps"],sets:3,lo:8,hi:12,rest:120,st:5,d:40,
+  how:["Blazino nad koleni nastavi tako, da te drži na sedežu.","Prijem malo širši od ramen.","Vleci drog do zgornjega dela prsi, komolci gredo navzdol in nazaj.","Počasi spusti nazaj gor do polnega raztega."],
+  a:{root:"hip",A:{x:150,y:148,to:-96,th:-3,sh:90,ft:0,el:[6,-29],wr:[3,-28]},B:{el:[-3,28],wr:[14,-24]},hl:["up","fa"],scene:"latmachine"}},
+ verttrac:{n:"Vertical Traction",t:"tg",mus:["hrbet","biceps"],sets:3,lo:8,hi:12,rest:120,st:5,d:40,
+  how:["Sedež nastavi tako, da ročaja ravno dosežeš z iztegnjenimi rokami.","Prsi gor, ramena stran od ušes.","Vleci ročaja navzdol do višine brade, komolci ob telesu.","Počasi nazaj gor."],
+  a:{root:"hip",A:{x:150,y:148,to:-96,th:-3,sh:90,ft:0,el:[6,-29],wr:[3,-28]},B:{el:[-3,28],wr:[14,-24]},hl:["up","fa"],scene:"verttrac"}},
+ lowrow:{n:"Low Row",t:"tg",mus:["hrbet","biceps"],sets:3,lo:8,hi:12,rest:120,st:5,d:40,
+  how:["Prsi naslonijo na blazino, stopala na opori.","Primi ročaja z iztegnjenimi rokami.","Vleci s komolci nazaj in na koncu stisni lopatice.","Počasi nazaj, lopatice se razprejo."],
+  a:{root:"hip",A:{x:108,y:148,to:-84,th:-4,sh:86,ft:-10,el:[29,3],wr:[28,0]},B:{el:[-22,8],wr:[26,-2]},hl:["up","ua"],scene:"lowrow"}},
+ dbrow:{n:"Enoročno veslanje z ročko",t:"fw",mus:["hrbet","biceps"],sets:3,lo:8,hi:12,rest:90,st:2,d:18,
+  how:["Prosta roka in koleno na klopi, hrbet raven.","Ročka visi pod ramo.","Vleci ročko proti boku, komolec ob telesu.","Počasi spusti do polnega raztega."],
+  a:{root:"hip",A:{x:95,y:106,to:4,th:96,sh:84,ft:0,ua:90,fa:90},B:{ua:210,fa:92},hl:["up","ua"],scene:"dbrow"}},
+ armcurl:{n:"Arm Curl",t:"tg",mus:["biceps"],sets:2,lo:10,hi:15,rest:75,st:5,d:15,
+  how:["Sedež nastavi tako, da nadlahti v celoti ležita na blazini.","Primi ročaja, komolci v osi naprave.","Upogni do konca in stisni biceps.","Spuščaj počasi, brez zamaha s telesom."],
+  a:{root:"hip",A:{x:126,y:148,to:-92,th:0,sh:90,ft:0,ua:35,fa:40},B:{fa:-115},hl:["ua"],scene:"armcurl"}},
+ hammer:{n:"Kladivo upogib z ročkama",t:"fw",mus:["biceps"],sets:2,lo:10,hi:12,rest:75,st:2,d:10,
+  how:["Stoj vzravnano, ročki ob telesu, dlani obrnjeni druga proti drugi.","Komolci ostanejo ob telesu.","Upogni do ramen.","Počasi spusti."],
+  a:{root:"ankle",A:{x:150,y:190,to:-90,th:90,sh:90,ft:0,ua:92,fa:88},B:{ua:96,fa:-65},hl:["ua"],scene:"dumbbell"}},
+ shoulderpress:{n:"Shoulder Press",t:"tg",mus:["ramena","triceps"],sets:2,lo:8,hi:12,rest:90,st:5,d:20,
+  how:["Sedež nastavi tako, da so ročaji v višini ramen.","Hrbet ob naslonu.","Potisni navzgor, na vrhu komolcev ne zakleni.","Počasi spusti do višine ramen."],
+  a:{root:"hip",A:{x:150,y:148,to:-92,th:0,sh:90,ft:0,el:[-4,26],wr:[6,-27]},B:{el:[0,-29],wr:[0,-28]},hl:["delt","ua"],scene:"shoulderpress"}},
+ dbshoulder:{n:"Potisk ročk nad glavo",t:"fw",mus:["ramena","triceps"],sets:2,lo:8,hi:12,rest:90,st:2,d:10,
+  how:["Sedi na klop z naslonom pokonci.","Ročki začneta v višini ušes.","Potisni navzgor in malo skupaj.","Počasi nazaj do višine ušes."],
+  a:{root:"hip",A:{x:150,y:148,to:-92,th:0,sh:90,ft:0,el:[-4,26],wr:[6,-27]},B:{el:[0,-29],wr:[0,-28]},hl:["delt","ua"],scene:"dbshoulder"}},
+ lateral:{n:"Odročenje z ročkama",t:"fw",mus:["ramena"],sets:2,lo:12,hi:15,rest:60,st:1,d:5,
+  how:["Stoj vzravnano, ročki ob bokih, komolci rahlo pokrčeni.","Dvigni roke v stran do višine ramen.","Mezinec je na vrhu rahlo višje od palca.","Počasi spusti. Lahka teža, brez zamaha."],
+  a:{front:1,A:{ua:96,fa:92},B:{ua:-3,fa:-8},hl:["delt"],scene:"front"}},
+ reardelt:{n:"Rear Delt",t:"tg",mus:["ramena","hrbet"],sets:2,lo:12,hi:15,rest:60,st:5,d:15,
+  how:["Na napravi Pectoral/Rear Delt sedi obrnjen proti blazini.","Ročaja nastavi v zadnji položaj, roke rahlo pokrčene.","Vleci roke nazaj v širino, do višine ramen.","Počasi nazaj naprej."],
+  a:{front:1,back:1,A:{ua:60,fa:70},B:{ua:-2,fa:2},hl:["delt"],scene:"front"}},
+ legpress:{n:"Leg Press",t:"tg",mus:["kvad","zadnjica"],sets:3,lo:8,hi:12,rest:150,st:5,d:60,
+  how:["Stopala v širini bokov na sredini plošče.","Hrbet in zadnjica ostaneta na sedežu.","Spusti do ~90° v kolenu.","Potisni skozi pete, na vrhu kolen ne zakleni."],
+  a:{root:"hip",A:{x:100,y:150,to:-138,th:-38,sh:42,ft:-50,ua:70,fa:20},B:{th:-12,sh:-6,ft:-80},hl:["th"],scene:"legpress"}},
+ legext:{n:"Leg Extension",t:"tg",mus:["kvad"],sets:2,lo:10,hi:15,rest:90,st:5,d:25,
+  how:["Os naprave poravnaj s kolenom, blazina tik nad gležnji.","Primi ročaja ob sedežu.","Iztegni noge in na vrhu sekundo zadrži.","Počasi spusti."],
+  a:{root:"hip",A:{x:120,y:146,to:-94,th:0,sh:92,ft:0,ua:100,fa:30},B:{sh:-4,ft:-88},hl:["th"],scene:"legext"}},
+ legcurl:{n:"Leg Curl",t:"tg",mus:["zadnja"],sets:2,lo:10,hi:15,rest:90,st:5,d:25,
+  how:["Os naprave poravnaj s kolenom, blazina za gležnji.","Blazino nad stegni zapri, da te drži.","Upogni noge pod sedež in stisni.","Počasi nazaj do iztegnjenih nog."],
+  a:{root:"hip",A:{x:115,y:146,to:-100,th:0,sh:-2,ft:-85,ua:70,fa:20},B:{sh:105,ft:10},hl:["th"],scene:"legcurl"}},
+ gobletsq:{n:"Goblet počep z ročko",t:"fw",mus:["kvad","zadnjica"],sets:3,lo:8,hi:12,rest:150,st:2,d:16,
+  how:["Ročko drži navpično pred prsmi.","Stopala malo širše od bokov, prsti rahlo navzven.","Spusti se med kolena, hrbet pokonci, pete na tleh.","Vstani skozi pete."],
+  a:{root:"ankle",A:{x:160,y:190,to:-88,th:90,sh:90,ft:0,ua:110,fa:-70},B:{to:-62,th:22,sh:112,ua:110,fa:-60},hl:["th"],scene:"dumbbell"}},
+ rdl:{n:"Romunski mrtvi dvig",t:"fw",mus:["zadnja","zadnjica","krizni"],sets:3,lo:8,hi:12,rest:150,st:2,d:16,
+  how:["Stoj z ročkama pred stegni, kolena rahlo pokrčena.","Boke potisni nazaj, hrbet ostane raven.","Ročki drsita ob nogah do sredine golenic.","Vstani s potiskom bokov naprej."],
+  a:{root:"ankle",A:{x:165,y:190,to:-90,th:90,sh:90,ft:0,ua:90,fa:90},B:{to:-12,th:72,sh:96},hl:["th","low"],scene:"dumbbell"}},
+ hipthrust:{n:"Dvig bokov s klopi",t:"fw",mus:["zadnjica","zadnja"],sets:3,lo:8,hi:12,rest:120,st:2,d:20,
+  how:["Zgornji del hrbta nasloni na rob klopi, ročko položi na boke.","Stopala v širini bokov, golen navpično na vrhu.","Dvigni boke, dokler telo ni ravno, in stisni zadnjico.","Počasi spusti."],
+  a:{root:"ankle",A:{x:205,y:190,to:200,th:-35,sh:90,ft:0,ua:28,fa:-12},B:{to:180,th:0},hl:["th"],scene:"hipthrust"}},
+ calf:{n:"Dvig na prste z ročkama",t:"fw",mus:["meca"],sets:2,lo:12,hi:15,rest:60,st:2,d:12,
+  how:["Stoj vzravnano, ročki ob telesu.","Dvigni se čim višje na prste.","Na vrhu sekundo zadrži.","Spusti pete počasi do konca."],
+  a:{root:"toe",A:{x:178,y:194,to:-90,th:90,sh:90,ft:0,ua:90,fa:90},B:{ft:40},hl:["sh"],scene:"dumbbell"}},
+ abcrunch:{n:"Abdominal Crunch",t:"tg",mus:["trebuh"],sets:2,lo:12,hi:15,rest:60,st:5,d:20,
+  how:["Sedež nastavi tako, da so ročaji ob ramenih.","Primi ročaja, ne vleci z rokami.","Zvij hrbtenico naprej in izdihni.","Počasi nazaj."],
+  a:{root:"hip",armRel:1,A:{x:132,y:148,to:-95,th:0,sh:90,ft:0,ua:-40,fa:-155},B:{to:-48},hl:["low"],scene:"abcrunch"}},
+ legraise:{n:"Dvig nog leže",t:"fw",mus:["trebuh"],sets:2,lo:10,hi:15,rest:60,st:1,d:0,
+  how:["Uleži se na blazino, roke ob telesu.","Spodnji del hrbta pritisni v tla.","Dvigni iztegnjeni nogi do navpično.","Spuščaj počasi, ne odloži jih do konca."],
+  a:{root:"hip",A:{x:150,y:186,to:180,th:0,sh:0,ft:-90,ua:6,fa:2},B:{th:-82,sh:-86,ft:0},hl:["low","th"],scene:"mat"}},
+ lowerback:{n:"Lower Back",t:"tg",mus:["krizni"],sets:2,lo:12,hi:15,rest:60,st:5,d:30,
+  how:["Os naprave poravnaj z boki.","Roke prekriži na prsih.","Počasi se nagni nazaj do pokončnega položaja.","Ne pretegni hrbta, nazaj počasi."],
+  a:{root:"hip",armRel:1,A:{x:130,y:148,to:-55,th:0,sh:90,ft:0,ua:60,fa:-130},B:{to:-100},hl:["low"],scene:"lowerback"}}
+};
+const WK={A:["legpress","chestpress","latmachine","shoulderpress","legcurl","armcurl","abcrunch"],B:["rdl","inclinedb","lowrow","legext","lateral","armext","calf"],C:["gobletsq","dbbench","dbrow","reardelt","legcurl","hammer","lowerback"]};
+const WK_FOCUS={A:"Naprave: noge, prsi, hrbet, ramena",B:"Zadnja stran nog, zgornji del prsi, veslanje",C:"Proste uteži: počep, potisk, veslanje"};
+const FEEL={easy:{l:"Lahko",s:"še 4+ bi šlo"},ok:{l:"Ravno prav",s:"še 2–3 bi šlo"},hard:{l:"Težko",s:"0–1 več"}};
+const byMus=k=>Object.keys(EX).filter(id=>EX[id].mus[0]===k);
+const anyMus=k=>Object.keys(EX).filter(id=>EX[id].mus.includes(k));
+
+// ================= Stanje =================
+const LS_STATE="lamela-state-v1", LS_DRAFT="lamela-draft-v2";
+const STANDALONE=!!window.__LAMELA_APP__;
+const ls={get(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const S={state:ls.get(LS_STATE)||{v:1,next:"A",done:0,ex:{},log:[]},draft:null,view:"today",open:null,rest:null,summary:null,confirmFinish:false,store:"connecting",picker:false,pick:[],lib:"prsa",libOpen:null};
+const newDraft=wk=>({date:today(),wk,started:Date.now(),sets:{},cur:{},swaps:{},custom:null});
+(function(){const d=ls.get(LS_DRAFT); S.draft=(d&&d.date===today())?d:newDraft(S.state.next);})();
+const saveDraft=()=>ls.set(LS_DRAFT,S.draft);
+
+// ================= Faze in predlogi =================
+function phaseOf(n){
+  if(n<6) return {k:"uvod",label:"Uvajanje",detail:`trening ${n+1} od 6`,setsMax:2,rir:"3–4"};
+  const m=(n-6)%21;
+  if(m>=18) return {k:"deload",label:"Lažji teden",detail:"90 % teže",setsMax:2,rir:"3–4"};
+  return {k:"build",label:"Gradnja",detail:`${Math.floor(m/3)+1}. teden od 6`,setsMax:9,rir:"1–2"};
+}
+const ph=()=>phaseOf(S.state.done);
+const plan=id=>{const e=EX[id],p=ph();return {sets:Math.min(e.sets,p.setsMax),lo:e.lo,hi:e.hi,rest:e.rest};};
+const rnd=(w,st)=>Math.max(st,Math.round(w/st)*st);
+const unit=id=>EX[id].t==="fw"?(id==="gobletsq"||id==="ohext"||id==="hipthrust"?"kg":"kg / ročka"):"kg";
+const fmt=w=>(Math.round(w*10)/10).toString().replace(".",",");
+function suggest(id){
+  const e=EX[id],st=e.st,s=S.state.ex[id],p=plan(id),phase=ph();
+  if(id==="legraise") return {w:0,why:"Lastna teža."};
+  if(!s||!s.last) return {w:e.d,why:"Prvič: začetna ocena. Prilagodi po prvi seriji.",first:true};
+  const sets=s.last.sets,top=Math.max(...sets.map(x=>x.w)),atTop=sets.filter(x=>x.w===top),reps=atTop.map(x=>x.r).join(", ");
+  if(phase.k==="deload") return {w:rnd(top*0.9,st),why:`Lažji teden: 90 % od ${fmt(top)} kg.`};
+  if(atTop.every(x=>x.r>=p.hi)&&!atTop.some(x=>x.f==="hard")) return {w:top+st,why:`Zadnjič ${fmt(top)} kg × ${reps}. Vse serije do vrha, zato +${fmt(st)} kg.`};
+  if(atTop.every(x=>x.r<p.lo)) return {w:Math.max(st,top-st),why:`Zadnjič ${fmt(top)} kg × ${reps}. Premalo ponovitev, zato −${fmt(st)} kg.`};
+  return {w:top,why:`Zadnjič ${fmt(top)} kg × ${reps}. Ista teža, cilj je več ponovitev.`};
+}
+function nextSet(id,set){
+  const st=EX[id].st,p=plan(id),phase=ph();let w=set.w,why;
+  if(id==="legraise") return {w:0,why:set.r>=p.hi?"Dobro. Naslednjič počasneje dol.":"Lastna teža."};
+  if(set.r>=p.hi+6){w+=2*st;why=`Bilo je veliko prelahko, zato +${fmt(2*st)} kg.`;}
+  else if(set.r>=p.hi+3||(set.r>=p.hi&&set.f==="easy")){w+=st;why=`Prelahko, zato +${fmt(st)} kg.`;}
+  else if(set.r<p.lo-2||(set.r<p.lo&&set.f==="hard")||(phase.k!=="build"&&set.f==="hard")){w=Math.max(st,w-st);why=`Pretežko za to fazo, zato −${fmt(st)} kg.`;}
+  else if(set.r<p.lo) why="Ista teža. Malo pod ciljem je v redu.";
+  else why="Ista teža, dobro je.";
+  return {w,why};
+}
+
+// ================= Sestavljanje treninga po mišicah =================
+function buildCustom(muscles){
+  const sel=MUS.filter(m=>muscles.includes(m.k)); const n=sel.length; const ids=[]; const rot=S.state.done;
+  sel.forEach(m=>{
+    const want=m.tiny?(n<=2?2:1):m.big?(n<=2?3:2):(n<=3?2:1);
+    let pool=byMus(m.k); if(pool.length<want) pool=pool.concat(anyMus(m.k).filter(x=>!pool.includes(x)));
+    const off=pool.length?rot%pool.length:0; const rotd=pool.slice(off).concat(pool.slice(0,off));
+    let c=0; for(const id of rotd){ if(c>=want) break; if(!ids.includes(id)){ids.push(id);c++;} }
+  });
+  const order=id=>{const e=EX[id];return (e.mus[0]&&MUS.find(m=>m.k===e.mus[0])||{}).big?0:e.sets>=3?1:2;};
+  return ids.sort((a,b)=>order(a)-order(b)).slice(0,8);
+}
+const labelFor=mus=>{const pre=PRESETS.find(p=>p.m.length===mus.length&&p.m.every(x=>mus.includes(x)));return pre?pre.n:mus.map(k=>MN[k]).join(" + ");};
+const exIds=()=>S.draft.wk==="X"&&S.draft.custom?S.draft.custom.ids:WK[S.draft.wk].map(id=>S.draft.swaps[id]||id);
+const origIds=()=>S.draft.wk==="X"&&S.draft.custom?S.draft.custom.ids:WK[S.draft.wk];
+const title=()=>S.draft.wk==="X"&&S.draft.custom?S.draft.custom.label:"Trening "+S.draft.wk;
+function cur(id){if(!S.draft.cur[id]){const sg=suggest(id),p=plan(id);S.draft.cur[id]={w:sg.w,r:Math.round((p.lo+p.hi)/2),why:null};}return S.draft.cur[id];}
+const doneSets=id=>(S.draft.sets[id]||[]).length;
+const doneAny=()=>Object.values(S.draft.sets).some(a=>a.length);
+const totals=()=>{let t=0,d=0;exIds().forEach(id=>{t+=plan(id).sets;d+=Math.min(doneSets(id),plan(id).sets);});return {t,d};};
+function swapCandidates(id,list){const m=EX[id].mus[0];return anyMus(m).filter(x=>x===id||!list.includes(x)).sort((a,b)=>(EX[a].mus[0]===m?0:1)-(EX[b].mus[0]===m?0:1));}
+
+// ================= Shramba =================
+let docRef=null,writing=false,dirty=false;
+async function flush(){ if(!docRef) return; dirty=true; if(writing) return; writing=true;
+  while(dirty){dirty=false;const body=clone(S.state);
+    try{await docRef.set(body);}catch(e){
+      if(e&&e.code==="unavailable"){await new Promise(r=>setTimeout(r,700+Math.random()*900));try{await docRef.set(body);}catch(e2){}}
+      else if(e&&(e.code==="invalid_argument"||e.code==="revoked"||e.code==="not_granted")){docRef=null;S.store="local";renderTop();}}}
+  writing=false;}
+function saveState(){ls.set(LS_STATE,S.state);flush();}
+(async function(){
+  try{
+    if(!window.claude||!window.claude.use){S.store="local";renderTop();return;}
+    const db=await window.claude.use("db"); if(!db){S.store="local";renderTop();return;}
+    docRef=db.doc("app/state"); S.store="cloud";
+    docRef.onSnapshot(snap=>{
+      if(writing||dirty||(snap.metadata&&snap.metadata.hasPendingWrites)) return;
+      if(snap.exists){const d=snap.data(); if(d&&d.v){S.state=clone(d); ls.set(LS_STATE,S.state); render();}}
+      else if(S.state.done>0||Object.keys(S.state.ex).length) flush();
+      renderTop();
+    },()=>{docRef=null;S.store="local";renderTop();});
+    renderTop();
+  }catch(e){S.store="local";renderTop();}
+})();
+
+// ================= Animacije =================
+const L={T:60,UA:30,FA:28,TH:42,SH:42,FT:13}, GROUND=196;
+const rad=a=>a*Math.PI/180, dir=a=>[Math.cos(rad(a)),Math.sin(rad(a))];
+const add=(p,a,l)=>{const d=dir(a);return [p[0]+d[0]*l,p[1]+d[1]*l];};
+const off=(p,v)=>[p[0]+v[0],p[1]+v[1]];
+const lerp=(a,b,t)=>a+(b-a)*t;
+function mix(A,B,t){const o={};for(const k in A){const b=(k in B)?B[k]:A[k];o[k]=Array.isArray(A[k])?A[k].map((v,i)=>lerp(v,b[i],t)):lerp(A[k],b,t);}return o;}
+function solve(an,p){
+  let hip,kn,ank,toe;
+  if(an.root==="ankle"){ank=[p.x,p.y];kn=add(ank,p.sh+180,L.SH);hip=add(kn,p.th+180,L.TH);toe=add(ank,p.ft,L.FT);}
+  else if(an.root==="toe"){toe=[p.x,p.y];ank=add(toe,p.ft+180,L.FT);kn=add(ank,p.sh+180,L.SH);hip=add(kn,p.th+180,L.TH);}
+  else {hip=[p.x,p.y];kn=add(hip,p.th,L.TH);ank=add(kn,p.sh,L.SH);toe=add(ank,p.ft,L.FT);}
+  const sh=add(hip,p.to,L.T), head=add(sh,p.to,15), base=an.armRel?p.to+90:0;
+  let el,wr; if(p.el){el=off(sh,p.el);wr=off(el,p.wr);} else {el=add(sh,p.ua+base,L.UA);wr=add(el,p.fa+base,L.FA);}
+  return {hip,kn,ank,toe,sh,head,el,wr};
+}
+// faza zanke: zadrži, gor (1 s), zadrži, dol (2 s)
+function cyc(ms){const u=(ms%3800)/3800;const e=x=>0.5-0.5*Math.cos(Math.PI*x);
+  if(u<0.1) return 0; if(u<0.36) return e((u-0.1)/0.26); if(u<0.44) return 1; if(u<0.9) return 1-e((u-0.44)/0.46); return 0;}
+let COL=null;
+function readCol(){const s=getComputedStyle(document.documentElement);const g=k=>s.getPropertyValue(k).trim();
+  COL={fig:g("--fig"),hl:g("--accent"),frame:g("--frame"),pad:g("--pad"),plate:g("--plate"),steel:g("--steel"),floor:g("--floor"),stage:g("--stage"),muted:g("--muted")};}
+function G(ctx){
+  const ln=(a,b,w,c)=>{ctx.strokeStyle=c;ctx.lineWidth=w;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();};
+  const pl=(pts,w,c)=>{ctx.strokeStyle=c;ctx.lineWidth=w;ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();};
+  const ci=(p,r,c)=>{ctx.fillStyle=c;ctx.beginPath();ctx.arc(p[0],p[1],r,0,Math.PI*2);ctx.fill();};
+  const rr=(x,y,w,h,r,c)=>{ctx.fillStyle=c;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);else ctx.rect(x,y,w,h);ctx.fill();};
+  return {ln,pl,ci,rr,
+    floor(){ln([8,GROUND+2],[292,GROUND+2],3,COL.floor);},
+    stack(x,lift){ln([x,26],[x,GROUND],3,COL.frame);ln([x+26,26],[x+26,GROUND],3,COL.frame);rr(x-3,20,32,7,2,COL.frame);
+      for(let i=0;i<12;i++){const y=GROUND-6-i*7.2-(i>=7?lift:0);rr(x+3,y,20,6,1.5,i>=7?COL.steel:COL.plate);} rr(x+20,GROUND-6-7*7.2-lift+1,8,4,1,COL.hl);},
+    seat(h){rr(h[0]-22,h[1]+6,50,8,4,COL.pad);ln([h[0]+4,h[1]+14],[h[0]+4,GROUND],4,COL.frame);ln([h[0]-16,GROUND],[h[0]+24,GROUND],4,COL.frame);},
+    back(h,to,len,from){const o=dir(to-90);const s=add(h,to,from||6),e=add(h,to,len);ln([s[0]+o[0]*10,s[1]+o[1]*10],[e[0]+o[0]*10,e[1]+o[1]*10],10,COL.pad);},
+    pad(a,b,w){ln(a,b,w||9,COL.pad);},
+    lever(a,b){ln(a,b,5,COL.frame);},
+    cable(pts){pl(pts,1.5,COL.steel);},
+    handle(p){ci(p,4.5,COL.frame);},
+    roller(p){ci(p,6.5,COL.pad);ci(p,2,COL.steel);},
+    db(p){ci(p,7.5,COL.frame);ci(p,3,COL.steel);},
+    bench(x1,x2,y){rr(x1,y-4,x2-x1,9,4,COL.pad);ln([x1+10,y+5],[x1+10,GROUND],4,COL.frame);ln([x2-10,y+5],[x2-10,GROUND],4,COL.frame);}
+  };
+}
+function drawFig(g,P,hl){
+  const c=k=>hl.includes(k)?COL.hl:COL.fig;
+  g.ln(P.ank,P.toe,5,COL.fig);
+  g.ln(P.kn,P.ank,9,c("sh"));
+  g.ln(P.hip,P.kn,11.5,c("th"));
+  g.ln(P.hip,P.sh,15,COL.fig);
+  if(hl.includes("up")) g.ln([lerp(P.hip[0],P.sh[0],.5),lerp(P.hip[1],P.sh[1],.5)],P.sh,15,COL.hl);
+  if(hl.includes("low")) g.ln(P.hip,[lerp(P.hip[0],P.sh[0],.55),lerp(P.hip[1],P.sh[1],.55)],15,COL.hl);
+  g.ci(P.head,8.5,COL.fig);
+  g.ln(P.sh,P.el,8.5,c("ua"));
+  g.ln(P.el,P.wr,7.5,c("fa"));
+  if(hl.includes("delt")) g.ci(P.sh,6.5,COL.hl);
+  g.ci(P.wr,3.8,COL.fig);
+}
+const SCENES={
+  chestpress(g,P,p,t){g.stack(26,t*18);g.seat(P.hip);g.back(P.hip,p.to,64);const pv=[P.sh[0]+44,P.sh[1]-56];g.cable([[39,26],[pv[0],26],pv]);g.lever(pv,P.wr);g.handle(P.wr);},
+  dbbench(g,P){g.bench(70,198,150);},
+  inclinedb(g,P,p){g.bench(150,205,150);g.back(P.hip,p.to,70,10);g.ln(add(P.hip,p.to,40),[140,GROUND],4,COL.frame);},
+  armext(g,P,p,t){g.seat(P.hip);g.back(P.hip,p.to,46);g.stack(250,t*14);g.pad([P.sh[0]+6,P.sh[1]+13],[P.el[0]+3,P.el[1]+9],9);g.ln([P.el[0]+3,P.el[1]+14],[P.el[0]+3,GROUND],4,COL.frame);g.cable([[263,26],[P.el[0],26],P.el]);g.lever(P.el,P.wr);g.handle(P.wr);},
+  ohext(g,P,p){g.seat(P.hip);g.back(P.hip,p.to,52);},
+  latmachine(g,P,p,t){g.seat(P.hip);g.stack(26,t*20);g.pad([P.kn[0]-14,P.kn[1]-11],[P.kn[0]+4,P.kn[1]-11],8);g.ln([P.kn[0]+4,P.kn[1]-11],[P.kn[0]+30,P.kn[1]-11],3,COL.frame);
+    g.ci([168,14],5,COL.frame);g.cable([P.wr,[168,14],[39,14],[39,26]]);g.ln([P.wr[0]-22,P.wr[1]-2],[P.wr[0]+22,P.wr[1]+2],4.5,COL.frame);},
+  verttrac(g,P,p,t){g.seat(P.hip);g.stack(26,t*20);g.pad([P.kn[0]-14,P.kn[1]-11],[P.kn[0]+4,P.kn[1]-11],8);const pv=[P.sh[0]-36,16];g.ln(pv,[pv[0],GROUND],4,COL.frame);g.lever(pv,P.wr);g.handle(P.wr);},
+  lowrow(g,P,p,t){g.seat(P.hip);g.pad([P.sh[0]+17,P.sh[1]+2],[P.sh[0]+15,P.sh[1]+34],10);g.ln([P.sh[0]+16,P.sh[1]+34],[P.sh[0]+16,GROUND],4,COL.frame);
+    g.pad([P.toe[0]+4,P.toe[1]-16],[P.toe[0]+4,P.toe[1]+2],6);g.stack(258,t*16);const pv=[236,186];g.lever(pv,P.wr);g.handle(P.wr);},
+  dbrow(g,P){g.bench(160,248,164);const e=[P.sh[0]+14,P.sh[1]+27],w=[P.sh[0]+20,P.sh[1]+53];g.ln(P.sh,e,8,COL.fig);g.ln(e,w,7,COL.fig);},
+  armcurl(g,P,p,t){g.seat(P.hip);g.back(P.hip,p.to,46);g.stack(252,t*14);g.pad([P.sh[0]+5,P.sh[1]+13],[P.el[0]+4,P.el[1]+9],9);g.ln([P.el[0]+4,P.el[1]+14],[P.el[0]+4,GROUND],4,COL.frame);g.lever(P.el,P.wr);g.handle(P.wr);},
+  shoulderpress(g,P,p,t){g.stack(26,t*18);g.seat(P.hip);g.back(P.hip,p.to,66);const pv=[P.sh[0]-34,P.sh[1]-72];g.ln([pv[0],pv[1]],[pv[0],GROUND],4,COL.frame);g.lever(pv,P.wr);g.handle(P.wr);},
+  dbshoulder(g,P,p){g.seat(P.hip);g.back(P.hip,p.to,66);},
+  legpress(g,P,p,t){g.ln([30,GROUND],[275,GROUND],5,COL.frame);g.back(P.hip,p.to,66,-4);g.pad([P.hip[0]-16,P.hip[1]+9],[P.hip[0]+12,P.hip[1]+9],10);g.ln([P.hip[0],P.hip[1]+14],[P.hip[0],GROUND],4,COL.frame);
+    g.ln([200,186],[282,108],4,COL.frame);const a=Math.atan2(P.ank[1]-P.hip[1],P.ank[0]-P.hip[0])*180/Math.PI;const c=add(P.ank,a,6);g.ln(add(c,a+90,24),add(c,a-90,24),7,COL.frame);g.ln(c,[c[0]+40,c[1]-24],3,COL.steel);},
+  legext(g,P,p,t){g.seat(P.hip);g.back(P.hip,p.to,58);g.stack(252,t*14);const r=[P.ank[0]+(P.ank[0]>P.kn[0]+20?0:6),P.ank[1]+(P.ank[0]>P.kn[0]+20?-6:0)];g.lever(P.kn,r);g.roller(r);},
+  legcurl(g,P,p,t){g.seat(P.hip);g.back(P.hip,p.to,58);g.stack(252,t*14);g.pad([P.kn[0]-22,P.kn[1]-12],[P.kn[0]-2,P.kn[1]-12],8);const r=add(P.ank,(p.sh)+90,7);g.lever(P.kn,r);g.roller(r);},
+  dumbbell(){},
+  hipthrust(g,P){g.bench(52,112,156);},
+  abcrunch(g,P,p,t){g.seat(P.hip);g.stack(252,t*14);g.cable([P.wr,[265,26]]);g.handle(P.wr);},
+  lowerback(g,P,p,t){g.seat(P.hip);g.stack(252,t*14);const r=add(add(P.hip,p.to,46),p.to-90,10);g.lever(P.hip,r);g.roller(r);},
+  mat(g){g.rr(40,GROUND-4,220,6,3,COL.pad);}
+};
+function drawFront(g,an,p,hl){
+  const cx=150,hy=120,sy=60;
+  g.ln([cx-10,hy],[cx-12,GROUND-2],10,COL.fig);g.ln([cx+10,hy],[cx+12,GROUND-2],10,COL.fig);
+  g.ln([cx,sy+6],[cx,hy-4],30,COL.fig);g.ci([cx,sy-20],10,COL.fig);
+  const sides=[[1,[cx+18,sy]],[-1,[cx-18,sy]]];
+  sides.forEach(([s,S0])=>{const a1=s>0?p.ua:180-p.ua,a2=s>0?p.fa:180-p.fa;const el=add(S0,a1,30),wr=add(el,a2,28);
+    g.ln(S0,el,8.5,hl.includes("ua")?COL.hl:COL.fig);g.ln(el,wr,7.5,COL.fig);if(hl.includes("delt"))g.ci(S0,7,COL.hl);
+    if(an.back) g.handle(wr); else {g.rr(wr[0]-3,wr[1]-8,6,16,2,COL.frame);}});
+  if(an.back){g.ln([cx-50,22],[cx+50,22],4,COL.frame);}
+}
+function drawEx(ctx,id,ms,W,H){
+  const an=EX[id].a, t=cyc(ms), p=mix(an.A,an.B,t), g=G(ctx);
+  ctx.clearRect(0,0,W,H);ctx.save();const s=Math.min(W/300,H/210);ctx.translate((W-300*s)/2,(H-210*s)/2);ctx.scale(s,s);
+  g.floor();
+  if(an.front){drawFront(g,an,p,an.hl);}
+  else{const P=solve(an,p);(SCENES[an.scene]||(()=>{}))(g,P,p,t);drawFig(g,P,an.hl);
+    if(an.scene==="dumbbell"||an.scene==="dbbench"||an.scene==="inclinedb"||an.scene==="ohext"||an.scene==="dbshoulder"||an.scene==="dbrow"||an.scene==="hipthrust") g.db(P.wr);}
+  if(an.back){ctx.fillStyle=COL.muted;ctx.font="600 11px Barlow, sans-serif";ctx.fillText("pogled od zadaj",10,18);}
+  ctx.restore();
+}
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+let canv=[];
+function collectCanvases(){canv=[...document.querySelectorAll("canvas[data-anim]")];}
+function sizeCanvas(c){const dpr=Math.min(2,window.devicePixelRatio||1);const w=Math.round(c.clientWidth*dpr),h=Math.round(w*210/300);if(w&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
+let frames=0;
+function loop(ts){
+  if(!COL||frames++%90===0) readCol();
+  const vh=window.innerHeight;
+  canv.forEach(c=>{const r=c.getBoundingClientRect(); if(r.bottom<0||r.top>vh||!c.isConnected) return; sizeCanvas(c); const ctx=c.getContext("2d");
+    drawEx(ctx,c.dataset.anim,reduce?1400:ts+(+c.dataset.ofs||0),c.width,c.height);});
+  requestAnimationFrame(loop);
+}
+const cv=(id,ofs)=>`<canvas data-anim="${id}" data-ofs="${ofs||0}" width="300" height="210" role="img" aria-label="Animacija: ${esc(EX[id].n)}"></canvas>`;
+
+// ================= Zvok, zaslon, počitek =================
+let actx=null,wake=null,restTimer=null;
+function ensureAudio(){try{if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C();}if(actx&&actx.state==="suspended")actx.resume();}catch(e){}}
+function beep(){try{if(!actx)return;const t=actx.currentTime;[0,.22].forEach(o=>{const g=actx.createGain(),osc=actx.createOscillator();osc.frequency.value=880;g.gain.setValueAtTime(.0001,t+o);g.gain.exponentialRampToValueAtTime(.25,t+o+.02);g.gain.exponentialRampToValueAtTime(.0001,t+o+.16);osc.connect(g).connect(actx.destination);osc.start(t+o);osc.stop(t+o+.18);});}catch(e){}}
+async function keepAwake(){try{if(navigator.wakeLock&&!wake){wake=await navigator.wakeLock.request("screen");wake.addEventListener("release",()=>{wake=null;});}}catch(e){}}
+function startRest(sec,label){S.rest={end:Date.now()+sec*1000,total:sec,label,beeped:false};clearInterval(restTimer);restTimer=setInterval(tickRest,250);tickRest();}
+function stopRest(){S.rest=null;clearInterval(restTimer);document.getElementById("restRoot").innerHTML="";}
+function tickRest(){
+  const r=S.rest,root=document.getElementById("restRoot");if(!r){root.innerHTML="";return;}
+  const left=Math.round((r.end-Date.now())/1000),over=left<=0;
+  if(over&&!r.beeped){r.beeped=true;beep();}
+  if(left<-90){stopRest();return;}
+  const a=Math.abs(left),t=(over?"+":"")+Math.floor(a/60)+":"+String(a%60).padStart(2,"0"),pct=over?100:Math.max(0,100-(left/r.total)*100);
+  root.innerHTML=`<div class="rest ${over?"over":""}" role="status"><div class="restbar" style="width:${pct}%"></div><div class="t num">${t}</div><div class="lbl">${over?"Počitek je mimo. Naslednja serija.":"Počitek · "+esc(r.label)}</div><button data-act="rest30" type="button">+30 s</button><button data-act="restskip" type="button">${over?"Zapri":"Preskoči"}</button></div>`;
+}
+
+// ================= Izris =================
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const DAYS=["nedelja","ponedeljek","torek","sreda","četrtek","petek","sobota"],MON=["januar","februar","marec","april","maj","junij","julij","avgust","september","oktober","november","december"];
+const dateLong=()=>{const d=new Date();return `${DAYS[d.getDay()]}, ${d.getDate()}. ${MON[d.getMonth()]}`;};
+const dateShort=s=>{const d=new Date(s+"T12:00:00");return `${d.getDate()}. ${d.getMonth()+1}.`;};
+const tags=id=>EX[id].mus.map((m,i)=>`<span class="tag ${i===0?"p":""}">${esc(MN[m])}</span>`).join("");
+function renderTop(){const el=document.getElementById("storeLbl");if(el)el.textContent=STANDALONE?"Shranjeno v telefonu":S.store==="cloud"?"Shranjeno v oblaku":S.store==="local"?"Samo na tej napravi":"Povezujem …";}
+function render(){
+  const tabs=[["today","Danes"],["lib","Vaje"],["program","Program"],["progress","Napredek"]];
+  let h=`<div class="top"><div class="brand">Lam<i>e</i>la</div><div class="store" id="storeLbl"></div></div>
+  <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" type="button" aria-selected="${S.view===k}" data-act="tab" data-v="${k}">${l}</button>`).join("")}</div>`;
+  h+=S.view==="today"?viewToday():S.view==="lib"?viewLib():S.view==="program"?viewProgram():viewProgress();
+  document.getElementById("app").innerHTML=h; renderTop(); tickRest(); collectCanvases();
+}
+function viewToday(){
+  const p=ph(),wk=S.draft.wk,tt=totals();let h="";
+  if(S.summary){const s=S.summary;
+    h+=`<section class="summary" aria-live="polite"><h2>${esc(s.title)} opravljen</h2>
+    <div class="stats"><div class="stat"><b class="num">${s.sets}</b><span>serij</span></div><div class="stat"><b class="num">${fmt(Math.round(s.vol))}</b><span>kg skupaj</span></div><div class="stat"><b class="num">${s.mins}</b><span>minut</span></div></div>
+    ${s.prs.length?`<div><b>Nov rekord:</b> ${s.prs.map(esc).join(", ")}</div>`:""}
+    <div class="meta">Naslednji po programu: <b>Trening ${esc(S.state.next)}</b>. Nove teže app predlaga glede na današnje ponovitve.</div>
+    <div><button class="link" type="button" data-act="closesum">Zapri</button></div></section>`;}
+  h+=`<section class="hero"><div class="meta">${dateLong()}</div><h1>${esc(title())}</h1>
+   <div class="row"><span class="chip phase">${esc(p.label)} · ${esc(p.detail)}</span><span class="chip">RIR ${p.rir}</span><span class="chip">${exIds().length} vaj</span></div>
+   <div class="mode" role="group" aria-label="Izberi trening">${["A","B","C"].map(k=>`<button type="button" aria-pressed="${k===wk}" data-act="wk" data-v="${k}">${k}</button>`).join("")}<button type="button" class="mus" aria-pressed="${wk==="X"||S.picker}" data-act="picker">Po mišicah</button></div>
+   <div class="bar" aria-label="Opravljene serije"><i style="width:${tt.t?Math.round(tt.d/tt.t*100):0}%"></i></div>
+   <div class="count num">${tt.d} od ${tt.t} serij${wk!=="X"?" · "+esc(WK_FOCUS[wk]):""}</div></section>`;
+  if(S.picker) h+=pickerHtml();
+  if(p.k==="uvod"&&!S.picker) h+=`<div class="note"><b>Vrnitev po pavzi.</b> Prvih 6 treningov delaš 2 seriji in pustiš 3–4 ponovitve v rezervi. Prva serija vsake vaje je testna. Izberi težo, ki bi jo dvignil približno 15-krat, naredi ponovitve in pritisni, kako je šlo.</div>`;
+  const ids=exIds(),orig=origIds();
+  h+=`<div class="list">${ids.map((id,i)=>exCard(id,orig[i],i)).join("")}</div>`;
+  h+=`<button class="finish" type="button" data-act="finish" ${doneAny()?"":"disabled"}>Zaključi trening</button>`;
+  if(S.confirmFinish){const left=tt.t-tt.d;h+=`<div class="note">${left>0?`Ostalo je še ${left} serij. Zaključim vseeno?`:"Shranim trening?"}</div><div class="confirm"><button type="button" data-act="nofinish">Nazaj</button><button class="yes" type="button" data-act="dofinish">Shrani trening</button></div>`;}
+  return h;
+}
+function pickerHtml(){
+  const n=S.pick.length, prev=n?buildCustom(S.pick):[];
+  return `<section class="picker"><h2>Kaj danes treniraš?</h2>
+  <div class="presets">${PRESETS.map((pr,i)=>`<button type="button" data-act="preset" data-v="${i}">${esc(pr.n)}</button>`).join("")}</div>
+  <div class="mgrid">${MUS.map(m=>`<button type="button" class="mt" aria-pressed="${S.pick.includes(m.k)}" data-act="pickm" data-v="${m.k}"><b>${esc(m.n)}</b><span>${anyMus(m.k).length} vaj</span></button>`).join("")}</div>
+  ${n?`<div class="meta">${prev.map(id=>esc(EX[id].n)).join(" · ")}</div>`:`<div class="meta">Izberi eno ali več skupin. App sestavi trening z napravami in prostimi utežmi, velike mišice najprej.</div>`}
+  <button class="go" type="button" data-act="build" ${n?"":"disabled"}>Sestavi trening${n?` (${prev.length} vaj)`:""}</button>
+  <button class="link" type="button" data-act="picker">Zapri</button></section>`;
+}
+function exCard(id,orig,i){
+  const e=EX[id],p=plan(id),sets=S.draft.sets[id]||[],c=cur(id),sg=suggest(id),open=S.open===id,done=sets.length>=p.sets,st=S.state.ex[id]||{};
+  const showW=sets.length?c.w:sg.w, bw=id==="legraise";
+  let h=`<article class="ex ${done?"done":""}"><button class="exhead" type="button" data-act="open" data-v="${id}" aria-expanded="${open}">
+    <div class="thumb">${open?`<div style="aspect-ratio:300/210;display:grid;place-items:center;color:var(--muted);font-size:12px">spodaj ↓</div>`:cv(id,i*430)}</div>
+    <div style="min-width:0"><div class="exname">${esc(e.n)}</div><div class="exsub num">${p.sets} × ${p.lo}–${p.hi}${st.seat?" · "+esc(st.seat):""}</div><div class="tags">${tags(id)}</div></div>
+    <div class="kg">${bw?`<b>—</b><small>lastna teža</small>`:`<b class="num">${fmt(showW)}</b><small>${unit(id)}</small>`}</div></button>
+    <div class="why"><span>${done?"Opravljeno: "+sets.map(s=>(bw?"":fmt(s.w)+"×")+s.r).join(", "):esc(sets.length&&c.why?c.why:sg.why)}</span><span class="dots" aria-label="${sets.length} od ${p.sets} serij">${Array.from({length:p.sets},(_,k)=>`<i class="${k<sets.length?"f":""}"></i>`).join("")}</span></div>`;
+  if(open){
+    h+=`<div class="body"><div class="stage"><span class="tempo">1 s gor · 2 s dol</span>${cv(id)}</div>
+      <ol class="howto">${e.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`;
+    if(e.t==="tg") h+=`<div class="seat"><label for="seat-${id}">Nastavitev</label><input id="seat-${id}" data-seat="${id}" placeholder="npr. sedež 4, naslon 2" value="${esc(st.seat||"")}"></div>`;
+    if(sets.length) h+=`<div class="sets">${sets.map((s,k)=>`<div class="set num"><span><b>${k+1}.</b> ${bw?"":fmt(s.w)+" "+unit(id)+" × "}${s.r}${bw?" ponovitev":""}</span><span class="f f-${s.f}">${FEEL[s.f].l}</span></div>`).join("")}</div>`;
+    h+=`<div class="inputs">${bw?`<div class="step"><label>Teža</label><div class="ctl"><span></span><output>—</output><span></span></div></div>`:`<div class="step"><label>Teža · ${unit(id)}</label><div class="ctl"><button type="button" data-act="w-" data-v="${id}" aria-label="Manj teže">−</button><output class="num">${fmt(c.w)}</output><button type="button" data-act="w+" data-v="${id}" aria-label="Več teže">+</button></div></div>`}
+      <div class="step"><label>Ponovitve</label><div class="ctl"><button type="button" data-act="r-" data-v="${id}" aria-label="Manj ponovitev">−</button><output class="num">${c.r}</output><button type="button" data-act="r+" data-v="${id}" aria-label="Več ponovitev">+</button></div></div></div>
+      <div class="hint">${done?"Vse serije so narejene. Lahko dodaš še eno.":`Serija ${sets.length+1} od ${p.sets}. Ko končaš, pritisni, kako je šlo:`}</div>
+      <div class="feel">${["easy","ok","hard"].map(f=>`<button type="button" class="b-${f}" data-act="log" data-v="${id}" data-f="${f}"><b>${FEEL[f].l}</b><span>${FEEL[f].s}</span></button>`).join("")}</div>
+      <div class="links">${sets.length?`<button class="link" type="button" data-act="undo" data-v="${id}">Razveljavi zadnjo serijo</button>`:""}${!sets.length&&swapCandidates(id,exIds()).length>1?`<button class="link" type="button" data-act="swap" data-v="${i}">Naprava zasedena? Zamenjaj vajo</button>`:""}${S.draft.wk==="X"&&!sets.length?`<button class="link" type="button" data-act="remove" data-v="${id}">Odstrani</button>`:""}</div>
+    </div>`;}
+  return h+`</article>`;
+}
+function viewLib(){
+  let h=`<div class="filters" role="group" aria-label="Mišice">${MUS.map(m=>`<button type="button" aria-pressed="${S.lib===m.k}" data-act="lib" data-v="${m.k}">${esc(m.n)}</button>`).join("")}</div>`;
+  const ids=anyMus(S.lib).sort((a,b)=>(EX[a].mus[0]===S.lib?0:1)-(EX[b].mus[0]===S.lib?0:1));
+  h+=`<h2 class="sec">${esc(MN[S.lib])}</h2><div class="list" style="margin-top:0">`;
+  ids.forEach((id,i)=>{const e=EX[id],open=S.libOpen===id,inToday=exIds().includes(id);
+    h+=`<article class="ex"><button class="exhead" type="button" data-act="libopen" data-v="${id}" aria-expanded="${open}"><div class="thumb">${open?`<div style="aspect-ratio:300/210;display:grid;place-items:center;color:var(--muted);font-size:12px">spodaj ↓</div>`:cv(id,i*500)}</div>
+      <div style="min-width:0"><div class="exname">${esc(e.n)}</div><div class="exsub">${e.t==="tg"?"Technogym naprava":"Proste uteži"} · ${e.lo}–${e.hi} ponovitev</div><div class="tags">${tags(id)}</div></div><div></div></button>`;
+    if(open) h+=`<div class="body"><div class="stage"><span class="tempo">1 s gor · 2 s dol</span>${cv(id)}</div><ol class="howto">${e.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
+      ${inToday?`<div class="hint">Že v današnjem treningu.</div>`:`<button class="addbtn" type="button" data-act="addtoday" data-v="${id}">Dodaj v današnji trening</button>`}</div>`;
+    h+=`</article>`;});
+  return h+`</div>`;
+}
+function viewProgram(){
+  const p=ph();
+  let h=`<section class="hero"><div class="meta">3 treningi na teden</div><h1>Program za maso</h1>
+  <div class="row"><span class="chip phase">Zdaj: ${esc(p.label)} · ${esc(p.detail)}</span><span class="chip">Naslednji: Trening ${esc(S.state.next)}</span></div></section>
+  <h2 class="sec">Celo telo A · B · C</h2><div class="prog">`;
+  ["A","B","C"].forEach(k=>{h+=`<div class="pcard"><h3>Trening ${k} <small>${esc(WK_FOCUS[k])}</small></h3><div class="pl">${WK[k].map(id=>{const q=plan(id);return `<span>${esc(EX[id].n)}</span><span class="num">${q.sets} × ${q.lo}–${q.hi}</span>`}).join("")}</div></div>`;});
+  h+=`</div><div class="note">Lahko pa trening sestaviš sam: na zavihku Danes pritisni <b>Po mišicah</b> in izberi npr. prsa + triceps.</div>
+  <h2 class="sec">Kako app izbere težo</h2><ol class="rules">
+  <li>Vsaka vaja ima razpon ponovitev, npr. 8–12. Ko pri isti teži v vseh serijah prideš do vrha, app naslednjič doda en korak: 5 kg na napravi, 2 kg na ročki.</li>
+  <li>Če ne prideš do spodnje meje, app težo zmanjša za en korak. Vmes ostane ista teža, ti pa ciljaš na več ponovitev.</li>
+  <li>Med treningom app po vsaki seriji predlaga težo za naslednjo, glede na ponovitve in to, kako težko je bilo.</li>
+  <li>Isto mišico treniraj največ vsak drugi dan.</li></ol>
+  <h2 class="sec">Faze</h2><ol class="rules">
+  <li><b>Uvajanje</b> (prvih 6 treningov): 2 seriji, 3–4 ponovitve v rezervi. Mišice se spomnijo hitro, kite in sklepi počasneje.</li>
+  <li><b>Gradnja</b> (6 tednov): polno število serij, 1–2 ponovitvi v rezervi.</li>
+  <li><b>Lažji teden</b>: 2 seriji z 90 % teže, potem nov krog gradnje.</li></ol>
+  <div class="note">RIR pomeni, koliko ponovitev bi še zmogel. RIR 2 = končal si, ko bi šli še dve.</div>`;
+  return h;
+}
+function spark(vals){
+  if(vals.length<2) return `<svg viewBox="0 0 96 36" aria-hidden="true"><line x1="0" y1="18" x2="96" y2="18" stroke="var(--line)" stroke-width="1"/><circle cx="90" cy="18" r="3" fill="var(--accent)"/></svg>`;
+  const mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1,pts=vals.map((v,i)=>[4+i*(88/(vals.length-1)),30-(v-mn)/rg*24]);
+  const d=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" "),l=pts[pts.length-1];
+  return `<svg viewBox="0 0 96 36" aria-hidden="true"><path d="${d} L ${l[0].toFixed(1)} 34 L 4 34 Z" fill="var(--accent-soft)"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/><circle cx="${l[0].toFixed(1)}" cy="${l[1].toFixed(1)}" r="3" fill="var(--accent)"/></svg>`;
+}
+function viewProgress(){
+  const ids=Object.keys(EX).filter(id=>S.state.ex[id]&&S.state.ex[id].hist&&S.state.ex[id].hist.length);
+  let h=`<section class="hero"><div class="meta">${S.state.done} opravljenih treningov</div><h1>Napredek</h1></section><h2 class="sec">Vaje</h2>`;
+  if(!ids.length) h+=`<div class="empty">Tukaj se bo pokazala najvišja teža pri vsaki vaji in kako raste. Ko zaključiš prvi trening, se vaje pojavijo tukaj.</div>`;
+  else h+=`<div class="hist">${ids.map(id=>{const hs=S.state.ex[id].hist,f=hs[0],l=hs[hs.length-1],d=l.top-f.top;
+    return `<div class="hrow"><div class="n">${esc(EX[id].n)}</div>${spark(hs.map(x=>x.top))}<div class="s num">${fmt(l.top)} ${unit(id)} × ${l.reps}${d>0?` · <span class="up">+${fmt(d)} kg</span>`:""} · ${hs.length}×</div></div>`;}).join("")}</div>`;
+  h+=`<h2 class="sec">Zadnji treningi</h2>`;
+  h+=!S.state.log.length?`<div class="empty">Še ni shranjenih treningov.</div>`:`<div class="log">${S.state.log.slice().reverse().slice(0,20).map(l=>`<div class="lrow num"><span><b>${dateShort(l.d)}</b> · ${esc(l.title||("Trening "+l.wk))}</span><span>${l.sets} serij · ${fmt(Math.round(l.vol))} kg · ${l.mins} min</span></div>`).join("")}</div>`;
+  if(STANDALONE) h+=`<h2 class="sec">Varnostna kopija</h2><div class="note" style="margin-top:0">Treningi so shranjeni v telefonu. Enkrat na mesec shrani kopijo, da jih ne izgubiš ob menjavi telefona.</div>
+   <div class="confirm"><button type="button" data-act="export">Shrani kopijo</button><button type="button" data-act="import">Naloži kopijo</button></div>
+   <input type="file" id="importFile" accept="application/json,.json" hidden>${S.msg?`<div class="hint" style="margin-top:8px">${esc(S.msg)}</div>`:""}`;
+  return h;
+}
+
+// ================= Akcije =================
+function finishWorkout(){
+  const d=S.draft,dt=d.date||today();let sets=0,vol=0;const prs=[];
+  Object.entries(d.sets).forEach(([id,arr])=>{if(!arr.length||!EX[id])return;
+    const s=S.state.ex[id]||(S.state.ex[id]={seat:"",hist:[]});if(!s.hist)s.hist=[];
+    const top=Math.max(...arr.map(x=>x.w)),reps=arr.filter(x=>x.w===top).map(x=>x.r).join(", ");
+    const prev=s.hist.length?Math.max(...s.hist.map(x=>x.top)):null;if(prev!==null&&top>prev)prs.push(EX[id].n+" "+fmt(top)+" kg");
+    s.last={d:dt,sets:arr.map(x=>({w:x.w,r:x.r,f:x.f}))};s.hist.push({d:dt,top,reps});if(s.hist.length>40)s.hist=s.hist.slice(-40);
+    sets+=arr.length;arr.forEach(x=>{vol+=x.w*x.r*(unit(id)==="kg / ročka"?2:1);});});
+  const mins=Math.max(1,Math.round((Date.now()-d.started)/60000)),t=title();
+  S.state.log.push({d:dt,wk:d.wk,title:t,sets,vol:Math.round(vol),mins});if(S.state.log.length>60)S.state.log=S.state.log.slice(-60);
+  S.state.done+=1; if(d.wk!=="X") S.state.next={A:"B",B:"C",C:"A"}[d.wk];
+  saveState(); S.summary={title:t,sets,vol,mins,prs};
+  S.draft=newDraft(S.state.next);S.draft.date="";ls.del(LS_DRAFT);S.open=null;S.confirmFinish=false;stopRest();
+}
+function ensureToday(){if(S.draft.date!==today()){S.draft.date=today();S.draft.started=Date.now();}}
+document.addEventListener("click",ev=>{
+  const b=ev.target.closest("[data-act]");if(!b)return;ensureAudio();
+  const a=b.dataset.act,id=b.dataset.v;
+  if(a==="tab"){S.view=id;render();window.scrollTo(0,0);return;}
+  if(a==="rest30"){if(S.rest){S.rest.end=Math.max(S.rest.end,Date.now())+30000;S.rest.total+=30;S.rest.beeped=false;}tickRest();return;}
+  if(a==="restskip"){stopRest();return;}
+  if(a==="closesum"){S.summary=null;render();return;}
+  if(a==="lib"){S.lib=id;S.libOpen=null;render();return;}
+  if(a==="libopen"){S.libOpen=S.libOpen===id?null:id;render();return;}
+  if(a==="import"){const f=document.getElementById("importFile");if(f)f.click();return;}
+  if(a==="export"){const name=`lamela-${today()}.json`,txt=JSON.stringify(S.state);
+    try{const file=new File([txt],name,{type:"application/json"});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:"Lamela kopija"}).then(()=>{S.msg="Kopija shranjena.";render();}).catch(()=>{});return;}}catch(e){}
+    const u=URL.createObjectURL(new Blob([txt],{type:"application/json"})),x=document.createElement("a");x.href=u;x.download=name;document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),3000);S.msg="Kopija shranjena v Prenose.";render();return;}
+  ensureToday();
+  if(a==="picker"){S.picker=!S.picker;if(S.picker&&!S.pick.length&&S.draft.custom)S.pick=S.draft.custom.mus.slice();render();return;}
+  if(a==="pickm"){S.pick=S.pick.includes(id)?S.pick.filter(x=>x!==id):S.pick.concat(id);render();return;}
+  if(a==="preset"){S.pick=PRESETS[+id].m.slice();render();return;}
+  if(a==="build"){const ids=buildCustom(S.pick);S.draft.wk="X";S.draft.custom={mus:S.pick.slice(),label:labelFor(S.pick),ids};S.picker=false;S.open=ids[0];saveDraft();render();window.scrollTo(0,0);return;}
+  if(a==="addtoday"){if(S.draft.wk!=="X"){S.draft.custom={mus:[],label:"Trening "+S.draft.wk+" +",ids:exIds().slice()};S.draft.wk="X";}
+    S.draft.custom.ids.push(id);S.draft.custom.label=S.draft.custom.label||"Moj trening";saveDraft();S.view="today";S.open=id;render();window.scrollTo(0,0);return;}
+  if(a==="wk"){S.draft.wk=id;S.picker=false;S.open=null;saveDraft();render();return;}
+  if(a==="open"){S.open=S.open===id?null:id;render();return;}
+  if(a==="w-"||a==="w+"){const c=cur(id),st=EX[id].st;c.w=Math.max(0,Math.round((c.w+(a==="w+"?st:-st))*10)/10);saveDraft();render();return;}
+  if(a==="r-"||a==="r+"){const c=cur(id);c.r=Math.max(1,c.r+(a==="r+"?1:-1));saveDraft();render();return;}
+  if(a==="log"){const c=cur(id),f=b.dataset.f,set={w:c.w,r:c.r,f};(S.draft.sets[id]=S.draft.sets[id]||[]).push(set);
+    const nx=nextSet(id,set);c.w=nx.w;c.why=nx.why;const p=plan(id),n=S.draft.sets[id].length;
+    if(n>=p.sets){const nextId=exIds().find(x=>doneSets(x)<plan(x).sets);S.open=nextId||null;startRest(p.rest,nextId?"naslednja: "+EX[nextId].n:"zadnja vaja");}
+    else startRest(p.rest,EX[id].n);
+    keepAwake();saveDraft();render();return;}
+  if(a==="undo"){const arr=S.draft.sets[id]||[];const s=arr.pop();if(s){cur(id).w=s.w;cur(id).r=s.r;cur(id).why=null;}saveDraft();render();return;}
+  if(a==="swap"){const i=+id,list=exIds(),curId=list[i],cands=swapCandidates(curId,list),nx=cands[(cands.indexOf(curId)+1)%cands.length];
+    if(S.draft.wk==="X"){S.draft.custom.ids[i]=nx;}else{const o=WK[S.draft.wk][i];if(nx===o)delete S.draft.swaps[o];else S.draft.swaps[o]=nx;}
+    S.open=nx;saveDraft();render();return;}
+  if(a==="remove"){S.draft.custom.ids=S.draft.custom.ids.filter(x=>x!==id);S.open=null;saveDraft();render();return;}
+  if(a==="finish"){S.confirmFinish=true;render();return;}
+  if(a==="nofinish"){S.confirmFinish=false;render();return;}
+  if(a==="dofinish"){finishWorkout();render();window.scrollTo(0,0);return;}
+});
+let seatT=null;
+document.addEventListener("input",ev=>{const id=ev.target.dataset&&ev.target.dataset.seat;if(!id)return;
+  const s=S.state.ex[id]||(S.state.ex[id]={seat:"",hist:[]});s.seat=ev.target.value.slice(0,60);ls.set(LS_STATE,S.state);clearTimeout(seatT);seatT=setTimeout(()=>flush(),1200);});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&S.rest)keepAwake();});
+new MutationObserver(()=>readCol()).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+if(window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change",readCol);
+
+document.addEventListener("change",ev=>{if(ev.target.id!=="importFile"||!ev.target.files[0])return;const fr=new FileReader();
+  fr.onload=()=>{try{const d=JSON.parse(fr.result);if(!d||d.v!==1||!d.ex||!Array.isArray(d.log))throw 0;S.state=d;saveState();S.msg=`Naloženo: ${d.done} treningov.`;}catch(e){S.msg="Te datoteke ne morem prebrati. Izberi kopijo, ki jo je shranila Lamela.";}render();};fr.readAsText(ev.target.files[0]);});
+if(STANDALONE){
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+  if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+render(); requestAnimationFrame(loop);
+})();
+</script>
+</body></html>
