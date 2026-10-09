@@ -53,13 +53,14 @@ textarea{width:100%;height:100px;margin-top:8px;border:1px solid var(--line);bac
 <div class="w">
 <h1>Moj Screener</h1>
 <div class="sub" id="sub">Top po 24h volatilnosti · USDT perpetuali</div>
-<div class="bar"><button class="chip on" id="tabS">Skener</button><button class="chip" id="tabH">Zgodovina</button><span class="mut" id="sess"></span></div>
+<div class="bar"><button class="chip on" id="tabS">Skener</button><button class="chip" id="tabH">Zgodovina</button><span class="mut" id="sess"></span><span id="live" class="mut"></span></div>
 <div id="viewS">
 <div class="bar">
 <button class="btn" id="go">Osveži</button>
 <span class="lbl">Število</span><input type="number" id="topn" value="30" min="5" max="60">
 <span class="lbl">Min promet (M)</span><input type="number" id="minto" value="5" min="0">
 <span class="lbl">Tveganje $</span><input type="number" id="risk" value="50" min="1">
+<label class="lbl"><input type="checkbox" id="auto" checked style="width:auto"> Samodejno osveži (5 min)</label>
 </div>
 <div class="prog" id="prog"><i></i></div>
 <div class="alert" id="alert"></div>
@@ -170,7 +171,7 @@ var c=cisd(k5);r.ct=c.ct;r.cl=c.cl;r.ca=c.ca;r.sl=c.sl;r.t=c.t||0;r.h4=cisd(k4,2
 r.k1=k1.slice(-48);r.k5=k5.slice(-72);score(r)},4,function(d){pr.firstChild.style.width=Math.round(d/list.length*100)+'%'});
 rows=list.filter(function(r){return !r.err});ts=Date.now();
 var dt=new Date(ts);$('sub').textContent='Top '+rows.length+' po 24h volatilnosti · '+dt.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
-logHist();await evalHist();banner();render();renderHist();setTimeout(markSeen,3000);
+connect();logHist();await evalHist();banner();render();renderHist();setTimeout(markSeen,3000);
 }catch(e){$('out').className='empty';$('out').textContent='Napaka pri branju Bybit API: '+e.message+'. Poskusi znova.'}
 btn.disabled=false;btn.textContent='Osveži';pr.style.display='none';pr.firstChild.style.width='0'}
 function ctText(r){
@@ -217,7 +218,7 @@ list.forEach(function(r){
 var isNew=r.sc>=3&&!seen[key(r)];
 var dv=(r.d1?'1H '+(r.d1==='bear'?'<span class="dn">bear</span>':'<span class="up">bull</span>'):'')+(r.d1&&r.d4?' · ':'')+(r.d4?'4H '+(r.d4==='bear'?'<span class="dn">bear</span>':'<span class="up">bull</span>'):'')||'<span class="mut">-</span>';
 var tr=r.tr==='up'?'<span class="up">gor</span>':r.tr==='down'?'<span class="dn">dol</span>':'<span class="mut">-</span>';
-h+='<tr class="rw" data-s="'+r.s+'"><td><b>'+r.s+'</b>'+(isNew?'<span class="new">NOVO</span>':'')+' <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'USDT.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'USDT">BB</a></td><td class="l"><span class="pill '+(r.sd==='-'?'none':r.sd)+'">'+(r.sd==='long'?'LONG':r.sd==='short'?'SHORT':'-')+'</span></td><td class="mono"><b>'+r.sc.toFixed(1)+'</b></td><td class="mono">'+fp(r.p)+'</td><td class="mono '+(r.ch>=0?'up':'dn')+'">'+(r.ch>=0?'+':'')+r.ch.toFixed(1)+'</td><td class="mono">'+r.to.toFixed(1)+'</td><td class="mono '+rsiC(r.r1)+'">'+r.r1+'</td><td class="mono '+rsiC(r.r4)+'">'+r.r4+'</td><td class="l">'+dv+'</td><td class="l">'+tr+'</td><td class="l">'+ctText(r)+'</td><td class="l">'+hText(r)+'</td></tr>';
+h+='<tr class="rw" data-s="'+r.s+'"><td><b>'+r.s+'</b>'+(isNew?'<span class="new">NOVO</span>':'')+' <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'USDT.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'USDT">BB</a></td><td class="l"><span class="pill '+(r.sd==='-'?'none':r.sd)+'">'+(r.sd==='long'?'LONG':r.sd==='short'?'SHORT':'-')+'</span></td><td class="mono"><b>'+r.sc.toFixed(1)+'</b></td><td class="mono pc">'+fp(r.p)+'</td><td class="mono cc '+(r.ch>=0?'up':'dn')+'">'+(r.ch>=0?'+':'')+r.ch.toFixed(1)+'</td><td class="mono">'+r.to.toFixed(1)+'</td><td class="mono '+rsiC(r.r1)+'">'+r.r1+'</td><td class="mono '+rsiC(r.r4)+'">'+r.r4+'</td><td class="l">'+dv+'</td><td class="l">'+tr+'</td><td class="l">'+ctText(r)+'</td><td class="l">'+hText(r)+'</td></tr>';
 if(open[r.s])h+='<tr class="dt"><td colspan="12" class="l">'+detail(r)+'</td></tr>'});
 out.innerHTML=h+'</tbody></table>';
 out.querySelectorAll('th').forEach(function(th){th.onclick=function(){var k=th.dataset.k;if(sortK===k)sortD=-sortD;else{sortK=k;sortD=-1}render()}});
@@ -253,6 +254,20 @@ o.className='';var h='<table><thead><tr><th>Čas</th><th class="l">Simbol</th><t
 hist.slice().reverse().forEach(function(x){var d=Math.abs(x.e-x.sl),tp=x.side==='long'?x.e+2*d:x.e-2*d,col=x.st==='2R'||x.st==='1R'?'up':x.st==='SL'?'dn':'mut';
 h+='<tr><td class="mono">'+new Date(x.t).toLocaleString('sl-SI',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</td><td class="l"><b>'+x.s+'</b></td><td class="l"><span class="pill '+x.side+'">'+x.side.toUpperCase()+'</span></td><td class="mono">'+x.sc.toFixed(1)+'</td><td class="mono">'+fp(x.e)+'</td><td class="mono">'+fp(x.sl)+'</td><td class="mono">'+fp(tp)+'</td><td class="l '+col+'">'+(x.st==='pending'?'čaka vstop':x.st==='live'?'v teku'+(x.h1?' (1R doseženo)':''):x.st)+'</td></tr>'});
 o.innerHTML=h+'</tbody></table>'}
+var ws=null,wsT=0;
+function setLive(on){var e=$('live');e.textContent=on?'● cene v živo':'○ ni žive povezave';e.className=on?'up':'mut'}
+function setCell(sym,sel,txt,cls){var tr=document.querySelector('tr.rw[data-s="'+sym+'"]');if(!tr)return;var c=tr.querySelector(sel);if(!c)return;c.textContent=txt;if(cls!==undefined)c.className='mono '+(sel==='.pc'?'pc':'cc')+' '+cls}
+function upd(sym,p,ch){var r=rows.filter(function(x){return x.s===sym})[0];if(!r)return;
+if(p!=null&&p!==r.p){var up=p>r.p;r.p=p;setCell(sym,'.pc',fp(p));var tr=document.querySelector('tr.rw[data-s="'+sym+'"]');var c=tr&&tr.querySelector('.pc');if(c){c.style.color=up?'var(--long)':'var(--short)';setTimeout(function(){c.style.color=''},500)}}
+if(ch!=null){r.ch=ch;setCell(sym,'.cc',(ch>=0?'+':'')+ch.toFixed(1),ch>=0?'up':'dn')}}
+function connect(){clearTimeout(wsT);if(ws){try{ws.onclose=null;ws.close()}catch(e){}}if(!rows.length)return;
+ws=new WebSocket('wss://stream.bybit.com/v5/public/linear');
+ws.onopen=function(){setLive(true);var a=rows.map(function(r){return 'tickers.'+r.s+'USDT'});for(var i=0;i<a.length;i+=10)ws.send(JSON.stringify({op:'subscribe',args:a.slice(i,i+10)}))};
+ws.onmessage=function(m){try{var j=JSON.parse(m.data);if(j.topic&&j.topic.indexOf('tickers.')===0&&j.data){var d=j.data;upd(d.symbol.replace(/USDT$/,''),d.lastPrice!=null?+d.lastPrice:null,d.price24hPcnt!=null?+d.price24hPcnt*100:null)}}catch(e){}};
+ws.onclose=function(){setLive(false);wsT=setTimeout(connect,3000)};ws.onerror=function(){try{ws.close()}catch(e){}}}
+setInterval(function(){if(ws&&ws.readyState===1)ws.send(JSON.stringify({op:'ping'}))},20000);
+setInterval(function(){var n=Date.now();if(!$('auto').checked||document.hidden||$('go').disabled)return;if(n-ts>=285000&&n%300000>=8000&&n%300000<60000)scan()},5000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&$('auto').checked&&!$('go').disabled&&Date.now()-ts>300000)scan()});
 function banner(){
 var n=rows.filter(function(r){return r.sc>=4&&(r.ct==='bear'||r.ct==='bull')&&!seen[key(r)]});var a=$('alert');
 if(n.length){a.className='alert show';a.textContent='Nov signal: '+n.map(function(r){return r.s+' '+r.sd.toUpperCase()+' ('+r.sc.toFixed(1)+')'}).join(', ');
@@ -263,7 +278,7 @@ document.querySelectorAll('[data-side]').forEach(function(b){b.onclick=function(
 document.querySelectorAll('[data-sig]').forEach(function(b){b.onclick=function(){var k=b.dataset.sig;sigs[k]=!sigs[k];b.classList.toggle('on',sigs[k]);render()}});
 $('minsc').oninput=render;$('go').onclick=scan;
 try{var rs=localStorage.getItem('risk');if(rs)$('risk').value=rs}catch(e){}
-$('risk').oninput=render;calcSess();renderHist();
+$('risk').oninput=render;calcSess();renderHist();scan();
 $('tabS').onclick=function(){$('viewS').style.display='';$('viewH').style.display='none';$('tabS').classList.add('on');$('tabH').classList.remove('on')};
 $('tabH').onclick=function(){$('viewS').style.display='none';$('viewH').style.display='';$('tabH').classList.add('on');$('tabS').classList.remove('on');renderHist()};
 $('hclr').onclick=function(){if(confirm('Izbrišem zgodovino signalov?')){hist=[];saveH();renderHist()}};
