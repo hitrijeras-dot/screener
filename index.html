@@ -73,6 +73,7 @@ textarea{width:100%;height:100px;margin-top:8px;border:1px solid var(--line);bac
 <button class="chip" data-sig="trend">Trend</button>
 <button class="chip" data-sig="cisd">5m CISD</button>
 <button class="chip" data-sig="htf">4H/D CISD</button>
+<button class="chip" data-sig="h1">1H CISD setup</button>
 <span class="lbl">Min ocena</span><input type="number" id="minsc" value="0" min="0" step="0.5">
 </div>
 <div class="card"><div id="out" class="empty">Pritisni Osveži.</div></div>
@@ -80,7 +81,7 @@ textarea{width:100%;height:100px;margin-top:8px;border:1px solid var(--line);bac
 <textarea id="ta" readonly></textarea>
 </div>
 <div id="viewH" style="display:none"><div class="bar"><span id="hstat" class="lbl"></span><button class="chip" id="hclr">Počisti zgodovino</button></div><div class="card"><div id="hout" class="empty">Zgodovina je prazna.</div></div></div>
-<div class="note">Bias (HTF) = včerajšnja D sveča ±1, potrjen D CISD ±2, potrjen 4H CISD ±1,5, 1H trend ±0,5; trejdaš samo v smeri biasa (podrobnosti ob kliku na vrstico). CISD šteje samo v smeri biasa. Vstop šele po zaprti 5m sveči s potrjenim CISD. Ocena: RSI 1H/4H (70/30) +1,5/+2, divergenca 1H/4H +1,5/+2,5, trend 1H +1, potrjen 5m CISD +3, nepotrjen sweep ne šteje. 4H/D potrjen CISD v isti smeri +1,5/+2. Potrjen 5m CISD v London/NY killzone +0,5. Kalkulator: vstop limit na CISD levelu, SL za sweep ekstremom, TP 1R in 2R. Podatki iz Bybit javnega API-ja, zgodovina je shranjena samo v tvojem telefonu. Ni finančni nasvet.</div>
+<div class="note">Bias (HTF) = včerajšnja D sveča ±1, potrjen D CISD ±2, potrjen 4H CISD ±1,5, 1H trend ±0,5; trejdaš samo v smeri biasa (podrobnosti ob kliku na vrstico). CISD šteje samo v smeri biasa. Vstop šele po zaprti 5m sveči s potrjenim CISD. Ocena: RSI 1H/4H (70/30) +1,5/+2, divergenca 1H/4H +1,5/+2,5, trend 1H +1, potrjen 5m CISD +3, nepotrjen sweep ne šteje. 4H/D potrjen CISD v isti smeri +1,5/+2. Potrjen 5m CISD v London/NY killzone +0,5. Kalkulator: vstop limit na CISD levelu, SL za sweep ekstremom, TP 1R in 2R. 1H CISD retrace: OB iz teles sveč serije, vstop 1 na CISD levelu, vstop 2 (DCA) na 50 % OB, SL za skrajnim wickom, TP 2R ali naslednja nepometena 1H likvidnost; potrjen 1H CISD v smeri biasa +2. Podatki iz Bybit javnega API-ja, zgodovina je shranjena samo v tvojem telefonu. Ni finančni nasvet.</div>
 </div>
 <script>
 (function(){
@@ -141,7 +142,9 @@ var st=e;while(st>0&&((k[st-1].c>=k[st-1].o)===hi))st--;
 var lvl=k[st].o,conf=false,ci=-1;
 for(var q=s+1;q<=last;q++){if(hi?k[q].c<lvl:k[q].c>lvl){conf=true;ci=q;break}}
 if(!conf&&(hi?b.c<lvl:b.c>lvl)){conf=true;ci=s}
-return {ct:conf?(hi?'bear':'bull'):(hi?'sweep-hi':'sweep-lo'),cl:lvl,ca:Math.max(0,(n-1-(conf?ci:s))*mins),sl:hi?b.h:b.l,sp:lvlp,t:k[st].t/1000}
+var bl=1e99,bh=-1e99,wx=hi?-1e99:1e99,zz;for(zz=st;zz<=e;zz++){bl=Math.min(bl,k[zz].o,k[zz].c);bh=Math.max(bh,k[zz].o,k[zz].c)}
+for(zz=st;zz<=s;zz++){wx=hi?Math.max(wx,k[zz].h):Math.min(wx,k[zz].l)}
+return {ct:conf?(hi?'bear':'bull'):(hi?'sweep-hi':'sweep-lo'),cl:lvl,ca:Math.max(0,(n-1-(conf?ci:s))*mins),sl:hi?b.h:b.l,sp:lvlp,t:k[st].t/1000,ob:{lo:bl,hi:bh,wx:wx}}
 }}
 return res}
 function score(r){
@@ -151,7 +154,18 @@ if(r.r1>=70)be+=1.5;if(r.r4>=70)be+=2;if(r.d1==='bear')be+=1.5;if(r.d4==='bear')
 var cw=r.ca<=30?3:r.ca<=60?2:1;var L=r.bias==='long';r.al=(r.ct==='bull'&&L)||(r.ct==='bear'&&!L);if(r.al){if(L)bu+=cw;else be+=cw}
 var h4=r.h4||{},hd=r.hd||{};if(L){if(h4.ct==='bull')bu+=1.5;if(hd.ct==='bull')bu+=2}else{if(h4.ct==='bear')be+=1.5;if(hd.ct==='bear')be+=2}
 if(sess.kz&&r.al){if(L)bu+=0.5;else be+=0.5}
-r.bu=bu;r.be=be;r.sd=r.bias;r.sc=L?bu:be;return r}
+if(r.s1){if(L)bu+=2;else be+=2}r.bu=bu;r.be=be;r.sd=r.bias;r.sc=L?bu:be;return r}
+function setup1(r,k1){var c=r.c1;if(!c||!c.ob)return null;var L=r.bias==='long';
+if(!((c.ct==='bull'&&L)||(c.ct==='bear'&&!L)))return null;
+var ob=c.ob,e1=c.cl,e2=(ob.lo+ob.hi)/2,sl=ob.wx;
+if(L?!(sl<e2&&e2<=e1):!(sl>e2&&e2>=e1))return null;
+var avg=(e1+e2)/2,d=Math.abs(sl-avg),tp=L?avg+2*d:avg-2*d,liq=false;
+var pv=pivots(k1,L?'h':'l',L),best=null;
+pv.forEach(function(i){var lv=L?k1[i].h:k1[i].l,swept=false;for(var j=i+1;j<k1.length;j++){if(L?k1[j].h>lv:k1[j].l<lv){swept=true;break}}
+if(swept)return;if(L?lv>=tp:lv<=tp){if(best===null||(L?lv<best:lv>best))best=lv}});
+if(best!==null){tp=best;liq=true}
+function rr(e){return Math.abs(tp-e)/Math.abs(sl-e)}
+return {L:L,e1:e1,e2:e2,avg:avg,sl:sl,tp:tp,liq:liq,rr1:rr(e1),rr2:rr(e2),rra:rr(avg),lo:ob.lo,hi:ob.hi,ca:c.ca}}
 async function pool(items,fn,conc,cb){var i=0,done=0;await Promise.all(Array.from({length:conc},async function(){
 while(i<items.length){var it=items[i++];try{await fn(it)}catch(e){it.err=1}cb(++done)}}))}
 async function scan(){
@@ -167,12 +181,12 @@ var c1=k1.map(function(x){return x.c}),c4=k4.map(function(x){return x.c});
 var R1=rsi(c1),R4=rsi(c4);
 r.r1=Math.round(R1[R1.length-1]);r.r4=Math.round(R4[R4.length-1]);
 r.d1=diverge(k1,R1);r.d4=diverge(k4,R4);r.tr=trend(k1);
-var c=cisd(k5);r.ct=c.ct;r.cl=c.cl;r.ca=c.ca;r.sl=c.sl;r.t=c.t||0;r.h4=cisd(k4,240);r.hd=cisd(kD,1440);r.k5f=k5;var pd=kD[kD.length-2],bs=0,bw=[];if(pd){bs+=pd.c<pd.o?-1:1;bw.push('včerajšnja D sveča '+(pd.c<pd.o?'rdeča':'zelena'))}
+var c=cisd(k5);r.ct=c.ct;r.cl=c.cl;r.ca=c.ca;r.sl=c.sl;r.t=c.t||0;r.h4=cisd(k4,240);r.hd=cisd(kD,1440);r.c1=cisd(k1,60);r.k5f=k5;var pd=kD[kD.length-2],bs=0,bw=[];if(pd){bs+=pd.c<pd.o?-1:1;bw.push('včerajšnja D sveča '+(pd.c<pd.o?'rdeča':'zelena'))}
 if(r.hd.ct==='bull'){bs+=2;bw.push('D CISD bull')}else if(r.hd.ct==='bear'){bs-=2;bw.push('D CISD bear')}
 if(r.h4.ct==='bull'){bs+=1.5;bw.push('4H CISD bull')}else if(r.h4.ct==='bear'){bs-=1.5;bw.push('4H CISD bear')}
 if(r.tr==='up'){bs+=0.5;bw.push('1H trend gor')}else if(r.tr==='down'){bs-=0.5;bw.push('1H trend dol')}
 r.bias=bs>0?'long':bs<0?'short':(pd&&pd.c<pd.o?'short':'long');r.bw=bw.join(' · ')+' (skupaj '+bs+')';
-r.k1=k1.slice(-48);r.k5=k5.slice(-72);score(r)},4,function(d){pr.firstChild.style.width=Math.round(d/list.length*100)+'%'});
+r.s1=setup1(r,k1);r.k1=k1.slice(-48);r.k5=k5.slice(-72);score(r)},4,function(d){pr.firstChild.style.width=Math.round(d/list.length*100)+'%'});
 rows=list.filter(function(r){return !r.err});ts=Date.now();
 var dt=new Date(ts);$('sub').textContent='Top '+rows.length+' po 24h volatilnosti · '+dt.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
 connect();logHist();await evalHist();banner();render();renderHist();setTimeout(markSeen,3000);
@@ -193,6 +207,7 @@ if(sigs.rsi&&!(r.r1>=70||r.r1<=30||r.r4>=70||r.r4<=30))return false;
 if(sigs.div&&!(r.d1||r.d4))return false;
 if(sigs.trend&&!r.tr)return false;
 if(sigs.cisd&&!r.al)return false;
+if(sigs.h1&&!r.s1)return false;
 if(sigs.htf&&!((r.h4&&(r.h4.ct==='bear'||r.h4.ct==='bull'))||(r.hd&&(r.hd.ct==='bear'||r.hd.ct==='bull'))))return false;return true}
 function candles(k,title,lv){
 var W=520,H=170,P=4,n=k.length,w=(W-2*P)/n,lo=1e99,hi=-1e99;
@@ -209,8 +224,15 @@ var lg=r.ct==='bull',e=r.cl,sl=r.sl,d=Math.abs(e-sl);
 if(!sl||(lg&&sl>=e)||(!lg&&sl<=e))return '<div class="mut" style="margin-top:10px">Kalkulator: SL ni veljaven glede na CISD level.</div>';
 var q=rk/d,tp1=lg?e+d:e-d,tp2=lg?e+2*d:e-2*d;
 return '<div style="margin-top:10px;font-size:13px"><b>'+(lg?'LONG':'SHORT')+'</b> · vstop limit na CISD '+fp(e)+' · SL '+fp(sl)+' ('+(d/e*100).toFixed(2)+'%) · TP 1R '+fp(tp1)+' · TP 2R '+fp(tp2)+' · velikost '+(q>=100?q.toFixed(0):q.toPrecision(3))+' ('+(q*e).toFixed(0)+' USDT) pri tveganju '+rk+' $</div>'}
+function setupHtml(r){var s=r.s1;
+if(!s)return '<div class="mut" style="margin-top:10px">1H CISD retrace setup: ni (potreben potrjen 1H CISD v smeri biasa).</div>';
+var rk=parseFloat($('risk').value)||50,d=Math.abs(s.sl-s.avg),Q=rk/d,h=Q/2,pc=d/s.avg*100,inz=r.p>=s.lo&&r.p<=s.hi;
+return '<div style="margin-top:10px;font-size:13px"><b>1H CISD retrace · '+(s.L?'LONG':'SHORT')+'</b> (CISD pred '+ago(s.ca)+', OB telesa '+fp(s.lo)+' – '+fp(s.hi)+(inz?', cena je zdaj v OB':'')+')<br>'
++'Vstop 1 (CISD level) '+fp(s.e1)+' · RR '+s.rr1.toFixed(1)+' | Vstop 2 (50 % OB, DCA) '+fp(s.e2)+' · RR '+s.rr2.toFixed(1)+' | povprečje '+fp(s.avg)+' · RR '+s.rra.toFixed(1)+'<br>'
++'SL '+fp(s.sl)+' (za najvišjim/najnižjim wickom, '+pc.toFixed(2)+' % od povprečja'+(pc<0.5?' <span class="dn">pod 0,5 %</span>':'')+') · TP '+fp(s.tp)+' ('+(s.liq?'naslednja nepometena 1H likvidnost':'2R')+')<br>'
++'Velikost: 2 × '+(h>=100?h.toFixed(0):h.toPrecision(3))+' enot ('+(h*s.avg).toFixed(0)+' USDT vsaka) pri tveganju '+rk+' $, če se napolnita oba vstopa</div>'}
 function detail(r){var lv=[];if(r.ct==='bear'||r.ct==='bull'){if(r.sl)lv.push({p:r.sl,c:'var(--warn)',t:'sweep '+fp(r.sl)});lv.push({p:r.cl,c:'var(--acc)',t:'CISD '+fp(r.cl)})}
-return '<div class="mut" style="margin-bottom:8px">Bias '+r.bias.toUpperCase()+' (HTF): '+r.bw+'</div><div class="gr">'+candles(r.k1,'1H · zadnjih 48')+candles(r.k5,'5m · zadnjih 72',lv)+'</div>'+calc(r)}
+return '<div class="mut" style="margin-bottom:8px">Bias '+r.bias.toUpperCase()+' (HTF): '+r.bw+'</div><div class="gr">'+candles(r.k1,'1H · zadnjih 48')+candles(r.k5,'5m · zadnjih 72',lv)+'</div>'+setupHtml(r)+calc(r)}
 function render(){
 var out=$('out');
 if(!rows.length){out.className='empty';out.textContent='Pritisni Osveži.';return}
@@ -222,7 +244,7 @@ list.forEach(function(r){
 var isNew=r.sc>=3&&!seen[key(r)];
 var dv=(r.d1?'1H '+(r.d1==='bear'?'<span class="dn">bear</span>':'<span class="up">bull</span>'):'')+(r.d1&&r.d4?' · ':'')+(r.d4?'4H '+(r.d4==='bear'?'<span class="dn">bear</span>':'<span class="up">bull</span>'):'')||'<span class="mut">-</span>';
 var tr=r.tr==='up'?'<span class="up">gor</span>':r.tr==='down'?'<span class="dn">dol</span>':'<span class="mut">-</span>';
-h+='<tr class="rw" data-s="'+r.s+'"><td><b>'+r.s+'</b>'+(isNew?'<span class="new">NOVO</span>':'')+' <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'USDT.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'USDT">BB</a></td><td class="l"><span title="'+r.bw+'" class="pill '+(r.sd==='-'?'none':r.sd)+'">'+(r.sd==='long'?'LONG':r.sd==='short'?'SHORT':'-')+'</span></td><td class="mono"><b>'+r.sc.toFixed(1)+'</b></td><td class="mono pc">'+fp(r.p)+'</td><td class="mono cc '+(r.ch>=0?'up':'dn')+'">'+(r.ch>=0?'+':'')+r.ch.toFixed(1)+'</td><td class="mono">'+r.to.toFixed(1)+'</td><td class="mono '+rsiC(r.r1)+'">'+r.r1+'</td><td class="mono '+rsiC(r.r4)+'">'+r.r4+'</td><td class="l">'+dv+'</td><td class="l">'+tr+'</td><td class="l">'+ctText(r)+'</td><td class="l">'+hText(r)+'</td></tr>';
+h+='<tr class="rw" data-s="'+r.s+'"><td><b>'+r.s+'</b>'+(isNew?'<span class="new">NOVO</span>':'')+(r.s1?'<span class="new" style="background:var(--longbg);color:var(--long)">1H CISD</span>':'')+' <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'USDT.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'USDT">BB</a></td><td class="l"><span title="'+r.bw+'" class="pill '+(r.sd==='-'?'none':r.sd)+'">'+(r.sd==='long'?'LONG':r.sd==='short'?'SHORT':'-')+'</span></td><td class="mono"><b>'+r.sc.toFixed(1)+'</b></td><td class="mono pc">'+fp(r.p)+'</td><td class="mono cc '+(r.ch>=0?'up':'dn')+'">'+(r.ch>=0?'+':'')+r.ch.toFixed(1)+'</td><td class="mono">'+r.to.toFixed(1)+'</td><td class="mono '+rsiC(r.r1)+'">'+r.r1+'</td><td class="mono '+rsiC(r.r4)+'">'+r.r4+'</td><td class="l">'+dv+'</td><td class="l">'+tr+'</td><td class="l">'+ctText(r)+'</td><td class="l">'+hText(r)+'</td></tr>';
 if(open[r.s])h+='<tr class="dt"><td colspan="12" class="l">'+detail(r)+'</td></tr>'});
 out.innerHTML=h+'</tbody></table>';
 out.querySelectorAll('th').forEach(function(th){th.onclick=function(){var k=th.dataset.k;if(sortK===k)sortD=-sortD;else{sortK=k;sortD=-1}render()}});
