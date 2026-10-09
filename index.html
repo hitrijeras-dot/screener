@@ -147,6 +147,8 @@ for(zz=st;zz<=s;zz++){wx=hi?Math.max(wx,k[zz].h):Math.min(wx,k[zz].l)}
 return {ct:conf?(hi?'bear':'bull'):(hi?'sweep-hi':'sweep-lo'),cl:lvl,ca:Math.max(0,(n-1-(conf?ci:s))*mins),sl:hi?b.h:b.l,sp:lvlp,t:k[st].t/1000,ob:{lo:bl,hi:bh,wx:wx}}
 }}
 return res}
+function eq5(k,L,p){var n=k.length-1,pv=[];for(var i=2;i<n-2;i++){var x=L?k[i].l:k[i].h,g=true;for(var j=1;j<=2;j++){if(L?(k[i-j].l<x||k[i+j].l<x):(k[i-j].h>x||k[i+j].h>x)){g=false;break}}if(!g)continue;for(var m=i+3;m<=n;m++){if(L?k[m].l<x:k[m].h>x){g=false;break}}if(g&&(L?x<p:x>p))pv.push(x)}
+var best=0;for(var a=0;a<pv.length;a++)for(var b=a+1;b<pv.length;b++){if(Math.abs(pv[a]-pv[b])/pv[a]<0.0015){var lv=L?Math.min(pv[a],pv[b]):Math.max(pv[a],pv[b]);if(!best||(L?lv>best:lv<best))best=lv}}return best}
 function score(r){
 var bu=0,be=0;
 if(r.r1<=30)bu+=1.5;if(r.r4<=30)bu+=2;if(r.d1==='bull')bu+=1.5;if(r.d4==='bull')bu+=2.5;if(r.tr==='up')bu+=1;
@@ -187,7 +189,7 @@ if(r.hd.ct==='bull'){bs+=2;bw.push('D CISD bull')}else if(r.hd.ct==='bear'){bs-=
 if(r.h4.ct==='bull'){bs+=1.5;bw.push('4H CISD bull')}else if(r.h4.ct==='bear'){bs-=1.5;bw.push('4H CISD bear')}
 if(r.tr==='up'){bs+=0.5;bw.push('1H trend gor')}else if(r.tr==='down'){bs-=0.5;bw.push('1H trend dol')}
 r.bias=bs>0?'long':bs<0?'short':(pd&&pd.c<pd.o?'short':'long');r.bw=bw.join(' · ')+' (skupaj '+bs+')';
-r.s1=setup1(r,k1);r.k1=k1.slice(-48);r.k5=k5.slice(-72);score(r)},4,function(d){pr.firstChild.style.width=Math.round(d/list.length*100)+'%'});
+r.s1=setup1(r,k1);r.eq=eq5(k5,r.bias==="long",r.p);r.k1=k1.slice(-48);r.k5=k5.slice(-72);score(r)},4,function(d){pr.firstChild.style.width=Math.round(d/list.length*100)+'%'});
 rows=list.filter(function(r){return !r.err});ts=Date.now();
 var dt=new Date(ts);$('sub').textContent='Top '+rows.length+' po 24h volatilnosti · '+dt.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
 connect();logHist();await evalHist();banner();render();renderHist();setTimeout(markSeen,3000);
@@ -228,7 +230,8 @@ return '<div style="margin-top:10px;font-size:13px"><b>'+(lg?'LONG':'SHORT')+'</
 function setupHtml(r){var s=r.s1;
 if(!s)return '<div class="mut" style="margin-top:10px">1H CISD retrace setup: ni (potreben potrjen 1H CISD v smeri biasa).</div>';
 var rk=parseFloat($('risk').value)||50,d=Math.abs(s.sl-s.avg),Q=rk/d,h=Q/2,pc=d/s.avg*100,inz=r.p>=s.lo&&r.p<=s.hi;
-return '<div style="margin-top:10px;font-size:13px"><b>1H CISD retrace · '+(s.L?'LONG':'SHORT')+'</b> (CISD pred '+ago(s.ca)+', OB telesa '+fp(s.lo)+' – '+fp(s.hi)+(inz?', cena je zdaj v OB':'')+')<br>'
+var eqw=r.eq?'<div class="dn" style="margin-top:10px;font-size:13px"><b>POČAKAJ:</b> nepometen 5m '+(s.L?'EQL (equal lows) pri ':'EQH (equal highs) pri ')+fp(r.eq)+' – likvidnost še ni pobrana, vstopi šele po sweepu + 5m CISD.</div>':'';
+return eqw+'<div style="margin-top:10px;font-size:13px"><b>1H CISD retrace · '+(s.L?'LONG':'SHORT')+'</b> (CISD pred '+ago(s.ca)+', OB telesa '+fp(s.lo)+' – '+fp(s.hi)+(inz?', cena je zdaj v OB':'')+')<br>'
 +'Vstop 1 (CISD level) '+fp(s.e1)+' · RR '+s.rr1.toFixed(1)+' | Vstop 2 (50 % OB, DCA) '+fp(s.e2)+' · RR '+s.rr2.toFixed(1)+' | povprečje '+fp(s.avg)+' · RR '+s.rra.toFixed(1)+'<br>'
 +'SL '+fp(s.sl)+' (za najvišjim/najnižjim wickom, '+pc.toFixed(2)+' % od povprečja'+(pc<0.5?' <span class="dn">pod 0,5 %</span>':'')+') · TP '+fp(s.tp)+' ('+(s.liq?'naslednja nepometena 1H likvidnost':'2R')+')<br>'
 +'Velikost: 2 × '+(h>=100?h.toFixed(0):h.toPrecision(3))+' enot ('+(h*s.avg).toFixed(0)+' USDT vsaka) pri tveganju '+rk+' $, če se napolnita oba vstopa</div>'}
