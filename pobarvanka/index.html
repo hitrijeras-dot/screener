@@ -1,0 +1,181 @@
+<!doctype html><html lang="sl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#FFF4E2"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Pobarvanka"><meta name="description" content="Pobarvanka z Injo in Evo."><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style><script>window.__POBARVANKA_APP__=true</script><title>Pobarvanka Inja in Eva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap">
+<style>
+/* Layout: gallery of pages -> full-screen coloring sheet with a big color palette and tool row under it. One bright paper look on purpose. */
+:root{
+  --bg:#FFF4E2; --card:#FFFFFF; --ink:#3B2716; --soft:#8A6F55; --accent:#E8742A; --accent2:#2E9C8F; --line:#F0DFC4;
+  --display:"Baloo 2",ui-rounded,"Trebuchet MS",sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--display);margin:0;-webkit-user-select:none;user-select:none}
+.app{max-width:980px;margin:0 auto;padding-block:12px 20px;padding-inline:16px;box-sizing:border-box}
+header{display:flex;align-items:center;gap:12px;justify-content:space-between;min-height:44px}
+h1{font-size:clamp(20px,5.6vw,26px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;font-weight:800;margin:0;line-height:1;color:var(--accent)}
+h1 span{color:var(--accent2)}
+.btn{font-family:var(--display);font-weight:800;font-size:17px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:8px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn:focus-visible,.sw:focus-visible,.tool:focus-visible,.pg:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
+.lead{color:var(--soft);font-size:17px;margin:6px 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.pg{border:3px solid var(--line);background:var(--card);border-radius:18px;padding:8px;cursor:pointer;display:flex;flex-direction:column;gap:6px;text-align:left}
+.pg canvas,.pg img{width:100%;aspect-ratio:2/3;display:block;border-radius:10px;background:#fff}
+.pg b{font-size:16px;line-height:1.1;padding:0 4px 2px}
+.pg small{color:var(--soft);font-size:13px;padding:0 4px}
+/* editor */
+.ed{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:16px;align-items:start;margin-top:10px}
+@media (max-width:760px){.ed{grid-template-columns:minmax(0,1fr)}}
+.sheet{position:relative;background:#fff;border-radius:18px;box-shadow:0 8px 24px rgba(90,55,20,.14);overflow:hidden;aspect-ratio:2/3;width:min(100%,calc((100vh - 100px)*2/3));width:min(100%,calc((100dvh - 100px)*2/3));margin:0 auto;max-width:100%}
+@media (max-width:760px){.sheet{width:min(100%,calc((100vh - 330px)*2/3));width:min(100%,calc((100dvh - 330px)*2/3));min-width:min(100%,240px)}}
+.sheet canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#lines{touch-action:none;cursor:crosshair}
+.side{display:flex;flex-direction:column;gap:12px}
+.pal{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;background:var(--card);border:2px solid var(--line);border-radius:18px;padding:10px}
+@media (max-width:760px){.pal{grid-template-columns:repeat(9,1fr);gap:6px;padding:8px}}
+.sw{aspect-ratio:1;border-radius:50%;border:3px solid rgba(0,0,0,.08);cursor:pointer;padding:0;transition:transform .12s}
+.sw[aria-pressed="true"]{transform:scale(1.15);border-color:var(--ink);box-shadow:0 0 0 3px #fff inset}
+.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tool{font-family:var(--display);font-weight:800;font-size:15px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.1}
+.tool svg{width:28px;height:28px}
+.tool[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.tool:disabled{opacity:.4;cursor:default}
+.cur{display:flex;align-items:center;gap:10px;color:var(--soft);font-size:15px}
+.cur i{width:26px;height:26px;border-radius:50%;border:3px solid var(--ink);display:inline-block}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:16px}
+@media (prefers-reduced-motion: reduce){.sw{transition:none}}
+</style>
+
+</head><body><div class="app" id="app">
+  <header><h1>Pobarvanka <span>Inja in Eva</span></h1><button class="btn" type="button" id="home" hidden style="flex:none">← Slike</button></header>
+  <section id="gal">
+    <p class="lead">Izberi sliko in jo pobarvaj. Tapni na prazno polje in se pobarva samo, s čopičem pa lahko rišeš sam.</p>
+    <div class="grid" id="grid"></div>
+  </section>
+  <section id="edit" hidden>
+    <div class="ed">
+      <div class="sheet" id="sheet"><canvas id="paint"></canvas><canvas id="lines"></canvas></div>
+      <div class="side">
+        <div class="pal" id="pal" role="group" aria-label="Barve"></div>
+        <div class="tools" role="group" aria-label="Orodja">
+          <button class="tool" type="button" data-tool="fill" aria-pressed="true"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 15 15 6l11 11-9 9z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/><path d="M6 15h20" stroke="currentColor" stroke-width="2.6"/><path d="M27 21c0 0 3 4 3 6a3 3 0 0 1-6 0c0-2 3-6 3-6z" fill="currentColor"/></svg>Vedro</button>
+          <button class="tool" type="button" data-tool="brush" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M26 4 14 18l3 3L29 7z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/><path d="M12 20c-4 0-6 3-6 5s-2 3-3 3c4 2 11 1 12-5z" fill="currentColor"/></svg>Čopič</button>
+          <button class="tool" type="button" data-tool="erase" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 21 17 9l9 9-8 8h-9z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/><path d="M11 15l9 9M14 27h14" stroke="currentColor" stroke-width="2.6"/></svg>Radirka</button>
+          <button class="tool" type="button" id="size" aria-label="Debelina čopiča"><svg viewBox="0 0 32 32" aria-hidden="true"><circle id="dot" cx="16" cy="16" r="6" fill="currentColor"/></svg><span id="sizeL">Srednji</span></button>
+          <button class="tool" type="button" id="undo" disabled><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M11 8 5 14l6 6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 14h13a7 7 0 0 1 0 14h-5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>Nazaj</button>
+          <button class="tool" type="button" id="clear"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 10h16l-1.5 17h-13zM5 10h22M13 10V6h6v4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg><span id="clearL">Pobriši</span></button>
+        </div>
+        <button class="btn" type="button" id="save" hidden style="justify-content:center">Shrani sliko</button>
+        <div class="cur"><i id="curSw"></i><span id="curName">Rdeča</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>window.__LINES={"c1": "pages/c1.png", "c2": "pages/c2.png", "c3": "pages/c3.png", "c4": "pages/c4.png", "c5": "pages/c5.png", "c6": "pages/c6.png", "c7": "pages/c7.png", "c8": "pages/c8.png"};</script>
+<script>
+const LINES=window.__LINES||{};
+const APP=!!window.__POBARVANKA_APP__;
+const PAGES=[
+ {id:"c1",n:"Inja in Eva"},{id:"c2",n:"Veverica Lešnik"},{id:"c3",n:"Ježek z jabolkom"},{id:"c4",n:"Kup listja"},
+ {id:"c5",n:"Svetleče gobice"},{id:"c6",n:"Stari hrast"},{id:"c7",n:"Zlati dež"},{id:"c8",n:"Lahko noč"}
+].filter(p=>LINES[p.id]);
+const COLORS=[["#E53935","Rdeča"],["#FB8C00","Oranžna"],["#FDD835","Rumena"],["#7CB342","Zelena"],["#2E7D32","Temno zelena"],["#29B6F6","Modra"],
+ ["#1E50A0","Temno modra"],["#8E44AD","Vijolična"],["#F48FB1","Roza"],["#8D5524","Rjava"],["#C68642","Svetlo rjava"],["#F2C9A0","Koža"],
+ ["#FFE0B2","Svetla koža"],["#F6D365","Blond"],["#B0B0B0","Siva"],["#3B3B3B","Črna"],["#D4A017","Zlata"],["#FFFFFF","Bela"]];
+const SIZES=[[8,"Tanek",4],[18,"Srednji",6],[36,"Debel",9]];
+const S={page:null,color:COLORS[0][0],tool:"fill",size:1,undo:[]};
+const $=id=>document.getElementById(id);
+const key=id=>"pob-"+id;
+const loadImg=src=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=src;});
+function getSaved(id){try{return localStorage.getItem(key(id));}catch(e){return null;}}
+function putSaved(id,v){try{if(v)localStorage.setItem(key(id),v);else localStorage.removeItem(key(id));}catch(e){}}
+function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,1600);}
+
+/* gallery */
+async function gallery(){
+  $("gal").hidden=false;$("edit").hidden=true;$("home").hidden=true;S.page=null;
+  const g=$("grid");g.innerHTML=PAGES.map((p,i)=>`<button class="pg" type="button" data-id="${p.id}"><canvas width="240" height="360" aria-hidden="true"></canvas><b>${p.n}</b><small>${getSaved(p.id)?"Nadaljuj barvanje":"Še nepobarvana"}</small></button>`).join("");
+  for(const p of PAGES){
+    const c=g.querySelector(`[data-id="${p.id}"] canvas`),x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,240,360);
+    const sv=getSaved(p.id);if(sv){try{x.drawImage(await loadImg(sv),0,0,240,360);}catch(e){}}
+    try{x.drawImage(await loadImg(LINES[p.id]),0,0,240,360);}catch(e){}
+  }
+}
+$("grid").onclick=e=>{const b=e.target.closest(".pg");if(b)openPage(b.dataset.id);};
+$("home").onclick=()=>{flush();gallery();};
+
+/* editor */
+let W=0,H=0,mask=null,pctx=null;
+async function openPage(id){
+  const p=PAGES.find(q=>q.id===id);if(!p)return;S.page=p;S.undo=[];updUndo();
+  $("gal").hidden=true;$("edit").hidden=false;$("home").hidden=false;window.scrollTo(0,0);
+  const li=await loadImg(LINES[id]);W=li.naturalWidth;H=li.naturalHeight;
+  const pc=$("paint"),lc=$("lines");pc.width=lc.width=W;pc.height=lc.height=H;
+  $("sheet").style.aspectRatio=W+"/"+H;
+  pctx=pc.getContext("2d",{willReadFrequently:true});pctx.fillStyle="#fff";pctx.fillRect(0,0,W,H);
+  const sv=getSaved(id);if(sv){try{pctx.drawImage(await loadImg(sv),0,0,W,H);}catch(e){}}
+  const lx=lc.getContext("2d");lx.clearRect(0,0,W,H);lx.drawImage(li,0,0);
+  const d=lx.getImageData(0,0,W,H).data;mask=new Uint8Array(W*H);for(let i=0;i<W*H;i++)mask[i]=d[i*4+3]>110?1:0;
+}
+function snap(){S.undo.push(pctx.getImageData(0,0,W,H));if(S.undo.length>20)S.undo.shift();updUndo();}
+function updUndo(){$("undo").disabled=!S.undo.length;}
+let saveT=null;function flush(){if(!S.page||!pctx)return;clearTimeout(saveT);putSaved(S.page.id,$("paint").toDataURL("image/png"));}
+function queueSave(){clearTimeout(saveT);saveT=setTimeout(flush,600);}
+function hex(c){const n=parseInt(c.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];}
+
+function fill(x0,y0){
+  if(mask[y0*W+x0]){ // tapped on a line: try a nearby free pixel
+    let found=false;for(let r=1;r<8&&!found;r++)for(let dy=-r;dy<=r&&!found;dy++)for(let dx=-r;dx<=r;dx++){const x=x0+dx,y=y0+dy;if(x>=0&&y>=0&&x<W&&y<H&&!mask[y*W+x]){x0=x;y0=y;found=true;break;}}
+    if(!found)return;
+  }
+  const img=pctx.getImageData(0,0,W,H),d=img.data,[r,g,b]=hex(S.color);
+  const i0=(y0*W+x0)*4,sr=d[i0],sg=d[i0+1],sb=d[i0+2];
+  if(Math.abs(sr-r)<3&&Math.abs(sg-g)<3&&Math.abs(sb-b)<3)return;
+  snap();
+  const tol=60,seen=new Uint8Array(W*H),same=i=>{const k=i*4;return !mask[i]&&!seen[i]&&Math.abs(d[k]-sr)+Math.abs(d[k+1]-sg)+Math.abs(d[k+2]-sb)<=tol;};
+  const st=[x0,y0];const filled=[];
+  while(st.length){let y=st.pop(),x=st.pop();let i=y*W+x;while(x>0&&same(i-1)){x--;i--;}
+    let up=false,dn=false;
+    while(x<W&&same(i)){seen[i]=1;filled.push(i);
+      if(y>0){if(same(i-W)){if(!up){st.push(x,y-1);up=true;}}else up=false;}
+      if(y<H-1){if(same(i+W)){if(!dn){st.push(x,y+1);dn=true;}}else dn=false;}
+      x++;i++;}
+  }
+  for(const i of filled){const k=i*4;d[k]=r;d[k+1]=g;d[k+2]=b;d[k+3]=255;}
+  // grow 2px under the line edge so no white halo shows
+  for(let pass=0;pass<2;pass++){const add=[];for(const i of filled){const x=i%W;for(const n of [i-1,i+1,i-W,i+W]){if(n<0||n>=W*H||seen[n])continue;if(Math.abs((n%W)-x)>1)continue;if(mask[n]){seen[n]=1;add.push(n);}}}
+    for(const n of add){const k=n*4;d[k]=r;d[k+1]=g;d[k+2]=b;d[k+3]=255;filled.push(n);}}
+  pctx.putImageData(img,0,0);queueSave();
+}
+/* pointer */
+let drawing=false,last=null;
+function pos(e){const r=$("lines").getBoundingClientRect();return[Math.max(0,Math.min(W-1,Math.round((e.clientX-r.left)*W/r.width))),Math.max(0,Math.min(H-1,Math.round((e.clientY-r.top)*H/r.height)))];}
+$("lines").addEventListener("pointerdown",e=>{if(!pctx)return;e.preventDefault();const p=pos(e);
+  if(S.tool==="fill"){fill(p[0],p[1]);return;}
+  snap();drawing=true;last=p;$("lines").setPointerCapture(e.pointerId);stroke(p,p);});
+$("lines").addEventListener("pointermove",e=>{if(!drawing)return;const p=pos(e);stroke(last,p);last=p;});
+const end=()=>{if(drawing){drawing=false;queueSave();}};
+$("lines").addEventListener("pointerup",end);$("lines").addEventListener("pointercancel",end);
+function stroke(a,b){const sc=W/600;pctx.strokeStyle=S.tool==="erase"?"#fff":S.color;pctx.lineWidth=SIZES[S.size][0]*sc*(S.tool==="erase"?1.6:1);
+  pctx.lineCap="round";pctx.lineJoin="round";pctx.beginPath();pctx.moveTo(a[0],a[1]);pctx.lineTo(b[0],b[1]);pctx.stroke();}
+
+/* controls */
+$("pal").innerHTML=COLORS.map(([c,n],i)=>`<button class="sw" type="button" style="background:${c}" aria-label="${n}" aria-pressed="${i===0}" data-c="${c}" data-n="${n}"></button>`).join("");
+function setColor(c,n){S.color=c;$("pal").querySelectorAll(".sw").forEach(b=>b.setAttribute("aria-pressed",b.dataset.c===c));$("curSw").style.background=c;$("curName").textContent=n;
+  if(S.tool==="erase")setTool("fill");}
+$("pal").onclick=e=>{const b=e.target.closest(".sw");if(b)setColor(b.dataset.c,b.dataset.n);};
+function setTool(t){S.tool=t;document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===t));}
+document.querySelectorAll("[data-tool]").forEach(b=>b.onclick=()=>setTool(b.dataset.tool));
+$("size").onclick=()=>{S.size=(S.size+1)%SIZES.length;$("sizeL").textContent=SIZES[S.size][1];$("dot").setAttribute("r",SIZES[S.size][2]);if(S.tool==="fill")setTool("brush");};
+$("undo").onclick=()=>{const u=S.undo.pop();if(u){pctx.putImageData(u,0,0);queueSave();}updUndo();};
+let armed=false;
+$("clear").onclick=()=>{if(!armed){armed=true;$("clearL").textContent="Res?";setTimeout(()=>{armed=false;$("clearL").textContent="Pobriši";},2500);return;}
+  armed=false;$("clearL").textContent="Pobriši";snap();pctx.fillStyle="#fff";pctx.fillRect(0,0,W,H);queueSave();};
+if(APP){$("save").hidden=false;$("save").onclick=()=>{const c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");x.drawImage($("paint"),0,0);x.drawImage($("lines"),0,0);
+  const a=document.createElement("a");a.download=`pobarvanka-${S.page.id}.png`;a.href=c.toDataURL("image/png");document.body.appendChild(a);a.click();a.remove();toast("Slika shranjena");};}
+document.addEventListener("visibilitychange",()=>{if(document.hidden)flush();});
+setColor(COLORS[0][0],COLORS[0][1]);
+gallery();
+</script>
+</body></html>
