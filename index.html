@@ -159,6 +159,7 @@ function setup1(r,k1){var c=r.c1;if(!c||!c.ob)return null;var L=r.bias==='long';
 if(!((c.ct==='bull'&&L)||(c.ct==='bear'&&!L)))return null;
 var ob=c.ob,e1=c.cl,e2=(ob.lo+ob.hi)/2,sl=ob.wx;
 if(L?!(sl<e2&&e2<=e1):!(sl>e2&&e2>=e1))return null;
+if(L?r.p<=sl:r.p>=sl)return null;
 var avg=(e1+e2)/2,d=Math.abs(sl-avg),tp=L?avg+2*d:avg-2*d,liq=false;
 var pv=pivots(k1,L?'h':'l',L),best=null;
 pv.forEach(function(i){var lv=L?k1[i].h:k1[i].l,swept=false;for(var j=i+1;j<k1.length;j++){if(L?k1[j].h>lv:k1[j].l<lv){swept=true;break}}
