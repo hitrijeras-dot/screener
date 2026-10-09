@@ -142,7 +142,7 @@ var st=e;while(st>0&&((k[st-1].c>=k[st-1].o)===hi))st--;
 var lvl=k[st].o,conf=false,ci=-1;
 for(var q=s+1;q<=last;q++){if(hi?k[q].c<lvl:k[q].c>lvl){conf=true;ci=q;break}}
 if(!conf&&(hi?b.c<lvl:b.c>lvl)){conf=true;ci=s}
-var bl=1e99,bh=-1e99,wx=hi?-1e99:1e99,zz;for(zz=st;zz<=e;zz++){bl=Math.min(bl,k[zz].o,k[zz].c);bh=Math.max(bh,k[zz].o,k[zz].c)}
+var bl=1e99,bh=-1e99,wx=hi?-1e99:1e99,zz;for(zz=st;zz<=Math.max(e,s);zz++){bl=Math.min(bl,k[zz].o,k[zz].c);bh=Math.max(bh,k[zz].o,k[zz].c)}
 for(zz=st;zz<=s;zz++){wx=hi?Math.max(wx,k[zz].h):Math.min(wx,k[zz].l)}
 return {ct:conf?(hi?'bear':'bull'):(hi?'sweep-hi':'sweep-lo'),cl:lvl,ca:Math.max(0,(n-1-(conf?ci:s))*mins),sl:hi?b.h:b.l,sp:lvlp,t:k[st].t/1000,ob:{lo:bl,hi:bh,wx:wx}}
 }}
