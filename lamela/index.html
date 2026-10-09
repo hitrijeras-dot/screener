@@ -92,6 +92,7 @@ canvas{display:block;width:100%;height:auto}
 .dots i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted)}
 .dots i.f{background:var(--good);border-color:var(--good)}
 .body{border-top:1px solid var(--line);padding:12px;display:grid;gap:14px;background:var(--sunk)}
+.thumb .px{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;object-position:50% 35%}.duo{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:0}.duo img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;object-position:50% 35%;border-right:1px solid var(--line)}.duo .an{align-self:center}
 .stage{border-radius:14px;background:var(--stage);border:1px solid var(--line);overflow:hidden;position:relative}
 .stage .tempo{position:absolute;left:10px;top:8px;font-size:12px;font-weight:600;color:var(--muted);background:var(--surface);border-radius:999px;padding:2px 8px;border:1px solid var(--line)}
 .howto{margin:0;padding-left:22px;display:grid;gap:6px;font-size:15px}
@@ -163,6 +164,7 @@ h2.sec{font-family:var(--f-display);font-weight:800;font-size:25px;margin:22px 0
 </head><body><div class="wrap" id="app"></div>
 <div id="restRoot"></div>
 
+<script>window.__PHOTOS={"abcrunch": "ex/abcrunch.webp", "armcurl": "ex/armcurl.webp", "armext": "ex/armext.webp", "calf": "ex/calf.webp", "chestpress": "ex/chestpress.webp", "dbbench": "ex/dbbench.webp", "dbrow": "ex/dbrow.webp", "dbshoulder": "ex/dbshoulder.webp", "gobletsq": "ex/gobletsq.webp", "hammer": "ex/hammer.webp", "hipthrust": "ex/hipthrust.webp", "inclinedb": "ex/inclinedb.webp", "lateral": "ex/lateral.webp", "latmachine": "ex/latmachine.webp", "legcurl": "ex/legcurl.webp", "legext": "ex/legext.webp", "legpress": "ex/legpress.webp", "legraise": "ex/legraise.webp", "lowerback": "ex/lowerback.webp", "lowrow": "ex/lowrow.webp", "ohext": "ex/ohext.webp", "rdl": "ex/rdl.webp", "reardelt": "ex/reardelt.webp", "shoulderpress": "ex/shoulderpress.webp", "verttrac": "ex/verttrac.webp"};</script>
 <script>
 (function(){
 "use strict";
@@ -462,6 +464,9 @@ function loop(ts){
     drawEx(ctx,c.dataset.anim,reduce?1400:ts+(+c.dataset.ofs||0),c.width,c.height);});
   requestAnimationFrame(loop);
 }
+const PHOTO=window.__PHOTOS||{};
+const phTb=(id,c)=>PHOTO[id]?`<img class="px" src="${PHOTO[id]}" alt="" loading="lazy">`:c;
+const phSt=(id,c)=>PHOTO[id]?`<div class="duo"><img src="${PHOTO[id]}" alt="${esc(EX[id].n)}" loading="lazy"><div class="an">${c}</div></div>`:c;
 const cv=(id,ofs)=>`<canvas data-anim="${id}" data-ofs="${ofs||0}" width="300" height="210" role="img" aria-label="Animacija: ${esc(EX[id].n)}"></canvas>`;
 
 // ================= Zvok, zaslon, počitek =================
@@ -528,12 +533,12 @@ function exCard(id,orig,i){
   const e=EX[id],p=plan(id),sets=S.draft.sets[id]||[],c=cur(id),sg=suggest(id),open=S.open===id,done=sets.length>=p.sets,st=S.state.ex[id]||{};
   const showW=sets.length?c.w:sg.w, bw=id==="legraise";
   let h=`<article class="ex ${done?"done":""}"><button class="exhead" type="button" data-act="open" data-v="${id}" aria-expanded="${open}">
-    <div class="thumb">${open?`<div style="aspect-ratio:300/210;display:grid;place-items:center;color:var(--muted);font-size:12px">spodaj ↓</div>`:cv(id,i*430)}</div>
+    <div class="thumb">${phTb(id,open?`<div style="aspect-ratio:300/210;display:grid;place-items:center;color:var(--muted);font-size:12px">spodaj ↓</div>`:cv(id,i*430))}</div>
     <div style="min-width:0"><div class="exname">${esc(e.n)}</div><div class="exsub num">${p.sets} × ${p.lo}–${p.hi}${st.seat?" · "+esc(st.seat):""}</div><div class="tags">${tags(id)}</div></div>
     <div class="kg">${bw?`<b>—</b><small>lastna teža</small>`:`<b class="num">${fmt(showW)}</b><small>${unit(id)}</small>`}</div></button>
     <div class="why"><span>${done?"Opravljeno: "+sets.map(s=>(bw?"":fmt(s.w)+"×")+s.r).join(", "):esc(sets.length&&c.why?c.why:sg.why)}</span><span class="dots" aria-label="${sets.length} od ${p.sets} serij">${Array.from({length:p.sets},(_,k)=>`<i class="${k<sets.length?"f":""}"></i>`).join("")}</span></div>`;
   if(open){
-    h+=`<div class="body"><div class="stage"><span class="tempo">1 s gor · 2 s dol</span>${cv(id)}</div>
+    h+=`<div class="body"><div class="stage"><span class="tempo">1 s gor · 2 s dol</span>${phSt(id,cv(id))}</div>
       <ol class="howto">${e.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`;
     if(e.t==="tg") h+=`<div class="seat"><label for="seat-${id}">Nastavitev</label><input id="seat-${id}" data-seat="${id}" placeholder="npr. sedež 4, naslon 2" value="${esc(st.seat||"")}"></div>`;
     if(sets.length) h+=`<div class="sets">${sets.map((s,k)=>`<div class="set num"><span><b>${k+1}.</b> ${bw?"":fmt(s.w)+" "+unit(id)+" × "}${s.r}${bw?" ponovitev":""}</span><span class="f f-${s.f}">${FEEL[s.f].l}</span></div>`).join("")}</div>`;
@@ -550,9 +555,9 @@ function viewLib(){
   const ids=anyMus(S.lib).sort((a,b)=>(EX[a].mus[0]===S.lib?0:1)-(EX[b].mus[0]===S.lib?0:1));
   h+=`<h2 class="sec">${esc(MN[S.lib])}</h2><div class="list" style="margin-top:0">`;
   ids.forEach((id,i)=>{const e=EX[id],open=S.libOpen===id,inToday=exIds().includes(id);
-    h+=`<article class="ex"><button class="exhead" type="button" data-act="libopen" data-v="${id}" aria-expanded="${open}"><div class="thumb">${open?`<div style="aspect-ratio:300/210;display:grid;place-items:center;color:var(--muted);font-size:12px">spodaj ↓</div>`:cv(id,i*500)}</div>
+    h+=`<article class="ex"><button class="exhead" type="button" data-act="libopen" data-v="${id}" aria-expanded="${open}"><div class="thumb">${phTb(id,open?`<div style="aspect-ratio:300/210;display:grid;place-items:center;color:var(--muted);font-size:12px">spodaj ↓</div>`:cv(id,i*500))}</div>
       <div style="min-width:0"><div class="exname">${esc(e.n)}</div><div class="exsub">${e.t==="tg"?"Technogym naprava":"Proste uteži"} · ${e.lo}–${e.hi} ponovitev</div><div class="tags">${tags(id)}</div></div><div></div></button>`;
-    if(open) h+=`<div class="body"><div class="stage"><span class="tempo">1 s gor · 2 s dol</span>${cv(id)}</div><ol class="howto">${e.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
+    if(open) h+=`<div class="body"><div class="stage"><span class="tempo">1 s gor · 2 s dol</span>${phSt(id,cv(id))}</div><ol class="howto">${e.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
       ${inToday?`<div class="hint">Že v današnjem treningu.</div>`:`<button class="addbtn" type="button" data-act="addtoday" data-v="${id}">Dodaj v današnji trening</button>`}</div>`;
     h+=`</article>`;});
   return h+`</div>`;
