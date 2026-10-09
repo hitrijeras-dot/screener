@@ -78,7 +78,11 @@ h2.sec{font-family:var(--f-display);font-weight:800;font-size:21px;margin:22px 0
 .note b{color:var(--ink)}
 .list{display:grid;gap:8px;margin-top:10px}
 .li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center}
-.li svg{width:64px;height:auto;border-radius:8px;background:var(--vf)}
+.li svg,.li img{width:64px;height:auto;border-radius:8px;background:var(--vf);display:block}
+.ph{position:relative;aspect-ratio:2/3;background:var(--vf)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .af{position:absolute;inset:0;width:100%;height:100%}
+.detail .ph{max-width:420px;margin:0 auto}
 .li b{font-size:15px;display:block;line-height:1.25}
 .li span{color:var(--muted);font-size:13px}
 .li.done{opacity:.55}
@@ -92,6 +96,7 @@ h2.sec{font-family:var(--f-display);font-weight:800;font-size:21px;margin:22px 0
 
 </head><body><div class="wrap" id="app"></div>
 
+<script>window.__PHOTOS={"z1": "poses/z1.webp", "z2": "poses/z2.webp", "z3": "poses/z3.webp", "z4": "poses/z4.webp", "z5": "poses/z5.webp", "z6": "poses/z6.webp", "m1": "poses/m1.webp", "m2": "poses/m2.webp", "m3": "poses/m3.webp", "m4": "poses/m4.webp", "m5": "poses/m5.webp", "m6": "poses/m6.webp", "p1": "poses/p1.webp", "p2": "poses/p2.webp", "p3": "poses/p3.webp", "p4": "poses/p4.webp", "p5": "poses/p5.webp", "p6": "poses/p6.webp", "r1": "poses/r1.webp", "r2": "poses/r2.webp", "r3": "poses/r3.webp", "r4": "poses/r4.webp", "r5": "poses/r5.webp", "r6": "poses/r6.webp", "d1": "poses/d1.webp", "d2": "poses/d2.webp", "d3": "poses/d3.webp", "d4": "poses/d4.webp", "d5": "poses/d5.webp", "d6": "poses/d6.webp", "o1": "poses/o1.webp", "o2": "poses/o2.webp", "o3": "poses/o3.webp", "o4": "poses/o4.webp", "o5": "poses/o5.webp", "o6": "poses/o6.webp", "s1": "poses/s1.webp", "s2": "poses/s2.webp", "s3": "poses/s3.webp", "s4": "poses/s4.webp", "s5": "poses/s5.webp", "s6": "poses/s6.webp", "b1": "poses/b1.webp", "b2": "poses/b2.webp", "b3": "poses/b3.webp", "b4": "poses/b4.webp", "b5": "poses/b5.webp", "b6": "poses/b6.webp"};</script>
 <script>
 (function(){
 "use strict";
@@ -180,6 +185,10 @@ const POSES=[
   how:["Obrni se s hrbtom proti kameri.","Glavo obrni čez ramo nazaj.","Rame spusti, brada proti rami."],
   say:"»Hodi stran od mene in se na moj znak ozri.«",tip:"Lepo s tančico, obleko z odprtim hrbtom ali lasmi.",
   fig:()=>[ST(100,{to:-90,hd:18,hair:"long",tw:.85,la:[105,95],ra:[75,88]})]},
+ {id:"z6",k:"zenska",n:"Prekrižane roke, sproščeno",s:"Samozavesten portret",
+  how:["Roke ohlapno prekriži pod prsmi, ne pretesno.","Teža na eni nogi, druga noga rahlo prekrižana.","Glavo rahlo nagni, nasmeh z očmi."],
+  say:"»Prekriži roke, kot da čakaš prijateljico na kavo.«",tip:"Pazi, da roke ne stisnejo nadlakti, sicer delujejo širše.",
+  fig:()=>[ST(100,{hd:-6,hair:"long",la:[112,8],ra:[68,172],ll:[96,84],rl:[84,96]})]},
  // ---- moški
  {id:"m1",k:"moski",n:"Roke v žepih",s:"Samozavestno, preprosto",
   how:["Stoj vzravnano, teža enakomerno na obeh nogah.","Roke v žepe, palca ostaneta zunaj.","Ramena rahlo nazaj, brada naprej."],
@@ -201,6 +210,10 @@ const POSES=[
   how:["Sede za mizo, komolca na mizi.","Ena roka ohlapno ob bradi, ne podpira glave.","Rame obrnjene rahlo stran."],
   say:"»Pomisli, kako bi razložil svoje delo prijatelju.«",tip:"Roka se le dotika, teža glave ne sme biti na njej.",
   fig:()=>[{prop:PROP.table(122,148)},SIT(84,150,{to:-80,ra:[30,-80],la:[60,15]})]},
+ {id:"m6",k:"moski",n:"Popravlja manšeto",s:"Detajl in samozavest",
+  how:["Z eno roko popravi manšeto ali uro na drugi.","Roke v višini pasu ali prsi.","Pogled navzdol na roke."],
+  say:"»Kot da se pripravljaš na pomemben sestanek.«",tip:"Odlično tudi za ženina pred obredom.",
+  fig:()=>[ST(100,{tw:.85,la:[80,-20],ra:[110,190],hd:10})]},
  // ---- pari
  {id:"p1",k:"pari",n:"V-poza",s:"Osnova za vse pare",
   how:["Postavita se tesno skupaj, obrnjena drug proti drugemu.","Ramena in boki tvorijo črko V proti kameri.","Notranji roki okoli pasu, zunanji prosti."],
@@ -247,6 +260,10 @@ const POSES=[
   how:["Primeta se za roke in hodita počasi proti tebi.","Med hojo se pogovarjata in pogledata.","Ti hodiš vzvratno ali stojiš z dolgim objektivom."],
   say:"»Hodita, kot da imata ves čas na svetu.«",tip:"AF-C s sledenjem, čas vsaj 1/320.",
   fig:()=>[ST(82,{c:"B",ll:[80,98],rl:[100,84],ra:[40,30]}),ST(118,{hair:"long",dress:1,veil:1,ll:[100,84],rl:[80,98],la:[140,150],ra:[95,60],prop:"bouquet"})]},
+ {id:"r6",k:"poroka",n:"Poljub pod tančico",s:"Romantičen trenutek",
+  how:["Tančico nežno ovij okoli obeh.","Mladoporočenca se poljubita ali se dotakneta s čeli.","Svetloba od zadaj lepo osvetli tančico."],
+  say:"»Pozabita name, samo vidva sta.«",tip:"Pri protisvetlobi tančica zažari. Merjenje na obraz.",
+  fig:()=>[ST(90,{to:-84,hd:20,c:"B",ra:[30,30]}),ST(110,{to:-96,hd:-18,hair:"long",dress:1,veil:1,la:[-150,160]})]},
  // ---- družina
  {id:"d1",k:"druzina",n:"Klasična trikotna",s:"Varnostna slika na začetku",
   how:["Starša zadaj, otroci spredaj.","Glave na različnih višinah, v obliki trikotnikov.","Vsi se dotikajo: roke na ramenih."],
@@ -268,6 +285,10 @@ const POSES=[
   how:["Vsi sedejo na odejo, starša zadaj.","Otroci v naročju ali spredaj.","Pogled drug v drugega namesto v kamero."],
   say:"»Kdo ima najbolj smešen smeh v družini?«",tip:"Spusti se v višino otrok.",
   fig:()=>[SIT(52,190,{c:"B",to:-90,ll:[-10,80],rl:[0,70],ra:[40,30]}),SIT(122,190,{hair:"long",to:-88,ll:[-10,80],rl:[0,70],la:[140,150]}),SIT(96,196,{s:.55,c:"K",ll:[-10,80],rl:[0,70]})]},
+ {id:"d6",k:"druzina",n:"Mama z otrokoma",s:"Bližina in smeh",
+  how:["Mama poklekne ali sede na tla.","Otroka se stisneta k njej z obeh strani.","Pogovarjajo se ali se smejijo, ne gledajo v kamero."],
+  say:"(otrokoma) »Povejta mami, kaj je najbolj smešna stvar, ki jo je kdaj naredila.«",tip:"Spusti se na njihovo višino in fotografiraj od blizu.",
+  fig:()=>[{x:100,y:150,s:1,to:-88,hd:-10,tw:.8,la:[110,95],ra:[70,85],ll:[90,175],rl:[30,95],c:"A",hair:"long"},ST(66,{s:.55,c:"K"}),ST(136,{s:.5,c:"K",hair:"long"})]},
  // ---- otroci
  {id:"o1",k:"otroci",n:"V višini njihovih oči",s:"Spusti se na kolena",
   how:["Spusti se na višino otrokovih oči.","Naj sedi ali se igra na tleh.","Pogovarjaj se z njim, ne ukazuj."],
@@ -289,6 +310,10 @@ const POSES=[
   how:["Starš poklekne v višino otroka.","Otrok mu šepeta na uho.","Starš se nasmehne ali zapre oči."],
   say:"(otroku) »Povej mami na uho, kaj imaš najraje za večerjo.«",tip:"Fokus na obraz starša ali otroka, ne na sredino.",
   fig:()=>[{x:122,y:150,s:1,to:-88,hd:-10,tw:.8,la:[110,95],ra:[70,85],ll:[90,175],rl:[30,95],c:"A",hair:"long"},ST(88,{s:.6,c:"K",hd:20,ra:[-30,-80]})]},
+ {id:"o6",k:"otroci",n:"Brat in sestra",s:"Sorojenci skupaj",
+  how:["Usedeta se drug ob drugega.","Starejši objame mlajšega okoli ramen.","Povej šalo ali ju prosi, da si šepetata."],
+  say:"»Kdo od vaju se zna bolj smešno smejati?«",tip:"Najboljše slike so tik po smehu, zato fotografiraj zaporedno.",
+  fig:()=>[SIT(80,196,{s:.6,c:"K",ll:[-10,80],rl:[0,70],ra:[0,20]}),SIT(122,196,{s:.55,c:"K",hair:"long",ll:[-10,80],rl:[0,70]})]},
  // ---- skupine
  {id:"s1",k:"skupine",n:"Trikotnik",s:"Najvišji v sredini",
   how:["Najvišji v sredino, nižji proti robovom.","Glave v obliki trikotnikov, ne v ravni črti.","Rame se dotikajo, ni lukenj."],
@@ -302,6 +327,18 @@ const POSES=[
   how:["Mladoporočenca v sredini v V-pozi.","Ostali na straneh, obrnjeni rahlo proti njima.","Simetrično levo in desno."],
   say:"»Vsi pogledajo mladoporočenca … zdaj mene!«",tip:"Pripravi seznam skupin vnaprej in ga daj priči, da kliče ljudi.",
   fig:()=>[ST(30,{s:.92,to:-85}),ST(58,{s:.95,c:"B",hair:"long",to:-86}),ST(90,{c:"B",to:-93,ra:[30,10]}),ST(112,{hair:"long",dress:1,veil:1,to:-87,la:[150,170],prop:"bouquet",ra:[100,60]}),ST(144,{s:.95,c:"B",hair:"long",to:-94}),ST(172,{s:.92,to:-95})]},
+ {id:"s4",k:"skupine",n:"Hoja skupine proti kameri",s:"Gibanje in pogovor",
+  how:["Skupina hodi počasi proti tebi v eni ali dveh vrstah.","Naj se pogovarjajo in smejijo med seboj.","Ti hodiš vzvratno ali stojiš z daljšim objektivom."],
+  say:"»Hodite, kot da greste skupaj na pijačo.«",tip:"Zaslonka f/4–5,6 in AF-C s sledenjem.",
+  fig:()=>[ST(40,{s:.92,ll:[80,98],rl:[100,84]}),ST(72,{s:.95,c:"B",hair:"long",ll:[100,84],rl:[80,98]}),ST(104,{ll:[80,98],rl:[100,84]}),ST(136,{s:.95,c:"B",hair:"long",ll:[100,84],rl:[80,98]}),ST(166,{s:.9,ll:[80,98],rl:[100,84]})]},
+ {id:"s5",k:"skupine",n:"Skupinski smeh",s:"Sproščeno, tesno skupaj",
+  how:["Vsi se stisnejo skupaj, roke okoli ramen.","Nagnejo se drug proti drugemu.","Povej nekaj smešnega ali naj nekdo pove šalo."],
+  say:"»Kdo je v skupini najslabši plesalec? Pokažite nanj!«",tip:"Fotografiraj takoj po smehu, takrat so obrazi najbolj sproščeni.",
+  fig:()=>[ST(46,{s:.92,to:-80}),ST(76,{s:.95,c:"B",hair:"long",to:-84}),ST(104,{to:-90}),ST(132,{s:.95,c:"B",hair:"long",to:-96}),ST(160,{s:.9,to:-100})]},
+ {id:"s6",k:"skupine",n:"Sede na stopnicah",s:"Različne višine",
+  how:["Skupino posedi na stopnice ali klop na različnih višinah.","Glave naj bodo zamaknjene, da se vidi vsak obraz.","Nekateri lahko stojijo ob strani."],
+  say:"»Usedite se tako, kot bi čakali na koncert.«",tip:"Stopnice naravno ustvarijo trikotnike in različne višine.",
+  fig:()=>[{prop:`<rect x="20" y="170" width="160" height="35" fill="var(--prop)"/><rect x="20" y="150" width="160" height="20" fill="var(--prop)" opacity=".7"/>`},SIT(56,146,{s:.85}),SIT(100,146,{s:.85,c:"B",hair:"long"}),SIT(144,146,{s:.85}),SIT(78,166,{s:.85,c:"B",hair:"long"}),SIT(122,166,{s:.85})]},
  // ---- boudoir
  {id:"b1",k:"boudoir",n:"Na boku, roka nad glavo",s:"Na postelji, mehke linije",
   how:["Uleže se na bok, obrnjena proti kameri.","Zgornja roka nad glavo, spodnja podpira glavo ali leži.","Kolena rahlo pokrčena, zgornja noga naprej."],
@@ -328,6 +365,9 @@ const POSES=[
   say:"»Spusti ramena in samo leži.«",tip:"Fotografiraj iz višine glave, rahlo od zgoraj.",
   fig:()=>[{prop:PROP.bed(150)},{x:120,y:144,s:1,to:184,hd:0,tw:.7,la:[200,160],ra:[210,150],ll:[-50,60],rl:[-40,64],c:"A",hair:"long"}]}
 ];
+const PHOTO=window.__PHOTOS||{};
+const AF=`<svg class="af" viewBox="0 0 200 300" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".85"><path d="M10 28 V10 H28"/><path d="M172 10 H190 V28"/><path d="M10 272 V290 H28"/><path d="M172 290 H190 V272"/></g></svg>`;
+function poseVis(p){return PHOTO[p.id]?`<div class="ph"><img src="${PHOTO[p.id]}" alt="${esc(p.n)}" loading="lazy">${AF}</div>`:poseSvg(p);}
 function poseSvg(p){const parts=p.fig();let h="";parts.forEach(x=>{if(x.prop!==undefined&&x.to===undefined)h+=x.prop;});parts.forEach(x=>{if(x.to!==undefined)h+=figSvg(x);});return viewfinder(h);}
 
 // ================= Nasveti =================
@@ -451,16 +491,16 @@ function viewTips(){
   return h;
 }
 function poseCard(p){const fav=S.data.fav.includes(p.id);
-  return `<article class="pose"><div class="vf">${poseSvg(p)}<button type="button" class="star" aria-pressed="${fav}" aria-label="${fav?"Odstrani s seznama":"Dodaj na seznam"}" data-act="fav" data-v="${p.id}">${fav?"★":"☆"}</button></div>
+  return `<article class="pose"><div class="vf">${poseVis(p)}<button type="button" class="star" aria-pressed="${fav}" aria-label="${fav?"Odstrani s seznama":"Dodaj na seznam"}" data-act="fav" data-v="${p.id}">${fav?"★":"☆"}</button></div>
    <button type="button" class="meta" style="border:0;background:transparent;text-align:left" data-act="open" data-v="${p.id}"><h3>${esc(p.n)}</h3><span class="s">${esc(p.s)}</span></button></article>`;}
 function poseDetail(p){const fav=S.data.fav.includes(p.id);
-  return `<article class="detail" id="det"><div class="vf">${poseSvg(p)}</div><div class="body"><h3>${esc(p.n)}</h3>
+  return `<article class="detail" id="det"><div class="vf">${poseVis(p)}</div><div class="body"><h3>${esc(p.n)}</h3>
    <ol class="steps">${p.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
    <div class="say"><b>Reci jim</b>${esc(p.say)}</div><div class="ptip">${esc(p.tip)}</div>
    <div class="row"><button type="button" class="btn ${fav?"":"acc"}" data-act="fav" data-v="${p.id}">${fav?"★ Na seznamu":"☆ Dodaj na seznam"}</button><button type="button" class="btn" data-act="open" data-v="${p.id}">Zapri</button></div></div></article>`;}
 function viewPoses(){
   const list=POSES.filter(p=>p.k===S.pcat);
-  let h=`<h1>Poze</h1><p class="lede">Izberi vrsto fotografiranja. Klikni pozo za navodila, z zvezdico jo dodaš na svoj seznam za fotografiranje.</p>
+  let h=`<h1>Poze</h1><p class="lede">Izberi vrsto fotografiranja. Fotografije poz so ustvarjene z AI kot primer. Klikni pozo za navodila, z zvezdico jo dodaš na svoj seznam za fotografiranje.</p>
   <div class="chips" role="group" aria-label="Vrsta fotografiranja">${CATS.map(c=>`<button type="button" aria-pressed="${S.pcat===c.k}" data-act="pcat" data-v="${c.k}">${esc(c.n)}<span class="n">${POSES.filter(x=>x.k===c.k).length}</span></button>`).join("")}</div>`;
   if(S.pcat==="boudoir")h+=`<div class="note"><b>Boudoir je zaupanje.</b> Pred fotografiranjem se pogovori o tem, kaj si stranka želi in česa ne. Začni oblečeno in s preprostimi pozami, nikoli ne pritiskaj na pozo, ki ji ni prijetna. Slike hrani zasebno in jih objavi samo s pisnim dovoljenjem.</div>`;
   h+=`<div class="poses">`;
@@ -474,7 +514,7 @@ function viewList(){
   const done=fav.filter(p=>S.data.done[p.id]).length;
   h+=`<div class="row" style="margin-top:12px;justify-content:space-between"><span class="lede">${done} od ${fav.length} narejenih</span><div class="row"><button type="button" class="btn" data-act="resetdone">Počisti kljukice</button><button type="button" class="btn" data-act="clearfav">Izprazni seznam</button></div></div><div class="list">`;
   fav.forEach(p=>{const d=!!S.data.done[p.id];
-    h+=`<div class="li ${d?"done":""}">${poseSvg(p).replace("<svg ","<svg aria-hidden=\"true\" ")}<button type="button" style="border:0;background:transparent;text-align:left;padding:0" data-act="goto" data-v="${p.id}"><b>${esc(p.n)}</b><span>${esc((CATS.find(c=>c.k===p.k)||{}).n)} · ${esc(p.say)}</span></button><button type="button" class="chk" aria-pressed="${d}" aria-label="Narejeno" data-act="done" data-v="${p.id}">✓</button></div>`;});
+    h+=`<div class="li ${d?"done":""}">${PHOTO[p.id]?`<img src="${PHOTO[p.id]}" alt="">`:poseSvg(p).replace("<svg ","<svg aria-hidden=\"true\" ")}<button type="button" style="border:0;background:transparent;text-align:left;padding:0" data-act="goto" data-v="${p.id}"><b>${esc(p.n)}</b><span>${esc((CATS.find(c=>c.k===p.k)||{}).n)} · ${esc(p.say)}</span></button><button type="button" class="chk" aria-pressed="${d}" aria-label="Narejeno" data-act="done" data-v="${p.id}">✓</button></div>`;});
   return h+`</div>${S.msg?`<div class="note">${esc(S.msg)}</div>`:""}`;
 }
 
