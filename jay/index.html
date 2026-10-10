@@ -104,6 +104,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
       <label>Potrjen HL velja še (sveč)<input id="fresh" type="number" min="1" max="30" value="7"></label>
       <label>Račun ($)<input id="acct" type="number" min="0" step="100" value="10000"></label>
       <label>Tveganje na trade (%)<input id="rpct" type="number" min="0.1" max="5" step="0.1" value="1"></label>
+      <label>SL za potrjen HL/LH<select id="slm"><option value="hl">pod HL (0.3 %)</option><option value="leg">pod dnom noge – 100 % fib (Jayeva invalidacija)</option></select></label>
     </div>
   </div>
 
@@ -256,7 +257,7 @@ var $=function(i){return document.getElementById(i)};
 var rows=[],side='all',stf='act',open=null,cache={},busy=false,newKeys={};
 var TZ='Europe/Ljubljana';
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
-['tf','topn','piv','fresh','acct','rpct','auto'].forEach(function(id){var v=ls('jay_'+id);if(v!==null&&v!==undefined)$(id).value=v;$(id).addEventListener('change',function(){ls('jay_'+id,$(id).value)})});
+['tf','topn','piv','fresh','acct','rpct','auto','slm'].forEach(function(id){var v=ls('jay_'+id);if(v!==null&&v!==undefined)$(id).value=v;$(id).addEventListener('change',function(){ls('jay_'+id,$(id).value)})});
 function fp(p){if(p==null||isNaN(p))return '–';var a=Math.abs(p);return a>=1000?p.toFixed(1):a>=100?p.toFixed(2):a>=1?p.toFixed(3):a>=0.1?p.toFixed(4):a>=0.01?p.toFixed(5):a>=0.001?p.toFixed(6):p.toPrecision(4)}
 function dfmt(t){return new Date(t).toLocaleDateString('sl-SI',{day:'numeric',month:'numeric',timeZone:'UTC'})}
 async function jget(u){var r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
@@ -310,7 +311,7 @@ async function scan(){
         if(last&&last.e>now){live=k.pop()}
         var st=jayScan(k,{piv:piv,freshD:5,tfMin:tfMin});
         var hd=await htfOf(t.symbol,tf,piv);
-        var su=jaySetups(k,live,st,{fresh:fresh});
+        var su=jaySetups(k,live,st,{fresh:fresh});su.forEach(applySL);
         cache[t.symbol]={k:k,live:live};
         su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;x.tH=k[x.Hx]?k[x.Hx].t:x.Hx;x.key=x.s+'|'+tf+'|'+x.dir+'|'+x.tH;x.htf=hd.w;x.htfM=hd.m;var up=x.dir==='long';x.hc3=!!(hd.c3&&(up?hd.c3.L:hd.c3.S));x.hw1=!!(hd.w1&&(up?hd.w1.L:hd.w1.S));res.push(x)});
       }catch(e){fails++}
@@ -609,6 +610,15 @@ function openLoad(){var id=open,r=id&&rows.filter(function(x){return x.s+'|'+x.d
 $('out').addEventListener('keydown',function(e){if(e.key==='Enter'){var tr=e.target.closest('.rw');if(tr)tr.click()}});
 
 /* ---------- Risba setupa (kot na TV) ---------- */
+/* ---------- SL možnost in cilji ekstenzije (izven CORE, samo prikaz) ----------
+   Potrjen setup: SL pod HL (kot CORE) ali pod dnom noge (100 % fib). Setupi v coni imajo SL pod nogo že v CORE. */
+function applySL(x){if(x.state!==1)return;if(x.slHL==null)x.slHL=x.sl;var up=x.dir==='long',e=x.entry;
+  x.sl=$('slm').value==='leg'?x.leg*(up?0.997:1.003):x.slHL;
+  x.tp=up?Math.max(x.tpH,e+2*(e-x.sl)):Math.min(x.tpH,e-2*(x.sl-e));
+  x.rr=Math.abs(x.tp-e)/Math.abs(e-x.sl);x.rrH=Math.abs(x.tpH-e)/Math.abs(e-x.sl)}
+function extP(r,f){return r.H+(r.H-r.leg)*f}
+$('slm').addEventListener('change',function(){rows.forEach(applySL);for(var key in mtf)if(mtf[key].su)mtf[key].su.forEach(applySL);render()});
+
 /* ---------- Več okvirjev v odprti vrstici ---------- */
 var MTF=['D','360','90','23'],mtf={},dtf=null;
 function mtfKey(sym,tf){return sym+'|'+tf+'|'+(+$('piv').value||5)}
@@ -618,7 +628,7 @@ async function mtfLoad(r){
     try{var k=await klines(r.s,tf),live=null;if(k.length&&k[k.length-1].e>Date.now())live=k.pop();mtf[key]=mtfMake(r.s,tf,k,live)}catch(e){mtf[key]={err:1,at:Date.now()}}}));
 }
 function mtfMake(sym,tf,k,live){var piv=+$('piv').value||5,st=jayScan(k,{piv:piv,freshD:5,tfMin:(TFS[tf]||TFS.D).min});
-  var su=jaySetups(k,live,st,{fresh:+$('fresh').value||7});su.forEach(function(x){x.s=sym});
+  var su=jaySetups(k,live,st,{fresh:+$('fresh').value||7});su.forEach(function(x){x.s=sym;applySL(x)});
   return {k:k,live:live,su:su,dir:htfDir(k,piv,0),at:Date.now()}}
 function mtfGet(r,tf){if(tf===$('tf').value){var c=cache[r.s];if(!c)return null;var key=mtfKey(r.s,tf)+'|cur';if(!mtf[key]||mtf[key].k!==c.k)mtf[key]=mtfMake(r.s,tf,c.k,c.live);return mtf[key]}
   return mtf[mtfKey(r.s,tf)]||null}
@@ -644,7 +654,7 @@ function chart(r,c,tf){
   var k=c.k.slice();if(c.live)k.push(c.live);
   var n=k.length,from=Math.max(0,Math.min(r.Lx!=null?r.Lx-6:n-90,n-90)),bars=k.slice(from),W=760,H=360,pl=8,pr=72,pt=16,pb=24,ext=14;
   var lo=Infinity,hi=-Infinity;bars.forEach(function(x){lo=Math.min(lo,x.l);hi=Math.max(hi,x.h)});
-  [r.tp,r.sl,r.g1,r.g2].forEach(function(v){lo=Math.min(lo,v);hi=Math.max(hi,v)});var pad=(hi-lo)*0.06;lo-=pad;hi+=pad;
+  [r.tp,r.sl,r.g1,r.g2,extP(r,0.27),extP(r,0.65)].forEach(function(v){lo=Math.min(lo,v);hi=Math.max(hi,v)});var pad=(hi-lo)*0.06;lo-=pad;hi+=pad;
   var N=bars.length+ext,cw=(W-pl-pr)/N,X=function(i){return pl+(i-from+0.5)*cw},Y=function(p){return pt+(hi-p)/(hi-lo)*(H-pt-pb)};
   var up=r.dir==='long',s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Setup '+r.s+'">';
   var xe=X(n-1+ext);
@@ -654,6 +664,9 @@ function chart(r,c,tf){
   var px=r.state===1?X(n-1):X(n-1);
   s+='<rect x="'+px+'" y="'+Y(up?r.tp:r.entry)+'" width="'+(xe-px)+'" height="'+Math.abs(Y(r.tp)-Y(r.entry))+'" fill="var(--long)" opacity=".16"/>';
   s+='<rect x="'+px+'" y="'+Y(up?r.entry:r.sl)+'" width="'+(xe-px)+'" height="'+Math.abs(Y(r.entry)-Y(r.sl))+'" fill="var(--short)" opacity=".18"/>';
+  // cilji ekstenzije −0.27 / −0.65 / −1 (od noge do H)
+  [0.27,0.65,1].forEach(function(f){var v=extP(r,f);if(v<lo||v>hi)return;s+='<line x1="'+X(Math.max(from,r.Hx!=null?r.Hx:from))+'" x2="'+xe+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--long)" stroke-width="1" stroke-dasharray="5 3" opacity=".75"/>'+
+    '<text x="'+(xe+4)+'" y="'+(Y(v)+4)+'" font-size="11" fill="var(--long)" font-family="ui-monospace,Menlo,monospace">−'+f+'</text>'});
   // fib črte
   [[0.5,r.g50],[0.618,r.g1],[0.79,r.g2]].forEach(function(f){s+='<line x1="'+X(Math.max(from,r.legX))+'" x2="'+xe+'" y1="'+Y(f[1])+'" y2="'+Y(f[1])+'" stroke="var(--val)" stroke-width="1" opacity=".7"/>'+
     '<text x="'+(xe+4)+'" y="'+(Y(f[1])+4)+'" font-size="11" fill="var(--val)" font-family="ui-monospace,Menlo,monospace">'+f[0]+'</text>'});
@@ -704,9 +717,11 @@ function chart(r,c,tf){
     '<span>Golden pocket</span><b>'+fp(r.g1)+' – '+fp(r.g2)+'</b>'+
     (r.HL!=null?'<span>'+(up?'HL':'LH')+'</span><b>'+fp(r.HL)+'</b>':'')+
     '<span>Vstop</span><b>'+fp(r.entry)+(r.state===1?' (zdaj)':' (ob zaprtju '+(up?'nad':'pod')+' 0.618)')+'</b>'+
-    '<span>SL</span><b>'+fp(r.sl)+' ('+(Math.abs(r.entry-r.sl)/r.entry*100).toFixed(1)+' %)</b>'+
+    '<span>SL</span><b>'+fp(r.sl)+' ('+(Math.abs(r.entry-r.sl)/r.entry*100).toFixed(1)+' %) · '+(r.state!==1||$('slm').value==='leg'?(up?'pod':'nad')+' dnom noge (100 %)':(up?'pod HL':'nad LH'))+'</b>'+
     '<span>TP</span><b>'+fp(r.tp)+' · '+r.rr.toFixed(1)+'R</b>'+
     '<span>TP do '+(up?'H':'L')+'</span><b>'+fp(r.tpH)+' · '+r.rrH.toFixed(1)+'R</b>'+
+    '<span>Ekstenzije</span><b>'+[0.27,0.65,1].map(function(f){var v=extP(r,f);return '−'+f+' '+fp(v)+' ('+(Math.abs(v-r.entry)/Math.abs(r.entry-r.sl)).toFixed(1)+'R)'}).join(' · ')+'</b>'+
+    '<span>Upravljanje</span><b style="font-family:inherit;font-weight:500">TP1 (pol pozicije) pri 2R '+fp(r.entry+(up?2:-2)*Math.abs(r.entry-r.sl))+' ali −0.27 '+fp(extP(r,0.27))+' → SL na BE '+fp(r.entry)+' → ostanek do −0.65 / −1</b>'+
     (risk>0?'<span>Velikost</span><b>'+(qty*r.entry).toFixed(0)+' $ ('+qty.toPrecision(4)+' kos) · tveganje '+risk.toFixed(0)+' $</b>':'')+
     '<span>HTF</span><b>'+($('tf').value==='W'?'1M ':'1W ')+arrow(r.htf)+($('tf').value==='W'?'':' · 1M '+arrow(r.htfM))+'</b>'+
     '<span>HTF sveče</span><b>3D '+(r.hc3?'<span class="up">✓</span>':'<span class="mut">✗</span>')+' · 1W '+(r.hw1?'<span class="up">✓</span>':'<span class="mut">✗</span>')+'</b>'+
