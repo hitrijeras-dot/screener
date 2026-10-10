@@ -10,6 +10,7 @@ Stanje: 10. 10. 2026, 17:20 (naš čas). Strogo ločeno od CISD sistema, Sistem 
 | Backtest strategija (20 variant naenkrat) | [jay_hl_backtest_strategija.pine](jay_hl_backtest_strategija.pine) – na TV ni shranjena, naloži po potrebi |
 | Rezultati backtesta | [backtest.md](backtest.md), surovo: backtest-1D-surovo.txt |
 | Backtest 2 – več okvirjev (1D, 6H, 90m, 23m) | [backtest2.md](backtest2.md), surovo: backtest2-surovo.json |
+| Backtest 3 – dnevno trgovanje (5m/23m/90m, EOD/24h/48h) | [backtest3-dnevno.md](backtest3-dnevno.md), TV strategija [jay_hl_dan_backtest.pine](jay_hl_dan_backtest.pine), skripte v `orodja/` |
 | Pregled trga in narisani setupi | [setupi-2026-10-10.md](setupi-2026-10-10.md), surovo: scan-2026-10-10-surovo.txt |
 | Screener (telefon) | https://hitrijeras-dot.github.io/screener/jay/ (koda: `/jay/index.html`) |
 | Animacija vzorca | animacija-jay-higher-low.html (+ Claude artefakt "Jayev HTF Higher Low") |
