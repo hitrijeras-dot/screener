@@ -18,7 +18,12 @@ showM   = input.bool(true, "Začetek meseca", group=grpT)
 showW3  = input.bool(true, "3. teden v mesecu (15.–21.)", group=grpT)
 show23  = input.bool(false, "23D obdobja (90-dnevni bloki od 1. 1.)", group=grpT)
 freshD  = input.int(5, "Nov mesec / kvartal velja še (dni)", minval=1, group=grpT)
-showTbl = input.bool(true, "Tabela stanja", group=grpT)
+showTbl = input.bool(true, "Tabela analize", group=grpT)
+grpR = "Trade / tveganje"
+showPos = input.bool(true, "Cona vstop / SL / TP (kot Long/Short orodje)", group=grpR)
+acct    = input.float(10000, "Račun ($)", step=100, group=grpR)
+riskP   = input.float(1.0, "Tveganje na trade (%)", step=0.1, group=grpR)
+freshN  = input.int(7, "Potrjen setup velja še (sveč)", minval=1, group=grpR)
 
 cVal  = #2C68D2
 cWho  = #C97A00
@@ -96,6 +101,8 @@ var bool  bTouched = false
 var bool  bDone = false
 var float bHL = na
 var int   bHLx = na
+var int   bSigX = na
+var float bSigHL = na
 bool bNew = false
 
 // short stanje
@@ -112,6 +119,8 @@ var bool  sTouched = false
 var bool  sDone = false
 var float sLH = na
 var int   sLHx = na
+var int   sSigX = na
+var float sSigLH = na
 bool sNew = false
 
 // --- nov swing low ---
@@ -215,6 +224,8 @@ if bArmed and not bNew
         if barstate.isconfirmed and bTouched and not bDone and close > open and close > b618 and bHL >= bLeg
             bullSig := true
             bDone := true
+            bSigX := bar_index
+            bSigHL := bHL
 bLiq  = not na(bL) and bL <= b618 * (1 + liqTol) and bL >= b79 * (1 - liqTol)
 
 // =================== SHORT: cona in signal ===================
@@ -238,6 +249,8 @@ if sArmed and not sNew
         if barstate.isconfirmed and sTouched and not sDone and close < open and close < s618 and sLH <= sLeg
             bearSig := true
             sDone := true
+            sSigX := bar_index
+            sSigLH := sLH
 sLiq = not na(sH) and sH >= s618 * (1 - liqTol) and sH <= s79 * (1 + liqTol)
 
 // =================== RISANJE ===================
@@ -294,19 +307,91 @@ if bearSig
 plotshape(bullSig, "HL long", shape.triangleup, location.belowbar, cUp, size=size.tiny)
 plotshape(bearSig, "LH short", shape.triangledown, location.abovebar, cDn, size=size.tiny)
 
-// =================== TABELA ===================
-var table tb = table.new(position.top_right, 2, 4, bgcolor=color.new(color.black, 85), border_width=1)
-stateTxt(armed, touched, done) =>
-    not armed ? "ni setupa" : done ? "potrjen" : touched ? "v coni – čakaj zeleno/rdečo svečo" : "čaka umik v GP"
+// =================== ANALIZA (kot v screenerju) ===================
+// stanje: 4 = potrjen (svež), 3 = možen ob zaprtju, 2 = v coni, 1 = čaka umik, 0 = nič
+lSt = 0
+if bArmed and not na(bH)
+    if bDone
+        lSt := not na(bSigX) and bar_index - bSigX < freshN and close > bSigHL * 0.997 and close < bH ? 4 : 0
+    else
+        inZ = bTouched or low <= b618
+        lSt := inZ and close > open and close > b618 and not barstate.isconfirmed ? 3 : inZ ? 2 : 1
+sSt = 0
+if sArmed and not na(sLo)
+    if sDone
+        sSt := not na(sSigX) and bar_index - sSigX < freshN and close < sSigLH * 1.003 and close > sLo ? 4 : 0
+    else
+        inZs = sTouched or high >= s618
+        sSt := inZs and close < open and close < s618 and not barstate.isconfirmed ? 3 : inZs ? 2 : 1
+isLong = lSt >= sSt
+st = isLong ? lSt : sSt
+hlv = isLong ? (lSt == 4 ? bSigHL : bHL) : (sSt == 4 ? sSigLH : sLH)
+nowEntry = st >= 3
+entry = isLong ? (nowEntry ? close : b618) : (nowEntry ? close : s618)
+sl = isLong ? (nowEntry ? nz(hlv, bLeg) * 0.997 : bLeg * 0.997) : (nowEntry ? nz(hlv, sLeg) * 1.003 : sLeg * 1.003)
+tgtH = isLong ? bH : sLo
+risk = math.abs(entry - sl)
+tp = isLong ? math.max(tgtH, entry + 2 * risk) : math.min(tgtH, entry - 2 * risk)
+rr = risk > 0 ? math.abs(tp - entry) / risk : na
+rrH = risk > 0 ? math.abs(tgtH - entry) / risk : na
+riskUsd = acct * riskP / 100
+posUsd = risk > 0 ? riskUsd / risk * entry : na
+f(x) => str.tostring(x, format.mintick)
+stTxt = st == 4 ? (isLong ? "Potrjen HL" : "Potrjen LH") + " · " + str.tostring(bar_index - (isLong ? bSigX : sSigX)) + " sveč nazaj" : st == 3 ? (isLong ? "Možen HL ob zaprtju" : "Možen LH ob zaprtju") : st == 2 ? "V coni – čakaj zaprtje" : st == 1 ? "Čaka umik v GP" : "Ni setupa"
+liqNow = isLong ? bLiq : sLiq
+
+var box pW = na
+var box pL = na
+var label lE = na
+var label lS = na
+var label lT = na
+var label lM = na
+if barstate.islast
+    box.delete(pW)
+    box.delete(pL)
+    label.delete(lE)
+    label.delete(lS)
+    label.delete(lT)
+    label.delete(lM)
+    if showPos and st > 0 and risk > 0
+        x2 = bar_index + 15
+        pW := box.new(bar_index, isLong ? tp : entry, x2, isLong ? entry : tp, bgcolor=color.new(cUp, 82), border_color=color.new(cUp, 40))
+        pL := box.new(bar_index, isLong ? entry : sl, x2, isLong ? sl : entry, bgcolor=color.new(cDn, 80), border_color=color.new(cDn, 40))
+        lE := label.new(x2, entry, (isLong ? "LONG " : "SHORT ") + f(entry) + (nowEntry ? "" : " (ob zaprtju nad 0.618)"), style=label.style_label_left, color=color.new(color.black, 100), textcolor=chart.fg_color, size=size.small)
+        lS := label.new(x2, sl, "SL " + f(sl), style=label.style_label_left, color=color.new(color.black, 100), textcolor=cDn, size=size.small)
+        lT := label.new(x2, tp, "TP " + f(tp) + " · " + str.tostring(rr, "#.#") + "R", style=label.style_label_left, color=color.new(color.black, 100), textcolor=cUp, size=size.small)
+    if st == 3
+        lM := label.new(bar_index, isLong ? low : high, isLong ? "možen HL?" : "možen LH?", style=isLong ? label.style_label_up : label.style_label_down, color=color.new(cWho, 0), textcolor=color.white, size=size.small)
+
+var table tb = table.new(position.top_right, 2, 12, bgcolor=color.new(color.black, 80), border_width=1)
 if showTbl and barstate.islast
+    c1 = color.new(color.gray, 0)
     table.cell(tb, 0, 0, "Jay HL", text_color=cInk, text_size=size.small)
-    table.cell(tb, 1, 0, timeOK ? "čas OK" : "čas ne", text_color=timeOK ? cTime : cInk, text_size=size.small)
-    table.cell(tb, 0, 1, "Long", text_color=cUp, text_size=size.small)
-    table.cell(tb, 1, 1, stateTxt(bArmed, bTouched, bDone) + (bArmed ? "  GP " + str.tostring(b618, format.mintick) + "–" + str.tostring(b79, format.mintick) : ""), text_color=color.gray, text_size=size.small)
-    table.cell(tb, 0, 2, "Short", text_color=cDn, text_size=size.small)
-    table.cell(tb, 1, 2, stateTxt(sArmed, sTouched, sDone) + (sArmed ? "  GP " + str.tostring(s618, format.mintick) + "–" + str.tostring(s79, format.mintick) : ""), text_color=color.gray, text_size=size.small)
-    table.cell(tb, 0, 3, "Liq", text_color=cVal, text_size=size.small)
-    table.cell(tb, 1, 3, (bArmed and bLiq ? "long: staro L v GP  " : "") + (sArmed and sLiq ? "short: stari H v GP" : ""), text_color=color.gray, text_size=size.small)
+    table.cell(tb, 1, 0, timeOK ? (intraday ? "čas OK (3. 6H)" : "čas OK") : "čas ne", text_color=timeOK ? cTime : cInk, text_size=size.small)
+    table.cell(tb, 0, 1, isLong ? "LONG" : "SHORT", text_color=isLong ? cUp : cDn, text_size=size.small)
+    table.cell(tb, 1, 1, stTxt, text_color=c1, text_size=size.small)
+    if st > 0
+        table.cell(tb, 0, 2, "Struktura", text_color=cInk, text_size=size.small)
+        table.cell(tb, 1, 2, isLong ? "L " + f(bL) + " → LL " + f(bLL) + " → H " + f(bH) : "H " + f(sH) + " → HH " + f(sHH) + " → L " + f(sLo), text_color=c1, text_size=size.small)
+        table.cell(tb, 0, 3, "Golden pocket", text_color=cVal, text_size=size.small)
+        table.cell(tb, 1, 3, isLong ? f(b618) + " – " + f(b79) : f(s618) + " – " + f(s79), text_color=c1, text_size=size.small)
+        table.cell(tb, 0, 4, isLong ? "HL" : "LH", text_color=cVal, text_size=size.small)
+        table.cell(tb, 1, 4, na(hlv) ? "–" : f(hlv), text_color=c1, text_size=size.small)
+        table.cell(tb, 0, 5, "Vstop", text_color=cInk, text_size=size.small)
+        table.cell(tb, 1, 5, f(entry) + (nowEntry ? " (zdaj)" : " (ob zaprtju nad 0.618)"), text_color=c1, text_size=size.small)
+        table.cell(tb, 0, 6, "SL", text_color=cDn, text_size=size.small)
+        table.cell(tb, 1, 6, f(sl) + " (" + str.tostring(risk / entry * 100, "#.#") + " %)", text_color=c1, text_size=size.small)
+        table.cell(tb, 0, 7, "TP", text_color=cUp, text_size=size.small)
+        table.cell(tb, 1, 7, f(tp) + " · " + str.tostring(rr, "#.#") + "R", text_color=c1, text_size=size.small)
+        table.cell(tb, 0, 8, isLong ? "TP do H" : "TP do L", text_color=cUp, text_size=size.small)
+        table.cell(tb, 1, 8, f(tgtH) + " · " + str.tostring(rrH, "#.#") + "R", text_color=c1, text_size=size.small)
+        table.cell(tb, 0, 9, "Velikost", text_color=cInk, text_size=size.small)
+        table.cell(tb, 1, 9, str.tostring(posUsd, "#") + " $ · tveganje " + str.tostring(riskUsd, "#") + " $", text_color=c1, text_size=size.small)
+        table.cell(tb, 0, 10, "Konfluenca", text_color=cVal, text_size=size.small)
+        table.cell(tb, 1, 10, (liqNow ? "+liq " : "") + (timeOK ? "+čas" : "") + (not liqNow and not timeOK ? "–" : ""), text_color=c1, text_size=size.small)
+    otherSt = isLong ? sSt : lSt
+    table.cell(tb, 0, 11, "Druga smer", text_color=cInk, text_size=size.small)
+    table.cell(tb, 1, 11, (isLong ? "SHORT: " : "LONG: ") + (otherSt == 4 ? "potrjen" : otherSt == 3 ? "možen ob zaprtju" : otherSt == 2 ? "v coni" : otherSt == 1 ? "čaka umik" : "ni setupa"), text_color=c1, text_size=size.small)
 
 // =================== ALARMI ===================
 alertcondition(bullTouch, "Jay HL: cena v long GP", "Jay HL: cena je prišla v golden pocket (long setup)")
