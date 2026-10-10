@@ -15,6 +15,7 @@ Stanje: 10. 10. 2026, 17:20 (naš čas). Strogo ločeno od CISD sistema, Sistem 
 | Screener (telefon) | https://hitrijeras-dot.github.io/screener/jay/ (koda: `/jay/index.html`) |
 | Animacija vzorca | animacija-jay-higher-low.html (+ Claude artefakt "Jayev HTF Higher Low") |
 | Učenje iz Discorda (samo Jayeve objave) | [discord-jay.md](discord-jay.md) |
+| Jayevi klici vs. naš indikator + HTF sveče | [discord-setupi-primerjava.md](discord-setupi-primerjava.md) |
 
 ## TradingView
 - Layout **"Jay Time & Value"** (prej layout "1") – samo za Jayev stil. Na njem: Jay HL indikator, OnlyWicks Daily Process, Oscillator V.6.2. Jure je ostale indikatorje sam odstranil.

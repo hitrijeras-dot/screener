@@ -29,6 +29,22 @@ Navodila za Claude Code. Najprej preberi `CLAUDE.md` v korenu in `claude-notes/j
 - Za izbrane kovance in okvir zaženi logiko čez zgodovino (kot `jay_hl_backtest_strategija.pine`): vstop ob zaprtju signalne sveče, SL pod HL, cilji H / 2R / 3R, provizija 0.11 %.
 - Rezultat: število tradeov, % zadetih, skupni R, max DD v R, po variantah (vsi / +čas / +liq).
 
+## 7. HTF sveče (zaporedje L-LL-HL na 3D in 1W) – iz primerjave z Jayevimi klici
+- Glej `discord-setupi-primerjava.md`. 3D sveče sidrane na epoch (Math.floor(t/3 dni)), 1W od ponedeljka 00:00 UTC; samo zaprte sveče.
+- Pogoj na zadnjih treh zaprtih svečah a, b, c: b.l < a.l (LL), c.l > b.l (HL) in c.c > b.h (HL sveča zapre nad vrhom LL sveče). Velja, če se je zgodilo v zadnjih 3 svečah (3D) oz. 4 tednih (1W osnova brez c.c > b.h).
+- Stolpec "HTF sveče": 3D ✓ / 1W ✓ / –. Filter "Samo s HTF svečami". V backtestu: 1D signal + 3D pogoj = +0.38R na trade (3R) proti +0.14R brez.
+- To je nova funkcija IZVEN `/*CORE*/` (filter), zato TV indikator dobi enak filter kot nov vhod (nalogo opravi Claude v klepetu ali ti – zapiši v README).
+
+## 8. SL "pod dnom noge" in cilji ekstenzije
+- V detajlu in tabeli dodaj možnost SL: "pod HL" (zdaj) ali "pod dnom noge (100 % fib)" = Jayeva invalidacija.
+- Na risbi in v detajlu cilji −0.27, −0.65, −1 (od noge do H). Predlog upravljanja: TP1 pri 2R ali −0.27 (pol pozicije), SL na BE, ostanek do −0.65 / −1.
+
+## 9. Okvir 3D
+- Dodaj 3D v izbiro okvirjev (sestavljen iz 1D, kot zgoraj). Swing setupi se pri Jayu pogosto vidijo na 3D/6D/23D.
+
+## 10. Backtest zavihek – nove variante
+- Filter "3D HTF sveče", SL "pod dnom noge", cilj "−0.27". Preveri, da da približno iste številke kot v `discord-setupi-primerjava.md`.
+
 ## Ne spreminjaj
 - `index.html` (Moj Screener) in drugih aplikacij.
 - Logike setupa brez sočasne spremembe TV indikatorja.

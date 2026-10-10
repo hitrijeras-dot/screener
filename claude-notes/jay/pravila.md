@@ -44,3 +44,10 @@ Primer ZRO: "When – week 3 wed OL / L LL HL fractal. Where – VAL HTF range. 
 - TP: H (stari vrh) ali vsaj 2R; backtest pravi fiksni 2R–3R > fib ekstenzije.
 - Re-entry samo z novo strukturo, ne samo ker je cena spet na nivoju.
 - Short zrcalno: H → HH → LH.
+
+## Dopolnitev 10. 10. zvečer (iz 2774 Jayevih objav, glej discord-setupi-primerjava.md)
+- "L LL HL" najprej gledaj kot **zaporedje sveč na višjem okviru** (3D, 1W, 6D, 23D): sveča pobere dno prejšnje (senca), naslednja naredi višje dno in zapre visoko. Šele nato 1-2 v GP na 1D/6H.
+- Najboljši filter v testu: **3D sveča HL zapre nad vrhom LL sveče** → 1D signal +0.38R namesto +0.14R.
+- Invalidacija: zaprtje pod škatlo / pod dnom noge (100 %), ne senca.
+- Vstop v coni po delih (2–3 naročila) ali HL na 90m / ob OL naslednje 6H sveče. TP1 (pol) → SL na BE → runner do −0.27 / −0.65 / −1 ali VAH.
+- Dnevni "snacks" (BTC/ETH): Monday range, 3. 90m, naslednja 6H z OL + HL – samo z jasnim TP1 in BE.
