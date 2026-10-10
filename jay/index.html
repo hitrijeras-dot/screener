@@ -66,6 +66,7 @@ th:first-child,td:first-child,.l{text-align:left}
 .kv b{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600}
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .note{color:var(--mut);font-size:12px;margin-top:16px;max-width:90ch}
+.fl.new{background:var(--warnbg);color:var(--warn)}
 .up{color:var(--long)}.dn{color:var(--short)}.mut{color:var(--mut)}
 a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 </style>
@@ -105,6 +106,12 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
     <button class="chip on" data-st="act" type="button">Za trejd</button>
     <button class="chip" data-st="all" type="button">Vse</button>
     <span class="lbl" id="stat"></span>
+  </div>
+  <div class="bar">
+    <label class="lbl" for="auto">Samodejno:</label>
+    <select id="auto" style="width:auto"><option value="0">Izklop</option><option value="5">vsakih 5 min</option><option value="15">vsakih 15 min</option><option value="30">vsakih 30 min</option></select>
+    <button class="chip" id="notif" type="button">Vklopi obvestila</button>
+    <span class="lbl" id="autost"></span>
   </div>
   <div class="prog"><i id="pg"></i></div>
   <div class="alert" id="err"></div>
@@ -205,10 +212,10 @@ function jaySetups(k,live,st,o){
 (function(){
 var API='https://api.bybit.com/v5/market/';
 var $=function(i){return document.getElementById(i)};
-var rows=[],side='all',stf='act',open=null,cache={};
+var rows=[],side='all',stf='act',open=null,cache={},busy=false,newKeys={};
 var TZ='Europe/Ljubljana';
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
-['tf','topn','piv','fresh','acct','rpct'].forEach(function(id){var v=ls('jay_'+id);if(v!==null&&v!==undefined)$(id).value=v;$(id).addEventListener('change',function(){ls('jay_'+id,$(id).value)})});
+['tf','topn','piv','fresh','acct','rpct','auto'].forEach(function(id){var v=ls('jay_'+id);if(v!==null&&v!==undefined)$(id).value=v;$(id).addEventListener('change',function(){ls('jay_'+id,$(id).value)})});
 function fp(p){if(p==null||isNaN(p))return '–';var a=Math.abs(p);return a>=1000?p.toFixed(1):a>=100?p.toFixed(2):a>=1?p.toFixed(3):a>=0.1?p.toFixed(4):a>=0.01?p.toFixed(5):a>=0.001?p.toFixed(6):p.toPrecision(4)}
 function dfmt(t){return new Date(t).toLocaleDateString('sl-SI',{day:'numeric',month:'numeric',timeZone:'UTC'})}
 async function jget(u){var r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
@@ -248,6 +255,7 @@ timeBand();setInterval(timeBand,60000);
 
 /* ---------- Skeniranje ---------- */
 async function scan(){
+  if(busy)return;busy=true;
   var btn=$('scan');btn.disabled=true;$('err').className='alert';
   var tf=$('tf').value,topn=Math.max(10,Math.min(300,+$('topn').value||80)),piv=+$('piv').value||5,fresh=+$('fresh').value||7;
   try{
@@ -262,7 +270,7 @@ async function scan(){
         var st=jayScan(k,{piv:piv,freshD:5,tfMin:tfMin});
         var su=jaySetups(k,live,st,{fresh:fresh});
         cache[t.symbol]={k:k,live:live};
-        su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;res.push(x)});
+        su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;x.tH=k[x.Hx]?k[x.Hx].t:x.Hx;x.key=x.s+'|'+tf+'|'+x.dir+'|'+x.tH;res.push(x)});
       }catch(e){fails++}
       done++;$('pg').style.width=(100*done/list.length)+'%';$('stat').textContent='Pregledujem '+done+'/'+list.length+' …';
     }
@@ -270,18 +278,65 @@ async function scan(){
     async function worker(){while(q.length){await one(q.shift());await new Promise(function(r){setTimeout(r,60)})}}
     await Promise.all([worker(),worker(),worker(),worker(),worker()]);
     rows=res;
+    checkNew(res,tf);
     var tm=new Date().toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
     $('stat').textContent='Pregledanih '+list.length+' kovancev ob '+tm+(fails?' · '+fails+' brez podatkov':'');
     render();
   }catch(e){$('err').textContent='Napaka pri branju Bybita: '+e.message+'. Poskusi znova čez minuto.';$('err').className='alert show'}
-  btn.disabled=false;
+  btn.disabled=false;busy=false;planAuto();
 }
+
+/* ---------- Novi setupi, obvestila, samodejni pregled ---------- */
+/* Ključ setupa = simbol + okvir + smer + čas H. Obvesti enkrat za "V coni" in enkrat za "Potrjen". */
+function checkNew(res,tf){
+  var all={};try{all=JSON.parse(ls('jay_seen')||'{}')||{}}catch(e){}
+  var first=!all[tf],seen=all[tf]||{},now=Date.now(),fresh=[];
+  res.forEach(function(r){if(r.state!==1&&r.state!==2)return;var lvl=r.state===1?2:1,p=seen[r.key];
+    if(!p||p.l<lvl){seen[r.key]={l:lvl,t:now};if(!first){fresh.push(r);newKeys[r.key]=1}}else p.t=now});
+  for(var key in seen)if(now-seen[key].t>30*864e5)delete seen[key];
+  all[tf]=seen;ls('jay_seen',JSON.stringify(all));
+  setTitle();
+  if(fresh.length)notify(fresh,tf);
+}
+function setTitle(){var n=Object.keys(newKeys).length;document.title=(n?'('+n+') ':'')+'Jay HL Screener'}
+function setupTxt(r){return r.s.replace(/USDT$/,'')+' '+(r.dir==='long'?'long':'short')+': '+(r.state===1?(r.dir==='long'?'potrjen HL':'potrjen LH'):'v coni')}
+function notify(list,tf){
+  if(ls('jay_notif')!=='1'||!('Notification' in window)||Notification.permission!=='granted')return;
+  var tfn=$('tf').options[$('tf').selectedIndex].text.split(' ')[0];
+  var title=list.length===1?'Jay HL '+tfn+' · '+setupTxt(list[0]):'Jay HL '+tfn+' · '+(function(n){var m=n%100;return n+(m===2?' nova setupa':m===3||m===4?' novi setupi':' novih setupov')})(list.length);
+  var body=list.length===1?'Vstop '+fp(list[0].entry)+' · SL '+fp(list[0].sl)+' · TP '+fp(list[0].tp):list.slice(0,6).map(setupTxt).join('\n')+(list.length>6?'\n…':'');
+  showNote(title,body,'jay-'+Date.now());
+}
+function showNote(title,body,tag){
+  var o={body:body,tag:tag,icon:'icon-192.png',badge:'icon-192.png'};
+  if('serviceWorker' in navigator)navigator.serviceWorker.getRegistration().then(function(reg){if(reg&&reg.showNotification)return reg.showNotification(title,o);new Notification(title,o)}).catch(function(){try{new Notification(title,o)}catch(e){}});
+  else try{new Notification(title,o)}catch(e){}
+}
+function notifBtn(){var b=$('notif');
+  if(!('Notification' in window)){b.textContent='Obvestila niso podprta';b.disabled=true;b.title='Na iPhonu najprej dodaj stran na začetni zaslon';return}
+  var on=ls('jay_notif')==='1'&&Notification.permission==='granted';
+  b.textContent=Notification.permission==='denied'?'Obvestila blokirana v brskalniku':on?'Obvestila vklopljena':'Vklopi obvestila';
+  b.classList.toggle('on',on)}
+$('notif').addEventListener('click',function(){
+  if(ls('jay_notif')==='1'&&Notification.permission==='granted'){ls('jay_notif','0');notifBtn();return}
+  Notification.requestPermission().then(function(p){if(p==='granted'){ls('jay_notif','1');showNote('Jay HL','Obvestila delujejo. Javim, ko kovanec pride v cono ali potrdi HL/LH.','jay-test')}notifBtn()});
+});
+var autoT=null;
+function planAuto(){clearTimeout(autoT);var m=+$('auto').value;
+  if(!m){$('autost').textContent='';return}
+  var at=Date.now()+m*6e4;autoT=setTimeout(scan,m*6e4);
+  $('autost').textContent='Naslednji pregled ob '+new Date(at).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit',timeZone:TZ})}
+$('auto').addEventListener('change',planAuto);
+function ack(){if(Object.keys(newKeys).length){newKeys={};setTitle();render()}}
+document.addEventListener('pointerdown',function(e){if(!e.target.closest('#scan'))ack()});
+document.addEventListener('keydown',ack);
+notifBtn();
 
 /* ---------- Tabela ---------- */
 var stName={0:'Možen HL danes',1:'Potrjen',2:'V coni',3:'Čaka umik'};
 function stCell(r){var cls=r.state===1?(r.dir==='long'?'s1':'s1s'):r.state===0?'s0':r.state===2?'s2':'s3';
   var t=r.state===1?(r.dir==='long'?'Potrjen HL':'Potrjen LH')+' · '+(r.age===0?'zadnja sveča':r.age+' sveč nazaj'):r.state===0?(r.dir==='long'?'Možen HL ob zaprtju':'Možen LH ob zaprtju'):stName[r.state];
-  return '<span class="st '+cls+'">'+t+'</span>'+(r.liq?'<span class="fl liq">+liq</span>':'')+(r.state===1&&r.time?'<span class="fl cas">+čas</span>':'')}
+  return '<span class="st '+cls+'">'+t+'</span>'+(r.liq?'<span class="fl liq">+liq</span>':'')+(r.state===1&&r.time?'<span class="fl cas">+čas</span>':'')+(newKeys[r.key]?'<span class="fl new">NOVO</span>':'')}
 function size(r){var a=+$('acct').value,p=+$('rpct').value;if(!(a>0&&p>0))return '–';var risk=a*p/100,q=risk/Math.abs(r.entry-r.sl);
   return '<span title="tveganje '+risk.toFixed(0)+' $">'+(q*r.entry>=1000?(q*r.entry/1000).toFixed(1)+'k $':(q*r.entry).toFixed(0)+' $')+'</span>'}
 function render(){

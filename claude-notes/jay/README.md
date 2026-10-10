@@ -33,3 +33,6 @@ Vedno 6H, 90m, 23m; včasih tudi 5m, 3m, 1m. Swing ideje na 1D/1W, 23D, mesec, k
 
 ## Odprti trade
 - VANA long (Jure sam): vstop ~1.06, SL 0.955, TP 1.33.
+
+## Screener – nadgradnje (claude-code-naloge.md)
+- **1. Alarmi (10. 10.)**: stikalo "Samodejno" (5/15/30 min, pregled teče, dokler je stran odprta), gumb "Vklopi obvestila" (prek `jay/sw.js`). Obvestilo enkrat za "V coni" in enkrat za "Potrjen HL/LH"; ključ = simbol + okvir + smer + čas H, shranjeno v localStorage `jay_seen` (30 dni). Prvi pregled na novem okviru je tih. Novi setupi imajo značko NOVO in štejejo v naslovu zavihka "(n)" do prvega klika.
