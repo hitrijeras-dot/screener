@@ -23,3 +23,8 @@ Stanje 10. 10. 2026, 15:35 (naš čas).
 ## Splošno
 - Odgovarjaj slovensko, časi po našem času.
 - Tveganje: 1 % na trade (zadnje navodilo 10. 10.).
+
+## Stanje 10. 10. 2026, 17:20 (seja na Macu)
+- Narejeno: PDF-ji prebrani, pravila, TV indikator "Jay HL", backtest, pregled trga, screener /jay/, layout "Jay Time & Value", lista "Jay HL".
+- Vse o Jayu je zdaj posebej v mapi **claude-notes/jay/** (začni z README.md).
+- Naprej: učenje iz Discorda (samo Jayeve objave) po vseh kanalih → claude-notes/jay/discord-jay.md; indikator naj signal riše samo na zaprti sveči; HTF filter.

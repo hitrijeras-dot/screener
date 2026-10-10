@@ -1,0 +1,327 @@
+<title>Jayev HTF Higher Low</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: chart terminal on top (the animation), numbered step rail below; four colour roles = TIME / VALUE / CONTROL / ENTRY */
+:root{
+  --bg:#E9EDF1; --panel:#FFFFFF; --ink:#141920; --muted:#5A6573; --grid:#DCE1E7; --axis:#9AA4AF;
+  --up:#18966E; --down:#CF4636;
+  --time:#C0185A; --value:#2C68D2; --who:#C97A00; --how:#18966E;
+  --zone-up:rgba(24,150,110,.14); --zone-down:rgba(207,70,54,.16); --gp:rgba(44,104,210,.10); --fvg:rgba(201,122,0,.16);
+  --display:"Archivo",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1116; --panel:#151A21; --ink:#E7EBF0; --muted:#8D98A5; --grid:#232A33; --axis:#5C6773;
+  --up:#2BBA8A; --down:#F0604F; --time:#FF4D8A; --value:#5E97F6; --who:#F2AA3A; --how:#2BBA8A;
+  --zone-up:rgba(43,186,138,.15); --zone-down:rgba(240,96,79,.17); --gp:rgba(94,151,246,.12); --fvg:rgba(242,170,58,.15);
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0D1116; --panel:#151A21; --ink:#E7EBF0; --muted:#8D98A5; --grid:#232A33; --axis:#5C6773;
+  --up:#2BBA8A; --down:#F0604F; --time:#FF4D8A; --value:#5E97F6; --who:#F2AA3A; --how:#2BBA8A;
+  --zone-up:rgba(43,186,138,.15); --zone-down:rgba(240,96,79,.17); --gp:rgba(94,151,246,.12); --fvg:rgba(242,170,58,.15);
+  color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--display);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:24px 40px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:20px}
+header{display:grid;gap:10px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font-size:clamp(28px,4.4vw,44px);line-height:1.05;font-weight:800;font-stretch:78%;letter-spacing:-.01em;text-wrap:balance}
+.lede{margin:0;max-width:66ch;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12px;font-weight:500;padding:4px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--grid)}
+.chip i{width:9px;height:9px;border-radius:2px;display:block}
+.c-time i{background:var(--time)} .c-value i{background:var(--value)} .c-who i{background:var(--who)} .c-how i{background:var(--how)}
+
+.terminal{background:var(--panel);border:1px solid var(--grid);border-radius:10px;overflow:hidden}
+.now{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:baseline;padding:16px 18px 12px;border-bottom:1px solid var(--grid);min-height:96px}
+.now .num{grid-row:span 2;font-family:var(--mono);font-size:30px;font-weight:600;color:var(--muted);line-height:1}
+.now h2{margin:0;font-size:20px;font-weight:700;font-stretch:85%;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.now p{margin:0;color:var(--muted);max-width:72ch;min-width:0}
+.tag{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;padding:2px 8px;border-radius:4px;color:#fff}
+.tag.time{background:var(--time)} .tag.value{background:var(--value)} .tag.who{background:var(--who)} .tag.how{background:var(--how)} .tag.none{background:var(--axis)}
+.scroll{overflow-x:auto}
+svg#chart{display:block;width:100%;min-width:720px;height:auto}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 18px 16px;border-top:1px solid var(--grid)}
+button{font:inherit}
+.btn{font-family:var(--mono);font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid var(--grid);background:var(--bg);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--axis)}
+.btn.primary{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn:focus-visible,.step:focus-visible{outline:2px solid var(--value);outline-offset:2px}
+.progress{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.step{width:100%;height:100%;text-align:left;display:grid;gap:6px;align-content:start;padding:12px 14px;background:var(--panel);border:1px solid var(--grid);border-radius:8px;color:var(--ink);cursor:pointer}
+.step .top{display:flex;align-items:center;gap:8px}
+.step .n{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.step b{font-size:15px;font-weight:700;font-stretch:88%}
+.step span.t{font-size:13.5px;color:var(--muted);line-height:1.45}
+.step[aria-current="step"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.note{margin:0;font-size:13px;color:var(--muted);max-width:80ch}
+
+/* chart */
+.gridline{stroke:var(--grid);stroke-width:1}
+.axis-txt{font-family:var(--mono);font-size:12px;fill:var(--muted)}
+.c-up line,.c-up rect{stroke:var(--up);fill:var(--up)}
+.c-down line,.c-down rect{stroke:var(--down);fill:var(--down)}
+.candle line{stroke-width:1.4}
+.ov{transition:opacity .45s ease}
+.lbl{font-family:var(--display);font-size:15px;font-weight:700}
+.lbl-s{font-family:var(--mono);font-size:12.5px;font-weight:500}
+.f-time{fill:var(--time)} .f-value{fill:var(--value)} .f-who{fill:var(--who)} .f-how{fill:var(--how)} .f-down{fill:var(--down)} .f-ink{fill:var(--ink)} .f-panel{fill:var(--panel)} .f-muted{fill:var(--muted)}
+.s-time{stroke:var(--time)} .s-value{stroke:var(--value)} .s-who{stroke:var(--who)} .s-how{stroke:var(--how)} .s-down{stroke:var(--down)} .s-muted{stroke:var(--axis)}
+.vfacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--grid);border-top:1px solid var(--grid)}
+.vfacts div{background:var(--panel);padding:10px 14px;display:grid;gap:2px}
+.vfacts span{font-size:12.5px;color:var(--muted)}
+.vfacts b{font-family:var(--mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+svg#vana{display:block;width:100%;min-width:720px;height:auto}
+@media (prefers-reduced-motion: reduce){.ov{transition:none}}
+@media (max-width:560px){.now{grid-template-columns:1fr}.now .num{grid-row:auto;font-size:22px}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">OnlyWicks · Time × Value · Jayev vzorec</div>
+    <h1>Jayev HTF Higher Low</h1>
+    <p class="lede">Isti trade, ki ga Jay igra na ZRO, VANA, TRUMP, JTO in POPCAT. Klikni Predvajaj in poglej, kako se zgradi korak za korakom: od padca do vstopa in ciljev.</p>
+    <div class="legend" aria-label="Barve">
+      <span class="chip c-time"><i></i>WHEN · čas</span>
+      <span class="chip c-value"><i></i>WHERE · vrednost</span>
+      <span class="chip c-who"><i></i>WHO · kdo vodi</span>
+      <span class="chip c-how"><i></i>HOW · vstop</span>
+    </div>
+  </header>
+
+  <section class="terminal" aria-label="Animirani graf">
+    <div class="now" aria-live="polite">
+      <div class="num" id="nowNum">8/8</div>
+      <h2><span id="nowTitle">Cilji</span><span class="tag how" id="nowTag">HOW</span></h2>
+      <p id="nowText"></p>
+    </div>
+    <div class="scroll"><svg id="chart" viewBox="0 0 1000 610" role="img" aria-label="Animiran graf vzorca L, LL, HL z vstopom"></svg></div>
+    <div class="controls">
+      <button class="btn primary" id="play" type="button">▶ Predvajaj od začetka</button>
+      <button class="btn" id="prev" type="button">← Nazaj</button>
+      <button class="btn" id="next" type="button">Naprej →</button>
+      <span class="progress" id="prog"></span>
+    </div>
+  </section>
+
+  <ol class="steps" id="steps"></ol>
+
+
+  <section class="terminal" aria-label="VANA dnevni graf">
+    <div class="now">
+      <div class="num">VANA</div>
+      <h2><span>Pravi primer: VANA, dnevni graf (Bybit)</span><span class="tag value">WHERE</span></h2>
+      <p>Jayev plan z 8. 10.: "HL, retest prejšnje likvidnosti in golden pocket". Spodaj so prave dnevne sveče od 23. 5. do 10. 10. 2026 z istimi oznakami kot v animaciji.</p>
+    </div>
+    <div class="scroll"><svg id="vana" viewBox="0 0 1000 560" role="img" aria-label="VANA dnevni graf z oznakami L, LL, H, HL, fib in long pozicijo"></svg></div>
+    <div class="vfacts">
+      <div><span>L (staro dno ranga)</span><b>0.990 · 25. 6.</b></div>
+      <div><span>LL (sweep)</span><b>0.814 · 4. 8.</b></div>
+      <div><span>H (vrh sunka)</span><b>1.188 · 23. 9.</b></div>
+      <div><span>HL (dotik 0.705)</span><b>0.963 · 8. 10.</b></div>
+      <div><span>Primer long</span><b>1.06 · SL 0.955 · TP 1.33</b></div>
+    </div>
+  </section>
+
+  <p class="note">Animacija je šolski primer z izmišljenimi cenami (okoli 1.00 kot pri VANA in ZRO). Oblika je povzeta po Jayevih grafih iz #setups, #jay-long-term in #trade-recaps. VANA graf ima prave dnevne cene z Bybita. Long na VANA je primer za razlago, ne signal: pred vstopom še vedno potrebuješ potrditev na nižjem okvirju. Pri tebi velja 1 % tveganja na trade.</p>
+</div>
+
+<script>
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const svg=document.getElementById('chart');
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- data ----------
+  let seed=11;
+  const rnd=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+  const C=[];
+  const last=()=>C[C.length-1].c;
+  function walk(n,from,to,vol,floor){let prev=C.length?last():from;for(let i=0;i<n;i++){const tgt=from+(to-from)*(i+1)/n;const c=tgt+(rnd()-0.5)*vol*2;const o=prev;let h=Math.max(o,c)+rnd()*vol*0.8;let l=Math.min(o,c)-rnd()*vol*0.8;if(floor)l=Math.max(l,Math.min(floor,o,c));C.push({o,h,l,c});prev=c;}}
+  walk(26,1.62,1.18,0.025);                                   // A: padec 0-25
+  let prev=last();
+  for(let i=0;i<22;i++){const tgt=1.16+0.072*Math.sin(i*0.85+0.6);const c=tgt+(rnd()-0.5)*0.03;const o=prev;let h=Math.min(Math.max(o,c)+rnd()*0.025,1.272);let l=Math.max(Math.min(o,c)-rnd()*0.025,1.058);h=Math.max(h,o,c);l=Math.min(l,o,c);C.push({o,h,l,c});prev=c;} // B: range 26-47
+  C[33].l=1.05;                                               // L
+  function hand(rows){rows.forEach((r,i)=>{let [o,h,l,c]=r;if(i===0){o=last();h=Math.max(h,o);}C.push({o,h,l,c});});}
+  hand([[0,1.17,1.08,1.09],[1.09,1.10,1.00,1.02],[1.02,1.03,0.93,0.95],[0.95,0.97,0.86,0.93],[0.93,0.97,0.87,0.95],[0.95,1.00,0.92,0.99]]); // C: sweep 48-53, LL=51
+  hand([[0,1.07,0.98,1.06],[1.06,1.19,1.05,1.18],[1.18,1.29,1.17,1.27],[1.27,1.35,1.25,1.33],[1.33,1.40,1.31,1.38],[1.38,1.39,1.32,1.34],[1.34,1.35,1.27,1.29]]); // D: sunek 54-60, H=58
+  hand([[0,1.30,1.20,1.22],[1.22,1.24,1.15,1.17],[1.17,1.18,1.10,1.12],[1.12,1.13,1.05,1.07],[1.07,1.09,1.02,1.04],[1.04,1.06,1.025,1.05],[1.05,1.09,1.03,1.08],[1.08,1.09,1.045,1.06],[1.06,1.13,1.05,1.12]]); // E: umik 61-69, HL=65, vstop=68
+  walk(16,1.12,1.745,0.028,1.075);                            // F: cilji 70-85
+
+  const ends=[26,48,54,54,61,68,70,86];
+  const N=100, x0=40, xw=900, pMin=0.80, pMax=1.80;
+  const X=i=>x0+(i+0.5)*xw/N;
+  const Y=p=>580-(p-pMin)/(pMax-pMin)*545;
+  const cw=xw/N*0.62;
+  const f2=v=>v.toFixed(2), f3=v=>v.toFixed(3);
+
+  // volume profile of the range (26-47): simplified, value around 1.16
+  const POC=1.16, VAH=1.23, VAL=1.09, bs=0.01;
+  const keys=[];for(let k=105;k<128;k++)keys.push(k);
+  const bins={};keys.forEach(k=>{const p=(k+0.5)*bs;bins[k]=Math.exp(-Math.pow((p-POC)/0.045,2))*(0.85+0.3*Math.abs(Math.sin(k*1.7)));});
+  const maxBin=Math.max(...keys.map(k=>bins[k]));
+  const inVAk=k=>(k+0.5)*bs>=VAL&&(k+0.5)*bs<=VAH;
+
+  // fib from LL(0.86) to H(1.40)
+  const LLp=C[51].l, Hp=C[58].h, rng=Hp-LLp;
+  const fib=r=>Hp-rng*r;
+  const ENTRY=1.06, SL=1.00, TP1=Hp;
+  const R=((TP1-ENTRY)/(ENTRY-SL)).toFixed(1);
+
+  // ---------- drawing helpers ----------
+  const el=(tag,attrs,parent,text)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;(parent||svg).appendChild(e);return e;};
+  const ovs=[];
+  const ov=(s,until)=>{const g=el('g',{class:'ov','data-step':s});if(until!=null)g.dataset.until=until;ovs.push(g);return g;};
+  const line=(g,x1,y1,x2,y2,cls,extra)=>el('line',Object.assign({x1,y1,x2,y2,class:cls,'stroke-width':1.5},extra||{}),g);
+  const text=(g,x,y,cls,t,anchor)=>el('text',{x,y,class:cls,'text-anchor':anchor||'start'},g,t);
+  const pill=(g,y,cls,t)=>{el('rect',{x:944,y:y-9,width:56,height:18,rx:3,class:cls},g);text(g,972,y+4,'lbl-s f-panel',t,'middle');};
+
+  // grid + axis
+  const grid=el('g',{});
+  for(let p=0.9;p<=1.801;p+=0.1){const y=Y(p);line(grid,x0,y,940,y,'gridline',{'stroke-width':1});text(grid,948,y+4,'axis-txt',f2(p));}
+
+  // overlays drawn under candles first (zones), labels later
+  // step 2: VP + value lines
+  const g2=ov(2);
+  keys.forEach(k=>{const y1=Y((k+1)*bs),y2=Y(k*bs);const inVA=inVAk(k);el('rect',{x:X(26)-cw/2,y:y1,width:bins[k]/maxBin*120,height:Math.max(1,y2-y1-0.6),style:`fill:var(--value);opacity:${inVA?0.22:0.1}`},g2);});
+  [[VAH,'VAH'],[POC,'POC'],[VAL,'VAL']].forEach(([p,n])=>{line(g2,X(26)-cw/2,Y(p),X(54),Y(p),'s-value',{'stroke-dasharray':n==='POC'?'':'5 4','stroke-width':n==='POC'?1.6:1.2,opacity:.75});});
+  text(g2,X(33),Y(1.05)+20,'lbl f-value','L','middle');
+  // step 5 FVG zone (under candles)
+  const g5z=ov(5);
+  el('rect',{x:X(54),y:Y(C[56].l),width:X(72)-X(54),height:Y(C[54].h)-Y(C[56].l),style:'fill:var(--fvg)'},g5z);
+  // step 6 golden pocket band + fib lines (under candles)
+  const g6z=ov(6);
+  el('rect',{x:X(51),y:Y(fib(0.618)),width:X(86)-X(51),height:Y(fib(0.79))-Y(fib(0.618)),style:'fill:var(--gp)'},g6z);
+  // step 7 position zones (under candles)
+  const g7z=ov(7);
+  el('rect',{x:X(68)-cw/2,y:Y(TP1),width:X(85.5)-X(68)+cw/2,height:Y(ENTRY)-Y(TP1),style:'fill:var(--zone-up)'},g7z);
+  el('rect',{x:X(68)-cw/2,y:Y(ENTRY),width:X(85.5)-X(68)+cw/2,height:Y(SL)-Y(ENTRY),style:'fill:var(--zone-down)'},g7z);
+
+  // candles
+  const cg=el('g',{});
+  const cEls=C.map((k,i)=>{const up=k.c>=k.o;const g=el('g',{class:'candle '+(up?'c-up':'c-down'),visibility:'hidden'},cg);line(g,X(i),Y(k.h),X(i),Y(k.l),'',{'stroke-width':1.4});const yt=Y(Math.max(k.o,k.c)),yb=Y(Math.min(k.o,k.c));el('rect',{x:X(i)-cw/2,y:yt,width:cw,height:Math.max(1.4,yb-yt)},g);return g;});
+
+  // labels above candles
+  {const g=ov(2,5);[[VAH,'VAH'],[POC,'POC'],[VAL,'VAL']].forEach(([p,n])=>{line(g,X(54),Y(p),940,Y(p),'s-value',{'stroke-dasharray':'5 4','stroke-width':1.1,opacity:.6});pill(g,Y(p),'f-value',n);});}
+  // step 3: LL + ABS
+  const g3=ov(3);
+  text(g3,X(51)-12,Y(LLp)+5,'lbl f-who','LL','end');
+  [51,52].forEach(i=>el('circle',{cx:X(i),cy:Y(C[i].l),r:7,fill:'none',class:'s-who','stroke-width':2},g3));
+  const g3t=ov(3,3);
+  text(g3t,X(53)+14,Y(0.875),'lbl-s f-who','ABS · ni gapa dol');
+  // step 4: time line
+  const g4=ov(4);
+  line(g4,X(51),26,X(51),588,'s-time',{'stroke-width':2,'stroke-dasharray':'6 5'});
+  text(g4,X(51)+8,40,'lbl f-time','TIME SHIFT');
+  text(g4,X(51)+8,58,'lbl-s f-time','nov mesec · 3. teden · OL');
+  // step 5: FVG + H
+  const g5=ov(5);
+  text(g5,X(58),Y(Hp)-10,'lbl f-ink','H','middle');
+  const g5t=ov(5,5);
+  text(g5t,X(72)-6,Y((C[54].h+C[56].l)/2)+4,'lbl-s f-who','FVG','end');
+  // step 6: fib lines + prev liq + HL
+  const g6=ov(6);
+  [[0.5,'0.5'],[0.618,'0.618'],[0.705,'0.705'],[0.79,'0.79']].forEach(([r,n])=>{line(g6,X(51),Y(fib(r)),X(86),Y(fib(r)),'s-value',{'stroke-width':1.1,opacity:.8});text(g6,X(86)+6,Y(fib(r))+4,'lbl-s f-value',n+' · '+f3(fib(r)));});
+  line(g6,X(26),Y(1.05),X(67),Y(1.05),'s-value',{'stroke-width':1.6,'stroke-dasharray':'2 4'});
+  text(g6,X(65)-10,Y(C[65].l)+6,'lbl f-value','HL','end');
+  const g6t=ov(6,6);
+  text(g6t,X(25),Y(1.05)+4,'lbl-s f-value','staro L = prejšnja likvidnost','end');
+  text(g6t,X(71),Y((fib(0.618)+fib(0.79))/2)+4,'lbl-s f-value','golden pocket');
+  // step 7: position
+  const g7=ov(7);
+  line(g7,X(68)-cw/2,Y(ENTRY),X(85.5),Y(ENTRY),'s-muted',{'stroke-width':1.2});
+  text(g7,X(85.5)-4,Y(TP1)+18,'lbl f-how','LONG · '+R+'R','end');
+  pill(g7,Y(TP1),'f-how','TP1');pill(g7,Y(ENTRY),'f-ink','VSTOP');pill(g7,Y(SL),'f-down','SL');
+  el('path',{d:`M${X(68)} ${Y(C[68].l)+10} l-7 12 h14 z`,class:'f-how'},g7);
+  // step 8: extensions
+  const g8=ov(8);
+  [[-0.27,'TP2 −0.27'],[-0.618,'TP3 −0.618']].forEach(([r,n])=>{line(g8,X(58),Y(fib(r)),X(86),Y(fib(r)),'s-how',{'stroke-width':1.4,'stroke-dasharray':'6 4'});text(g8,X(86)+6,Y(fib(r))+4,'lbl-s f-how',n+' · '+f2(fib(r)));});
+
+  // ---------- steps ----------
+  const S=[
+    {t:'Dolg padec',tag:'none',k:'—',x:'Cena dolgo pada. Jay tu ne dela nič. Čaka, da prodajalci izgubijo moč.'},
+    {t:'Baza in vrednost',tag:'value',k:'WHERE',x:`Cena se ustavi in hodi bočno. Tu nastane vrednost: POC ${f2(POC)} je cena z največ trgovanja, med VAL ${f2(VAL)} in VAH ${f2(VAH)} je 70 % volumna. Dno ranga je L.`},
+    {t:'Sweep pod dno = LL',tag:'who',k:'WHO',x:'Cena prebije L in pobere stope. Dolgi spodnji wicki in ni gapa navzdol: kupci vse pojedo (absorpcija). Prodajalci nimajo več moči.'},
+    {t:'Pravi čas',tag:'time',k:'WHEN',x:'Ta LL pade na zamenjavo časa: nov mesec ali kvartal, 3. teden, dan najprej naredi low (OL). Brez pravega časa ni tradea.'},
+    {t:'Sunek gor',tag:'who',k:'WHO',x:'Močne zelene sveče in gap gor (FVG). Kupci so prevzeli. Zdaj še ne skočiš noter, čakaš umik.'},
+    {t:'Umik v golden pocket = HL',tag:'value',k:'WHERE',x:`Fib potegneš od LL do vrha H. Cena se vrne v cono 0.618–0.79, točno na staro dno ranga. Tam zdrži in naredi višje dno (HL).`},
+    {t:'Vstop',tag:'how',k:'HOW',x:`Ko se na nižjem okvirju struktura obrne gor, vstopiš na prvi retest. Vstop ${f2(ENTRY)}, SL ${f2(SL)} pod HL, tveganje 1 %. Do starega vrha je to ${R}R.`},
+    {t:'Cilji',tag:'how',k:'HOW',x:`TP1 je stari vrh ${f2(TP1)}, potem fib ekstenzije −0.27 (${f2(fib(-0.27))}) in −0.618 (${f2(fib(-0.618))}). SL premakneš šele, ko cena naredi novo strukturo.`}
+  ];
+  const list=document.getElementById('steps');
+  const btns=S.map((s,i)=>{const li=document.createElement('li');const b=document.createElement('button');b.type='button';b.className='step';b.innerHTML=`<span class="top"><span class="n">${i+1}/8</span><span class="tag ${s.tag}">${s.k}</span></span><b></b><span class="t"></span>`;b.querySelector('b').textContent=s.t;b.querySelector('.t').textContent=s.x;b.addEventListener('click',()=>{stopPlay();go(i+1,i+1===step+1);});li.appendChild(b);list.appendChild(li);return b;});
+
+  let step=8, shown=86, timer=null, playing=false;
+  function setCandles(n){cEls.forEach((g,i)=>g.setAttribute('visibility',i<n?'visible':'hidden'));shown=n;}
+  function setOverlays(st){ovs.forEach(g=>{const u=g.dataset.until;g.style.opacity=(+g.dataset.step<=st&&(u==null||st<=+u))?1:0;});}
+  function setText(st){const s=S[st-1];document.getElementById('nowNum').textContent=st+'/8';document.getElementById('nowTitle').textContent=s.t;const tg=document.getElementById('nowTag');tg.className='tag '+s.tag;tg.textContent=s.k;document.getElementById('nowText').textContent=s.x;btns.forEach((b,i)=>b.setAttribute('aria-current',i===st-1?'step':'false'));document.getElementById('prog').textContent=`Sveč: ${ends[st-1]} · korak ${st} od 8`;}
+  function go(t,animate,done){
+    clearTimeout(timer);
+    t=Math.max(1,Math.min(8,t));
+    const target=ends[t-1];
+    setOverlays(t-1);setText(t);step=t;
+    if(!animate||reduce||target<=shown){setCandles(target);setOverlays(t);if(done)timer=setTimeout(done,reduce?1800:2600);return;}
+    const tick=()=>{if(shown<target){setCandles(shown+1);timer=setTimeout(tick,55);}else{setOverlays(t);if(done)timer=setTimeout(done,2600);}};
+    tick();
+  }
+  const playBtn=document.getElementById('play');
+  function stopPlay(){playing=false;playBtn.textContent='▶ Predvajaj od začetka';}
+  function playFrom(t){if(!playing)return;go(t,true,()=>{if(t<8)playFrom(t+1);else stopPlay();});}
+  playBtn.addEventListener('click',()=>{if(playing){clearTimeout(timer);stopPlay();return;}playing=true;playBtn.textContent='❚❚ Ustavi';setCandles(0);setOverlays(0);playFrom(1);});
+  document.getElementById('prev').addEventListener('click',()=>{stopPlay();go(step-1,false);});
+  document.getElementById('next').addEventListener('click',()=>{stopPlay();go(step+1,true);});
+
+  // complete at rest: full picture
+  setCandles(86);setOverlays(8);setText(8);
+})();
+</script>
+<script>
+(function(){
+  const NS='http://www.w3.org/2000/svg', svg=document.getElementById('vana');
+  const D=[["2026-05-23",1.5019,1.5403,1.4477,1.5229],["2026-05-24",1.5229,1.5361,1.4458,1.4701],["2026-05-25",1.4701,1.5064,1.4624,1.4682],["2026-05-26",1.4682,1.5622,1.4387,1.5181],["2026-05-27",1.5181,1.5324,1.418,1.4367],["2026-05-28",1.4367,1.4393,1.3113,1.3762],["2026-05-29",1.3762,1.4336,1.3433,1.3982],["2026-05-30",1.3982,1.4683,1.3957,1.4076],["2026-05-31",1.4076,1.4283,1.3658,1.3915],["2026-06-01",1.3915,1.4125,1.2892,1.348],["2026-06-02",1.348,1.385,1.2367,1.266],["2026-06-03",1.266,1.3341,1.2449,1.2774],["2026-06-04",1.2774,1.2881,1.1589,1.201],["2026-06-05",1.201,1.2058,1.0542,1.1207],["2026-06-06",1.1207,1.1309,1.0195,1.092],["2026-06-07",1.092,1.1543,1.0884,1.124],["2026-06-08",1.124,1.1627,1.0988,1.116],["2026-06-09",1.116,1.1411,1.0632,1.0908],["2026-06-10",1.0908,1.1145,1.0399,1.0631],["2026-06-11",1.0631,1.1191,1.062,1.1003],["2026-06-12",1.1003,1.1174,1.0787,1.0944],["2026-06-13",1.0944,1.1467,1.0922,1.1272],["2026-06-14",1.1272,1.1491,1.0873,1.1445],["2026-06-15",1.1445,1.1987,1.1301,1.1696],["2026-06-16",1.1696,1.1929,1.1424,1.1737],["2026-06-17",1.1737,1.2127,1.1562,1.1733],["2026-06-18",1.1733,1.1798,1.088,1.1292],["2026-06-19",1.1292,1.1923,1.1153,1.1616],["2026-06-20",1.1616,1.1688,1.1317,1.1523],["2026-06-21",1.1523,1.1675,1.1183,1.1209],["2026-06-22",1.1209,1.1624,1.1052,1.116],["2026-06-23",1.116,1.1219,1.0607,1.0839],["2026-06-24",1.0839,1.0928,1.01,1.0581],["2026-06-25",1.0581,1.0676,0.9904,1.0491],["2026-06-26",1.0491,1.122,1.0129,1.0843],["2026-06-27",1.0843,1.0951,1.0487,1.0588],["2026-06-28",1.0588,1.1709,1.0541,1.1029],["2026-06-29",1.1029,1.2607,1.0884,1.1283],["2026-06-30",1.1283,1.2093,1.0673,1.0828],["2026-07-01",1.0828,1.1013,1.0516,1.0842],["2026-07-02",1.0842,1.1232,1.0748,1.1202],["2026-07-03",1.1202,1.204,1.1117,1.194],["2026-07-04",1.194,1.195,1.158,1.1722],["2026-07-05",1.1722,1.187,1.1431,1.1739],["2026-07-06",1.1739,1.2244,1.124,1.174],["2026-07-07",1.174,1.1859,1.138,1.1435],["2026-07-08",1.1435,1.1497,1.11,1.1447],["2026-07-09",1.1447,1.1825,1.1358,1.1547],["2026-07-10",1.1547,1.2672,1.1495,1.2318],["2026-07-11",1.2318,1.2318,1.1753,1.1773],["2026-07-12",1.1773,1.2369,1.1743,1.1895],["2026-07-13",1.1895,1.2497,1.1686,1.2371],["2026-07-14",1.2371,1.3212,1.1997,1.2152],["2026-07-15",1.2152,1.3022,1.1813,1.2353],["2026-07-16",1.2353,1.3139,1.208,1.2525],["2026-07-17",1.2525,1.2758,1.1715,1.196],["2026-07-18",1.196,1.215,1.1181,1.1254],["2026-07-19",1.1254,1.2656,1.1109,1.1572],["2026-07-20",1.1572,1.2118,1.1352,1.1868],["2026-07-21",1.1868,1.2206,1.1691,1.1822],["2026-07-22",1.1822,1.235,1.147,1.201],["2026-07-23",1.201,1.2379,1.1766,1.2358],["2026-07-24",1.2358,1.3016,1.2064,1.235],["2026-07-25",1.235,1.3296,1.1339,1.168],["2026-07-26",1.168,1.2136,1.1584,1.1875],["2026-07-27",1.1875,1.2229,1.1527,1.192],["2026-07-28",1.192,1.2495,1.1699,1.2273],["2026-07-29",1.2273,1.261,1.0829,1.09],["2026-07-30",1.09,1.0984,1.0058,1.0151],["2026-07-31",1.0151,1.025,0.8727,0.886],["2026-08-01",0.886,0.91,0.8792,0.8908],["2026-08-02",0.8908,0.8918,0.8581,0.8621],["2026-08-03",0.8621,0.8626,0.8228,0.8298],["2026-08-04",0.8298,0.8563,0.8141,0.8264],["2026-08-05",0.8264,0.8618,0.8216,0.8438],["2026-08-06",0.8438,0.8649,0.8386,0.8545],["2026-08-07",0.8545,0.889,0.8503,0.8711],["2026-08-08",0.8711,0.8849,0.8492,0.8732],["2026-08-09",0.8732,0.8864,0.8608,0.8656],["2026-08-10",0.8656,0.9036,0.8612,0.8761],["2026-08-11",0.8761,0.9011,0.8346,0.8458],["2026-08-12",0.8458,0.8557,0.8334,0.842],["2026-08-13",0.842,0.8514,0.8213,0.8382],["2026-08-14",0.8382,0.8555,0.8358,0.8471],["2026-08-15",0.8471,0.875,0.8428,0.8631],["2026-08-16",0.8631,0.9011,0.8552,0.8672],["2026-08-17",0.8672,0.8853,0.8495,0.857],["2026-08-18",0.857,0.865,0.8379,0.8594],["2026-08-19",0.8594,0.9122,0.8516,0.9051],["2026-08-20",0.9051,0.9433,0.8897,0.939],["2026-08-21",0.939,1.0135,0.9345,1.0067],["2026-08-22",1.0067,1.0585,0.9531,0.9966],["2026-08-23",0.9966,1.0598,0.95,1.0423],["2026-08-24",1.0423,1.0491,0.9916,1.0134],["2026-08-25",1.0134,1.0413,0.9602,0.9786],["2026-08-26",0.9786,0.9967,0.9624,0.9919],["2026-08-27",0.9919,0.9922,0.9484,0.9503],["2026-08-28",0.9503,0.9623,0.8925,0.902],["2026-08-29",0.902,0.919,0.894,0.9001],["2026-08-30",0.9001,0.9288,0.8657,0.8794],["2026-08-31",0.8794,0.9127,0.8765,0.8999],["2026-09-01",0.8999,0.9057,0.877,0.8936],["2026-09-02",0.8936,0.8937,0.8723,0.8811],["2026-09-03",0.8811,0.9169,0.8782,0.908],["2026-09-04",0.908,1.0445,0.9068,0.9477],["2026-09-05",0.9477,0.9512,0.928,0.9429],["2026-09-06",0.9429,0.9504,0.9222,0.9496],["2026-09-07",0.9496,0.9552,0.928,0.9381],["2026-09-08",0.9381,1.0118,0.9342,0.9606],["2026-09-09",0.9606,0.9689,0.8895,0.9247],["2026-09-10",0.9247,0.9251,0.8766,0.8788],["2026-09-11",0.8788,0.9285,0.8778,0.9096],["2026-09-12",0.9096,0.9518,0.9092,0.9401],["2026-09-13",0.9401,0.9911,0.9336,0.952],["2026-09-14",0.952,0.988,0.9428,0.9556],["2026-09-15",0.9556,1.0441,0.893,0.9011],["2026-09-16",0.9011,0.9356,0.8862,0.9334],["2026-09-17",0.9334,0.9672,0.9196,0.9667],["2026-09-18",0.9667,1.037,0.9584,1.0341],["2026-09-19",1.0341,1.1332,1.0141,1.103],["2026-09-20",1.103,1.1266,1.0399,1.0991],["2026-09-21",1.0991,1.1551,1.0847,1.1258],["2026-09-22",1.1258,1.1677,1.0963,1.1631],["2026-09-23",1.1631,1.1883,1.0728,1.0905],["2026-09-24",1.0905,1.1509,1.0838,1.1397],["2026-09-25",1.1397,1.1646,1.1282,1.1553],["2026-09-26",1.1553,1.1717,1.1299,1.1532],["2026-09-27",1.1532,1.167,1.1308,1.158],["2026-09-28",1.158,1.1663,1.0637,1.091],["2026-09-29",1.091,1.1036,1.0353,1.0583],["2026-09-30",1.0583,1.1089,1.0554,1.0811],["2026-10-01",1.0811,1.1029,1.0518,1.0768],["2026-10-02",1.0768,1.1253,1.0368,1.0718],["2026-10-03",1.0718,1.0944,1.0601,1.0717],["2026-10-04",1.0717,1.1112,1.0611,1.0981],["2026-10-05",1.0981,1.1176,1.0695,1.0945],["2026-10-06",1.0945,1.1051,1.0654,1.079],["2026-10-07",1.079,1.0801,1.0059,1.0293],["2026-10-08",1.0293,1.0539,0.9634,1.0033],["2026-10-09",1.0033,1.0533,0.9979,1.0492],["2026-10-10",1.0492,1.0782,1.0449,1.0601]];
+  const N=D.length+24, x0=40, xw=900, pMin=0.78, pMax=1.58;
+  const X=i=>x0+(i+0.5)*xw/N, Y=p=>530-(p-pMin)/(pMax-pMin)*500, cw=xw/N*0.62;
+  const idx=d=>D.findIndex(r=>r[0]===d);
+  const el=(t,a,par,tx)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(tx!=null)e.textContent=tx;(par||svg).appendChild(e);return e;};
+  const line=(x1,y1,x2,y2,cls,ex)=>el('line',Object.assign({x1,y1,x2,y2,class:cls,'stroke-width':1.4},ex||{}));
+  const text=(x,y,cls,t,a)=>el('text',{x,y,class:cls,'text-anchor':a||'start'},null,t);
+  for(let p=0.8;p<=1.501;p+=0.1){line(x0,Y(p),940,Y(p),'gridline',{'stroke-width':1});text(948,Y(p)+4,'axis-txt',p.toFixed(2));}
+  ['2026-06-01','2026-07-01','2026-08-01','2026-09-01','2026-10-01'].forEach((d,k)=>{const i=idx(d);text(X(i),552,'axis-txt',['jun','jul','avg','sep','okt'][k],'middle');});
+  const lo=0.8657,hi=1.1883,R=hi-lo,fib=r=>hi-R*r;
+  const iA=idx('2026-08-30'), iE=D.length-1, iEnd=D.length+14;
+  // golden pocket band
+  el('rect',{x:X(iA),y:Y(fib(0.618)),width:X(iEnd)-X(iA),height:Y(fib(0.79))-Y(fib(0.618)),style:'fill:var(--gp)'});
+  // long position zones
+  const ENTRY=1.06,SL=0.955,TP=1.3296, xs=X(iE)-cw/2, xe=X(iEnd);
+  el('rect',{x:xs,y:Y(TP),width:xe-xs,height:Y(ENTRY)-Y(TP),style:'fill:var(--zone-up)'});
+  el('rect',{x:xs,y:Y(ENTRY),width:xe-xs,height:Y(SL)-Y(ENTRY),style:'fill:var(--zone-down)'});
+  // fib lines
+  [[0.5,'0.5'],[0.618,'0.618'],[0.705,'0.705'],[0.79,'0.79']].forEach(([r,n])=>{line(X(iA),Y(fib(r)),X(iEnd),Y(fib(r)),'s-value',{'stroke-width':1,opacity:.75});});
+  // prev liq (old L) and range high
+  const iL=idx('2026-06-25'), iRH=idx('2026-07-25');
+  line(X(iL),Y(0.9904),X(iEnd),Y(0.9904),'s-value',{'stroke-width':1.6,'stroke-dasharray':'2 4'});
+  line(X(iRH),Y(TP),X(iEnd),Y(TP),'s-muted',{'stroke-width':1.6});
+  // time line Q4
+  const iQ=idx('2026-10-01'); line(X(iQ),24,X(iQ),532,'s-time',{'stroke-width':2,'stroke-dasharray':'6 5'});
+  // candles
+  D.forEach((r,i)=>{const [d,o,h,l,c]=r;const up=c>=o;const g=el('g',{class:'candle '+(up?'c-up':'c-down')});el('line',{x1:X(i),y1:Y(h),x2:X(i),y2:Y(l),'stroke-width':1.3},g);const yt=Y(Math.max(o,c)),yb=Y(Math.min(o,c));el('rect',{x:X(i)-cw/2,y:yt,width:cw,height:Math.max(1.3,yb-yt)},g);});
+  // labels
+  text(X(iL),Y(0.9904)+20,'lbl f-value','L','middle');
+  const iLL=idx('2026-08-04'); text(X(iLL),Y(0.8141)+20,'lbl f-who','LL','middle');
+  const iH=idx('2026-09-23'); text(X(iH),Y(1.1883)-10,'lbl f-ink','H','middle');
+  const iHL=idx('2026-10-08'); text(X(iHL)-8,Y(0.9634)+5,'lbl f-value','HL','end');
+  el('circle',{cx:X(iHL),cy:Y(0.9634),r:7,fill:'none',class:'s-value','stroke-width':2});
+  text(X(iQ)-8,40,'lbl f-time','TIME: Q4','end');
+  [[0.5,'0.5'],[0.618,'0.618'],[0.705,'0.705'],[0.79,'0.79']].forEach(([r,n])=>text(X(iEnd)+6,Y(fib(r))+4,'lbl-s f-value',n));
+  text(X(iRH)+4,Y(TP)-8,'lbl-s f-muted','vrh ranga 1.33 = cilj');
+  text(xe-4,Y(ENTRY)-6,'lbl-s f-ink','LONG 1.06','end');
+  text(xe-4,Y(SL)+14,'lbl-s f-down','SL 0.955','end');
+  text(xe-4,Y(TP)+16,'lbl-s f-how',((TP-ENTRY)/(ENTRY-SL)).toFixed(1)+'R','end');
+})();
+</script>

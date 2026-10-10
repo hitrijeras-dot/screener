@@ -1,0 +1,310 @@
+//@version=5
+indicator("Jay HL · Time × Value", shorttitle="Jay HL", overlay=true, max_lines_count=400, max_labels_count=200, max_boxes_count=50)
+
+// =================== Nastavitve ===================
+grpS = "Struktura"
+pivLen   = input.int(5, "Swing: sveče levo/desno", minval=2, group=grpS)
+lookPiv  = input.int(6, "Koliko starih swingov gleda za L / H", minval=2, maxval=20, group=grpS)
+useLong  = input.bool(true, "Long (L → LL → HL)", group=grpS)
+useShort = input.bool(true, "Short (H → HH → LH)", group=grpS)
+grpF = "Fib / vrednost"
+gpA     = input.float(0.618, "Golden pocket od", step=0.001, group=grpF)
+gpB     = input.float(0.79, "Golden pocket do", step=0.001, group=grpF)
+liqTol  = input.float(1.5, "Toleranca stare likvidnosti (%)", step=0.1, group=grpF) / 100
+showExt = input.bool(true, "Cilji −0.27 / −0.618", group=grpF)
+grpT = "Čas"
+showQ   = input.bool(true, "Začetek kvartala", group=grpT)
+showM   = input.bool(true, "Začetek meseca", group=grpT)
+showW3  = input.bool(true, "3. teden v mesecu (15.–21.)", group=grpT)
+show23  = input.bool(false, "23D obdobja (od začetka kvartala)", group=grpT)
+freshD  = input.int(5, "Nov mesec / kvartal velja še (dni)", minval=1, group=grpT)
+showTbl = input.bool(true, "Tabela stanja", group=grpT)
+
+cVal  = #2C68D2
+cWho  = #C97A00
+cTime = #C0185A
+cUp   = #18966E
+cDn   = #CF4636
+cInk  = #787B86
+
+// =================== ČAS (WHEN) ===================
+newMonth = ta.change(month) != 0
+newQ     = newMonth and (month == 1 or month == 4 or month == 7 or month == 10)
+week3    = dayofmonth >= 15 and dayofmonth <= 21
+var int qStart = na
+var int mStart = na
+if newQ
+    qStart := time
+if newMonth
+    mStart := time
+p23   = na(qStart) ? na : math.floor((time - qStart) / 86400000 / 23)
+new23 = not na(p23) and not na(p23[1]) and p23 > p23[1] and not newQ
+freshTime = not na(mStart) and (time - mStart) < freshD * 86400000
+timeOK = week3 or freshTime
+
+vline(col, sty, w) =>
+    line.new(bar_index, low, bar_index, high, extend=extend.both, color=col, style=sty, width=w)
+
+if showQ and newQ
+    vline(cTime, line.style_solid, 2)
+    label.new(bar_index, high, "Q" + str.tostring(math.ceil(month / 3.0)), yloc=yloc.abovebar, style=label.style_none, textcolor=cTime, size=size.normal)
+else if showM and newMonth
+    vline(color.new(cTime, 50), line.style_dotted, 1)
+if show23 and new23
+    vline(color.new(cTime, 40), line.style_dashed, 1)
+bgcolor(showW3 and week3 ? color.new(cTime, 93) : na, title="3. teden")
+
+// =================== POMOČ ===================
+clearLines(array<line> a) =>
+    while array.size(a) > 0
+        line.delete(array.pop(a))
+clearLabels(array<label> a) =>
+    while array.size(a) > 0
+        label.delete(array.pop(a))
+lvl(array<line> a, int x, float y, color col, string sty, int w) =>
+    array.push(a, line.new(x, y, x + 1, y, extend=extend.right, color=col, style=sty, width=w))
+txt(array<label> a, int x, float y, string s, color col, string st) =>
+    array.push(a, label.new(x, y, s, style=st, color=color.new(col, 100), textcolor=col, size=size.normal))
+
+// =================== STRUKTURA ===================
+pl = ta.pivotlow(low, pivLen, pivLen)
+ph = ta.pivothigh(high, pivLen, pivLen)
+lowRecent  = ta.lowest(low, pivLen + 1)
+highRecent = ta.highest(high, pivLen + 1)
+
+var array<float> pls = array.new_float()
+var array<int>   plb = array.new_int()
+var array<float> phs = array.new_float()
+var array<int>   phb = array.new_int()
+
+// long stanje
+var float bL = na
+var int   bLx = na
+var float bLL = na
+var int   bLLx = na
+var bool  bArmed = false
+var float bLeg = na
+var int   bLegX = na
+var float bH = na
+var int   bHx = na
+var bool  bTouched = false
+var bool  bDone = false
+var float bHL = na
+var int   bHLx = na
+bool bNew = false
+
+// short stanje
+var float sH = na
+var int   sHx = na
+var float sHH = na
+var int   sHHx = na
+var bool  sArmed = false
+var float sLeg = na
+var int   sLegX = na
+var float sLo = na
+var int   sLox = na
+var bool  sTouched = false
+var bool  sDone = false
+var float sLH = na
+var int   sLHx = na
+bool sNew = false
+
+// --- nov swing low ---
+if not na(pl)
+    px = bar_index - pivLen
+    n = array.size(pls)
+    prevPL = n > 0 ? array.get(pls, n - 1) : na
+    // LL: nov low pod prejšnjim -> L = najnižji stari low nad njim (pobrana likvidnost)
+    if n > 0 and pl < prevPL
+        float swept = na
+        int sweptX = na
+        for i = math.max(0, n - lookPiv) to n - 1
+            v = array.get(pls, i)
+            if v > pl and (na(swept) or v < swept)
+                swept := v
+                sweptX := array.get(plb, i)
+        bL := swept
+        bLx := sweptX
+        bLL := pl
+        bLLx := px
+        bArmed := false
+    // short: po HH zlom zadnjega lowa navzdol -> vklopi short cono
+    m = array.size(phs)
+    lastPH  = m > 0 ? array.get(phs, m - 1) : na
+    lastPHx = m > 0 ? array.get(phb, m - 1) : na
+    if useShort and not na(sHH) and px > sHHx and n > 0 and pl < prevPL and not na(lastPH) and lastPHx >= sHHx and lastPH <= sHH
+        sArmed := true
+        sLeg := lastPH
+        sLegX := lastPHx
+        sLo := pl
+        sLox := px
+        sTouched := highRecent >= sLo + (sLeg - sLo) * gpA
+        sDone := false
+        sLH := sTouched ? highRecent : na
+        sLHx := bar_index
+        sNew := true
+    array.push(pls, pl)
+    array.push(plb, px)
+    if array.size(pls) > 40
+        array.shift(pls)
+        array.shift(plb)
+
+// --- nov swing high ---
+if not na(ph)
+    hx = bar_index - pivLen
+    m = array.size(phs)
+    prevPH = m > 0 ? array.get(phs, m - 1) : na
+    // HH: nov high nad prejšnjim -> H = najvišji stari high pod njim
+    if m > 0 and ph > prevPH
+        float sw = na
+        int swX = na
+        for i = math.max(0, m - lookPiv) to m - 1
+            v = array.get(phs, i)
+            if v < ph and (na(sw) or v > sw)
+                sw := v
+                swX := array.get(phb, i)
+        sH := sw
+        sHx := swX
+        sHH := ph
+        sHHx := hx
+        sArmed := false
+    // long: po LL zlom zadnjega highja navzgor -> vklopi long cono
+    n = array.size(pls)
+    lastPL  = n > 0 ? array.get(pls, n - 1) : na
+    lastPLx = n > 0 ? array.get(plb, n - 1) : na
+    if useLong and not na(bLL) and hx > bLLx and m > 0 and ph > prevPH and not na(lastPL) and lastPLx >= bLLx and lastPL >= bLL
+        bArmed := true
+        bLeg := lastPL
+        bLegX := lastPLx
+        bH := ph
+        bHx := hx
+        bTouched := lowRecent <= bH - (bH - bLeg) * gpA
+        bDone := false
+        bHL := bTouched ? lowRecent : na
+        bHLx := bar_index
+        bNew := true
+    array.push(phs, ph)
+    array.push(phb, hx)
+    if array.size(phs) > 40
+        array.shift(phs)
+        array.shift(phb)
+
+// =================== LONG: cona in signal ===================
+bR   = bH - bLeg
+b50  = bH - bR * 0.5
+b618 = bH - bR * gpA
+b705 = bH - bR * 0.705
+b79  = bH - bR * gpB
+bullSig = false
+bullTouch = false
+if bArmed and not bNew
+    if close < bLeg
+        bArmed := false
+    else
+        if low <= b618
+            bullTouch := not bTouched
+            bTouched := true
+            if na(bHL) or low < bHL
+                bHL := low
+                bHLx := bar_index
+        if bTouched and not bDone and close > open and close > b618 and bHL >= bLeg
+            bullSig := true
+            bDone := true
+bLiq  = not na(bL) and bL <= b618 * (1 + liqTol) and bL >= b79 * (1 - liqTol)
+
+// =================== SHORT: cona in signal ===================
+sR   = sLeg - sLo
+s50  = sLo + sR * 0.5
+s618 = sLo + sR * gpA
+s705 = sLo + sR * 0.705
+s79  = sLo + sR * gpB
+bearSig = false
+bearTouch = false
+if sArmed and not sNew
+    if close > sLeg
+        sArmed := false
+    else
+        if high >= s618
+            bearTouch := not sTouched
+            sTouched := true
+            if na(sLH) or high > sLH
+                sLH := high
+                sLHx := bar_index
+        if sTouched and not sDone and close < open and close < s618 and sLH <= sLeg
+            bearSig := true
+            sDone := true
+sLiq = not na(sH) and sH >= s618 * (1 - liqTol) and sH <= s79 * (1 + liqTol)
+
+// =================== RISANJE ===================
+var array<line>  bLines  = array.new_line()
+var array<label> bLabels = array.new_label()
+var box bBox = na
+var array<line>  sLines  = array.new_line()
+var array<label> sLabels = array.new_label()
+var box sBox = na
+
+if bNew
+    clearLines(bLines)
+    clearLabels(bLabels)
+    box.delete(bBox)
+    if not na(bL)
+        txt(bLabels, bLx, bL, "L", cVal, label.style_label_up)
+        lvl(bLines, bLx, bL, color.new(cVal, 20), line.style_dotted, 2)
+    txt(bLabels, bLLx, bLL, "LL", cWho, label.style_label_up)
+    txt(bLabels, bHx, bH, "H", cInk, label.style_label_down)
+    bBox := box.new(bLegX, b618, bLegX + 1, b79, extend=extend.right, bgcolor=color.new(cVal, 86), border_color=color.new(cVal, 100))
+    lvl(bLines, bLegX, b50, color.new(cVal, 50), line.style_solid, 1)
+    lvl(bLines, bLegX, b618, color.new(cVal, 20), line.style_solid, 1)
+    lvl(bLines, bLegX, b705, color.new(cVal, 20), line.style_dashed, 1)
+    lvl(bLines, bLegX, b79, color.new(cVal, 20), line.style_solid, 1)
+    if showExt
+        lvl(bLines, bHx, bH + bR * 0.27, color.new(cUp, 30), line.style_dashed, 1)
+        lvl(bLines, bHx, bH + bR * 0.618, color.new(cUp, 30), line.style_dashed, 1)
+
+if sNew
+    clearLines(sLines)
+    clearLabels(sLabels)
+    box.delete(sBox)
+    if not na(sH)
+        txt(sLabels, sHx, sH, "H", cVal, label.style_label_down)
+        lvl(sLines, sHx, sH, color.new(cVal, 20), line.style_dotted, 2)
+    txt(sLabels, sHHx, sHH, "HH", cWho, label.style_label_down)
+    txt(sLabels, sLox, sLo, "L", cInk, label.style_label_up)
+    sBox := box.new(sLegX, s79, sLegX + 1, s618, extend=extend.right, bgcolor=color.new(cDn, 88), border_color=color.new(cDn, 100))
+    lvl(sLines, sLegX, s50, color.new(cDn, 50), line.style_solid, 1)
+    lvl(sLines, sLegX, s618, color.new(cDn, 20), line.style_solid, 1)
+    lvl(sLines, sLegX, s705, color.new(cDn, 20), line.style_dashed, 1)
+    lvl(sLines, sLegX, s79, color.new(cDn, 20), line.style_solid, 1)
+    if showExt
+        lvl(sLines, sLox, sLo - sR * 0.27, color.new(cDn, 30), line.style_dashed, 1)
+        lvl(sLines, sLox, sLo - sR * 0.618, color.new(cDn, 30), line.style_dashed, 1)
+
+if bullSig
+    flags = "HL" + (bLiq ? " +liq" : "") + (timeOK ? " +čas" : "")
+    label.new(bHLx, bHL, flags, style=label.style_label_up, color=cUp, textcolor=color.white, size=size.normal)
+if bearSig
+    flags = "LH" + (sLiq ? " +liq" : "") + (timeOK ? " +čas" : "")
+    label.new(sLHx, sLH, flags, style=label.style_label_down, color=cDn, textcolor=color.white, size=size.normal)
+
+plotshape(bullSig, "HL long", shape.triangleup, location.belowbar, cUp, size=size.tiny)
+plotshape(bearSig, "LH short", shape.triangledown, location.abovebar, cDn, size=size.tiny)
+
+// =================== TABELA ===================
+var table tb = table.new(position.top_right, 2, 4, bgcolor=color.new(color.black, 85), border_width=1)
+stateTxt(armed, touched, done) =>
+    not armed ? "ni setupa" : done ? "potrjen" : touched ? "v coni – čakaj zeleno/rdečo svečo" : "čaka umik v GP"
+if showTbl and barstate.islast
+    table.cell(tb, 0, 0, "Jay HL", text_color=cInk, text_size=size.small)
+    table.cell(tb, 1, 0, timeOK ? "čas OK" : "čas ne", text_color=timeOK ? cTime : cInk, text_size=size.small)
+    table.cell(tb, 0, 1, "Long", text_color=cUp, text_size=size.small)
+    table.cell(tb, 1, 1, stateTxt(bArmed, bTouched, bDone) + (bArmed ? "  GP " + str.tostring(b618, format.mintick) + "–" + str.tostring(b79, format.mintick) : ""), text_color=color.gray, text_size=size.small)
+    table.cell(tb, 0, 2, "Short", text_color=cDn, text_size=size.small)
+    table.cell(tb, 1, 2, stateTxt(sArmed, sTouched, sDone) + (sArmed ? "  GP " + str.tostring(s618, format.mintick) + "–" + str.tostring(s79, format.mintick) : ""), text_color=color.gray, text_size=size.small)
+    table.cell(tb, 0, 3, "Liq", text_color=cVal, text_size=size.small)
+    table.cell(tb, 1, 3, (bArmed and bLiq ? "long: staro L v GP  " : "") + (sArmed and sLiq ? "short: stari H v GP" : ""), text_color=color.gray, text_size=size.small)
+
+// =================== ALARMI ===================
+alertcondition(bullTouch, "Jay HL: cena v long GP", "Jay HL: cena je prišla v golden pocket (long setup)")
+alertcondition(bullSig, "Jay HL: HL potrjen (long)", "Jay HL: HL potrjen v golden pocketu – preveri čas in nižji okvir")
+alertcondition(bearTouch, "Jay LH: cena v short GP", "Jay LH: cena je prišla v golden pocket (short setup)")
+alertcondition(bearSig, "Jay LH: LH potrjen (short)", "Jay LH: LH potrjen v golden pocketu – preveri čas in nižji okvir")
