@@ -156,13 +156,14 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
         <label style="grid-column:1/-1">Kovanci (ločeni z vejico)<input id="btsym" type="text" value="BTC, ETH, SOL, XRP, DOGE, AVAX, LINK, SUI, TIA, ARB, OP, INJ, NEAR, APT, WIF, ZRO, TRUMP, JTO, POPCAT, SPX, ENA, SEI, 1000PEPE, VANA"></label>
         <label>Okvir<select id="bttf"><option value="D3">3D</option><option value="D" selected>1D</option><option value="360">6H</option><option value="90">90m</option><option value="23">23m</option><option value="5">5m</option><option value="3">3m</option><option value="1">1m</option><option value="W">1W</option></select></label>
         <label>Vstop s CISD na nižjem okviru<select id="btltf"><option value="">Izklop</option><option value="auto" selected>Samodejno (3D→6H, 1D→1H, 6H→15m, 90m→5m, 23m→1m)</option><option value="360">6H</option><option value="60">1H</option><option value="15">15m</option><option value="5">5m</option><option value="1">1m</option></select></label>
+        <label>SL<select id="btsl"><option value="hl">pod HL / nad LH (0.3 %)</option><option value="leg">pod dnom noge – 100 % fib</option></select></label>
         <label>Okno za CISD (sveč višjega okvira)<input id="btw" type="number" min="1" max="20" value="5"></label>
         <label>Zgodovina (sveč)<select id="btn"><option value="1000">1000</option><option value="2500" selected>2500</option><option value="5000">5000</option></select></label>
       </div>
       <div class="bar" style="margin:12px 0 0"><button class="btn" id="btgo" type="button">Zaženi backtest</button><span class="lbl" id="btst"></span></div>
     </div>
     <div id="btout"></div>
-    <div class="note" style="margin-top:8px">Kot <i>jay_hl_backtest_strategija.pine</i>: ista logika kot screener, samo zaprte sveče. Vstop ob zaprtju signalne sveče, SL 0.3 % pod HL (nad LH), izhod od naslednje sveče naprej (SL in TP v isti sveči = SL), provizija 0.11 % v R, najmanj 1R do cilja. <b>CISD vstop</b>: po potrjenem HL/LH v oknu W sveč na nižjem okviru čaka sweep zadnjega swing lowa in zaprtje nad odprtjem prve sveče rdeče serije pred njim (kot Moj Screener); B = vstop ob zaprtju, C = limit na tem levelu (velja 24 sveč, prekliče se, če cena prej doseže cilj); SL za najnižjo ceno od sweepa; če pade pod HTF SL, setup odpade. <b>+HTF</b> = smer 1W (na 1W okviru 1M) ob signalu, samo iz že zaprtih tedenskih sveč, en trade naenkrat na kovanec in varianto. Max DD = največji padec skupne krivulje R vseh kovancev. 23m je omejen na ~30 strani 1m sveč.</div>
+    <div class="note" style="margin-top:8px">Kot <i>jay_hl_backtest_strategija.pine</i>: ista logika kot screener, samo zaprte sveče. Vstop ob zaprtju signalne sveče, SL 0.3 % pod HL (nad LH), izhod od naslednje sveče naprej (SL in TP v isti sveči = SL), provizija 0.11 % v R, najmanj 1R do cilja. <b>CISD vstop</b>: po potrjenem HL/LH v oknu W sveč na nižjem okviru čaka sweep zadnjega swing lowa in zaprtje nad odprtjem prve sveče rdeče serije pred njim (kot Moj Screener); B = vstop ob zaprtju, C = limit na tem levelu (velja 24 sveč, prekliče se, če cena prej doseže cilj); SL za najnižjo ceno od sweepa; če pade pod HTF SL, setup odpade. <b>+3D sveče</b> = L-LL-HL na 3D, HL sveča zapre nad vrhom LL sveče, v zadnjih 3 zaprtih 3D svečah ob signalu. <b>−0.27</b> = cilj H + (H − noga) × 0.27. <b>SL pod dnom noge</b> = 0.3 % pod 100 % fib (Jayeva invalidacija), velja tudi za A in preklic CISD. <b>+HTF</b> = smer 1W (na 1W okviru 1M) ob signalu, samo iz že zaprtih tedenskih sveč, en trade naenkrat na kovanec in varianto. Max DD = največji padec skupne krivulje R vseh kovancev. 23m je omejen na ~30 strani 1m sveč.</div>
   </div>
 
   <div class="note">
@@ -409,7 +410,14 @@ htfBtn();
 $('hcf').addEventListener('click',function(){hcOn=!hcOn;ls('jay_hc',hcOn?'1':'0');hcBtn();render()});hcBtn();
 
 /* ---------- Backtest (kot jay_hl_backtest_strategija.pine) ---------- */
-var BT_F=[['vsi','vsi'],['cas','+čas'],['liq','+liq'],['htf','+HTF']],BT_T=['H','2R','3R'];
+var BT_F=[['vsi','vsi'],['cas','+čas'],['liq','+liq'],['htf','+HTF'],['c3','+3D sveče']],BT_T=['H','2R','3R','e27'],BT_TN={H:'H','2R':'2R','3R':'3R',e27:'−0.27'};
+function vi(f,t){for(var i=0;i<BT_F.length;i++)if(BT_F[i][0]===f)return i*BT_T.length+BT_T.indexOf(t);return 0}
+/* 3D HTF sveče skozi zgodovino: zastavica po vsaki zaprti 3D sveči (iz 1D, sidro epoch), velja od njenega zaprtja */
+async function btC3(sym){var kd=await klines(sym,'D',{n:1000,pages:3}),o=closed3D(kd),out=[];
+  for(var j=2;j<o.length;j++){var f=candSeq(o.slice(Math.max(0,j-4),j+1),3,true);out.push({e:o[j].e,L:f.L,S:f.S})}return out}
+function c3At(C,t,up){var x=null;if(!C)return false;for(var j=0;j<C.length&&C[j].e<=t;j++)x=C[j];return !!(x&&(up?x.L:x.S))}
+function btSL(g,up,leg){return leg?(up?g.leg*0.997:g.leg*1.003):(up?g.HL*0.997:g.LH*1.003)}
+function btTP(g,up,en,rk,t){var tg=up?g.H:g.lo;if(t==='H')return tg;if(t==='e27')return up?g.H+(g.H-g.leg)*0.27:g.lo-(g.leg-g.lo)*0.27;var m=t==='2R'?2:3;return up?en+m*rk:en-m*rk}
 /* HTF skozi zgodovino brez gledanja naprej: smer po vsaki zaprti 1W (na 1W okviru 1M) sveči, velja od njenega zaprtja */
 async function btHtf(sym,tf,piv){var M=tf==='W',k=await kl(sym,M?'M':'W',M?200:1000),now=Date.now(),out=[];
   k.forEach(function(x){var d=new Date(x.t);x.e=M?Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1):x.t+6048e5});
@@ -417,7 +425,7 @@ async function btHtf(sym,tf,piv){var M=tf==='W',k=await kl(sym,M?'M':'W',M?200:1
   for(var j=0;j<k.length;j++){var d=htfDir(k.slice(0,j+1),piv,0);out.push({e:k[j].e,d:d||0})}
   return out}
 function htfAt(H,t){var d=0;if(!H)return 0;for(var j=0;j<H.length&&H[j].e<=t;j++)d=H[j].d;return d}
-function btRun(k,tfMin,piv,H){
+function btRun(k,tfMin,piv,H,C3,leg){
   var sigs=[];jayScan(k,{piv:piv,freshD:5,tfMin:tfMin,onSig:function(g,d){sigs.push({g:g,d:d})}});
   var V=[];BT_F.forEach(function(f){BT_T.forEach(function(t){V.push({f:f[0],t:t,o:null,tr:[]})})});
   var si=0;
@@ -425,10 +433,10 @@ function btRun(k,tfMin,piv,H){
     V.forEach(function(v){var o=v.o;if(!o)return;var up=o.d===1,rk=Math.abs(o.en-o.st),fr=FEE*o.en/rk,r=null;
       if(up?c.l<=o.st:c.h>=o.st)r=-1-fr;else if(up?c.h>=o.tp:c.l<=o.tp)r=(up?o.tp-o.en:o.en-o.tp)/rk-fr;
       if(r!==null){v.tr.push({t:c.t,R:r,d:o.d});v.o=null}});
-    while(si<sigs.length&&sigs[si].g.i===i){var S=sigs[si++],g=S.g,up=S.d==='long',en=g.close,st=up?g.HL*(1-0.003):g.LH*(1+0.003),rk=Math.abs(en-st),tg=up?g.H:g.lo;
-      var hd=htfAt(H,k[i].e||k[i].t);
-      V.forEach(function(v){if(v.o||!(rk>0)||(v.f==='cas'&&!g.time)||(v.f==='liq'&&!g.liq)||(v.f==='htf'&&hd!==(up?1:-1)))return;
-        var m=v.t==='2R'?2:3,tp=v.t==='H'?tg:up?en+m*rk:en-m*rk;if(Math.abs(tp-en)/rk<1)return;v.o={d:up?1:-1,en:en,st:st,tp:tp}})}
+    while(si<sigs.length&&sigs[si].g.i===i){var S=sigs[si++],g=S.g,up=S.d==='long',en=g.close,st=btSL(g,up,leg),rk=Math.abs(en-st);
+      var te=k[i].e||k[i].t,hd=htfAt(H,te),c3=c3At(C3,te,up);
+      V.forEach(function(v){if(v.o||!(rk>0)||(up?st>=en:st<=en)||(v.f==='cas'&&!g.time)||(v.f==='liq'&&!g.liq)||(v.f==='htf'&&hd!==(up?1:-1))||(v.f==='c3'&&!c3))return;
+        var tp=btTP(g,up,en,rk,v.t);if(Math.abs(tp-en)/rk<1)return;v.o={d:up?1:-1,en:en,st:st,tp:tp}})}
   }
   return {V:V,open:V.map(function(v){return v.o?1:0}),sigs:sigs};
 }
@@ -438,7 +446,7 @@ function btRun(k,tfMin,piv,H){
    A = vstop ob zaprtju HTF signala (SL pod HL), B = ob zaprtju CISD sveče, C = limit na CISD levelu (retest, velja 24 sveč).
    SL za B/C = najnižja cena od sweepa do potrditve. Short zrcalno (cene obrnemo v minus in uporabimo isto long logiko). */
 var BT_E=[['A','zaprtje HTF sveče (zdaj)'],['B','CISD – zaprtje'],['C','CISD – retest (limit)']];
-function btCisd(kH,kL,sigs,W,H){
+function btCisd(kH,kL,sigs,W,H,C3,leg){
   var out={},busy={},neg=null,st={sig:0,cisd:0,fill:0},n=kL.length;
   BT_E.forEach(function(e){BT_T.forEach(function(t){out[e[0]+t]=[];busy[e[0]+t]=-Infinity})});
   if(n<100)return {out:out,st:st};
@@ -446,16 +454,16 @@ function btCisd(kH,kL,sigs,W,H){
   function pivL(K,i){for(var j=1;j<=3;j++)if(K[i-j].l<=K[i].l)return false;for(j=1;j<=2;j++)if(K[i+j].l<K[i].l)return false;return true}
   function lastPiv(K,q){for(var i=q-3;i>=Math.max(3,q-70);i--){if(!pivL(K,i))continue;var ok=true;for(var m=i+1;m<q;m++)if(K[m].l<K[i].l){ok=false;break}if(ok)return i}return -1}
   function sim(K,en,sl,tp,f){var rk=en-sl,fr=FEE*Math.abs(en)/rk;for(var q=f;q<n;q++){if(K[q].l<=sl)return {R:-1-fr,t:K[q].t};if(K[q].h>=tp)return {R:(tp-en)/rk-fr,t:K[q].t}}return null}
-  function tgt(en,sl,Ht,t){var rk=en-sl;return t==='H'?Ht:en+(t==='2R'?2:3)*rk}
+  function tgt(en,sl,Ht,t,Hg){var rk=en-sl;return t==='H'?Ht:t==='e27'?Ht+(Ht-Hg)*0.27:en+(t==='2R'?2:3)*rk}
   function add(key,en,sl,tp,t0,f,K,fl){if(!(en>sl)||(tp-en)/(en-sl)<1||busy[key]>t0)return;var r=sim(K,en,sl,tp,f);
-    if(r){out[key].push({t:r.t,R:r.R,d:fl.d,cas:fl.cas,liq:fl.liq,htf:fl.htf});busy[key]=r.t}else busy[key]=Infinity}
+    if(r){out[key].push({t:r.t,R:r.R,d:fl.d,cas:fl.cas,liq:fl.liq,htf:fl.htf,c3:fl.c3});busy[key]=r.t}else busy[key]=Infinity}
   var L0=kL[0].t+75*(kL[1].t-kL[0].t);
   sigs.forEach(function(S){var g=S.g,up=S.d==='long',sb=kH[g.i];if(!sb||sb.e<L0||sb.e>kL[n-1].t)return;
     var K=up?kL:(neg||(neg=kL.map(function(x){return {t:x.t,o:-x.o,h:-x.l,l:-x.h,c:-x.c}}))),sg=up?1:-1;
-    var HL=up?g.HL:-g.LH,Ht=up?g.H:-g.lo,hsl=HL*(up?0.997:1.003),hd=htfAt(H,sb.e);
-    var fl={d:sg,cas:!!g.time,liq:!!g.liq,htf:hd===sg};st.sig++;
+    var Ht=up?g.H:-g.lo,Hg=sg*g.leg,hsl=sg*btSL(g,up,leg),hd=htfAt(H,sb.e);
+    var fl={d:sg,cas:!!g.time,liq:!!g.liq,htf:hd===sg,c3:c3At(C3,sb.e,up)};st.sig++;
     var i0=idx(sb.e),wEnd=kH[Math.min(g.i+W,kH.length-1)].e,en=sg*g.close;
-    BT_T.forEach(function(t){add('A'+t,en,hsl,tgt(en,hsl,Ht,t),sb.e,i0,K,fl)});
+    BT_T.forEach(function(t){add('A'+t,en,hsl,tgt(en,hsl,Ht,t,Hg),sb.e,i0,K,fl)});
     var cand=null,conf=-1;
     for(var q=i0;q<n&&K[q].t<wEnd;q++){var b=K[q];if(b.l<=hsl)break;
       var p=lastPiv(K,q);
@@ -464,11 +472,11 @@ function btCisd(kH,kL,sigs,W,H){
       if(cand&&b.c>cand.lvl){conf=q;break}}
     if(conf<0)return;st.cisd++;
     var cb=K[conf],sl=cand.ext,enB=cb.c,lvl=cand.lvl;
-    BT_T.forEach(function(t){add('B'+t,enB,sl,tgt(enB,sl,Ht,t),cb.t,conf+1,K,fl)});
+    BT_T.forEach(function(t){add('B'+t,enB,sl,tgt(enB,sl,Ht,t,Hg),cb.t,conf+1,K,fl)});
     if(!(lvl>sl)||lvl>=enB)return;var filled=false;
-    BT_T.forEach(function(t){var key='C'+t,tp=tgt(lvl,sl,Ht,t);if(!((tp-lvl)/(lvl-sl)>=1))return;
+    BT_T.forEach(function(t){var key='C'+t,tp=tgt(lvl,sl,Ht,t,Hg);if(!((tp-lvl)/(lvl-sl)>=1))return;
       for(var f=conf+1;f<Math.min(n,conf+25);f++){if(K[f].l<=lvl){filled=true;
-          if(K[f].l<=sl){if(busy[key]<=K[f].t){out[key].push({t:K[f].t,R:-1-FEE*Math.abs(lvl)/(lvl-sl),d:fl.d,cas:fl.cas,liq:fl.liq,htf:fl.htf});busy[key]=K[f].t}}
+          if(K[f].l<=sl){if(busy[key]<=K[f].t){out[key].push({t:K[f].t,R:-1-FEE*Math.abs(lvl)/(lvl-sl),d:fl.d,cas:fl.cas,liq:fl.liq,htf:fl.htf,c3:fl.c3});busy[key]=K[f].t}}
           else add(key,lvl,sl,tp,K[f].t,f+1,K,fl);return}
         if(K[f].h>=tp)return}});
     if(filled)st.fill++;
@@ -482,11 +490,11 @@ async function btGo(){
   var tf=$('bttf').value,c=TFS[tf]||TFS.D,nb=+$('btn').value,piv=+$('piv').value||5;
   var per=c.agg?c.agg/(c.base||+c.api):1,pages=Math.min(30,Math.ceil((nb*per+per)/1000));
   var syms=$('btsym').value.toUpperCase().split(/[\s,;]+/).filter(Boolean).map(function(x){return /USDT$/.test(x)?x:x+'USDT'});
-  var ltf=$('btltf').value,W=Math.max(1,+$('btw').value||5);if(ltf==='auto')ltf={D3:'360',D:'60','360':'15','90':'5','23':'1'}[tf]||'';
+  var leg=$('btsl').value==='leg',ltf=$('btltf').value,W=Math.max(1,+$('btw').value||5);if(ltf==='auto')ltf={D3:'360',D:'60','360':'15','90':'5','23':'1'}[tf]||'';
   var res=[],done=0,q=syms.slice();
   async function one(sym){try{var k=await klines(sym,tf,{n:1000,pages:pages});if(k.length&&k[k.length-1].e>Date.now())k.pop();if(k.length>nb)k=k.slice(-nb);
-      if(k.length<30)throw 0;var H=null;try{H=await btHtf(sym,tf,piv)}catch(e){}var r=btRun(k,c.min,piv,H);r.noH=!H;r.s=sym;r.from=k[0].t;r.bars=k.length;
-      if(ltf&&ltf!==tf){try{var kL=await klines(sym,ltf,{n:1000,pages:25});if(kL.length&&kL[kL.length-1].e>Date.now())kL.pop();r.cz=btCisd(k,kL,r.sigs,W,H)}catch(e){}}
+      if(k.length<30)throw 0;var H=null,C3=null;try{H=await btHtf(sym,tf,piv)}catch(e){}try{C3=await btC3(sym)}catch(e){}var r=btRun(k,c.min,piv,H,C3,leg);r.noC3=!C3;r.noH=!H;r.s=sym;r.from=k[0].t;r.bars=k.length;
+      if(ltf&&ltf!==tf){try{var kL=await klines(sym,ltf,{n:1000,pages:25});if(kL.length&&kL[kL.length-1].e>Date.now())kL.pop();r.cz=btCisd(k,kL,r.sigs,W,H,C3,leg)}catch(e){}}
       r.sigs=null;res.push(r)}catch(e){res.push({s:sym,err:1})}
     done++;$('btst').textContent='Računam '+done+'/'+syms.length+' …'}
   async function worker(){while(q.length)await one(q.shift())}
@@ -499,11 +507,11 @@ function czRender(){var L=btLast;if(!L||!L.ltf)return '';
   var S={sig:0,cisd:0,fill:0},from=Math.max.apply(null,ok.map(function(r){return r.cz.from||0}));ok.forEach(function(r){S.sig+=r.cz.st.sig;S.cisd+=r.cz.st.cisd;S.fill+=r.cz.st.fill});
   var pass=function(x){return czF==='vsi'||x[czF]};
   var cell=function(v,d){return '<td class="mono '+(v>0?'up':v<0?'dn':'')+'">'+(v>0?'+':'')+v.toFixed(d)+'</td>'};
-  var rowsC=[];BT_E.forEach(function(e){BT_T.forEach(function(t){var tr=[];ok.forEach(function(r){tr=tr.concat(r.cz.out[e[0]+t].filter(pass))});var x=btStats(tr);x.name=e[0]+': '+e[1]+', cilj '+t;x.e=e[0];rowsC.push(x)})});
+  var rowsC=[];BT_E.forEach(function(e){BT_T.forEach(function(t){var tr=[];ok.forEach(function(r){tr=tr.concat(r.cz.out[e[0]+t].filter(pass))});var x=btStats(tr);x.name=e[0]+': '+e[1]+', cilj '+BT_TN[t];x.e=e[0];rowsC.push(x)})});
   var best=rowsC.reduce(function(a,b){return b.n>=10&&(!a||b.avg>a.avg)?b:a},null);
   return '<h3 style="margin:20px 0 6px;font-size:16px">Vstop s CISD na '+(TFN[L.ltf]||L.ltf)+'</h3>'+
     '<div class="lbl" style="margin-bottom:8px">Obdobje nižjega okvira od '+new Date(from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+' · HTF signalov: '+S.sig+' · CISD najden: '+S.cisd+(S.sig?' ('+(S.cisd/S.sig*100).toFixed(0)+' %)':'')+' · retest izpolnjen: '+S.fill+' · okno '+L.W+' sveč '+(TFN[L.tf]||L.tf)+'. A, B in C so na istih signalih, zato so primerljivi.</div>'+
-    '<div class="bar" style="margin-bottom:8px"><span class="lbl">Filter:</span>'+[['vsi','vsi'],['cas','+čas'],['liq','+liq'],['htf','+HTF']].map(function(f){return '<button class="chip'+(czF===f[0]?' on':'')+'" data-czf="'+f[0]+'" type="button">'+f[1]+'</button>'}).join('')+'</div>'+
+    '<div class="bar" style="margin-bottom:8px"><span class="lbl">Filter:</span>'+BT_F.map(function(f){return '<button class="chip'+(czF===f[0]?' on':'')+'" data-czf="'+f[0]+'" type="button">'+f[1]+'</button>'}).join('')+'</div>'+
     '<div class="card"><table style="min-width:560px"><thead><tr><th>Vstop</th><th>Tradeov</th><th>Zadetih</th><th>Skupaj R</th><th>Na trade</th><th>Max DD</th></tr></thead><tbody>'+
     rowsC.map(function(x,i){return '<tr'+(x===best?' style="background:var(--longbg)"':'')+(i%3===0&&i?' style="border-top:2px solid var(--line)"':'')+'><td>'+x.name+(x===best?' <span class="fl liq">najboljša</span>':'')+'</td><td class="mono">'+x.n+'</td><td class="mono">'+x.w.toFixed(0)+' %</td>'+cell(x.R,1)+cell(x.avg,2)+'<td class="mono dn">'+(x.dd?'−':'')+x.dd.toFixed(1)+'R</td></tr>'}).join('')+'</tbody></table></div>';
 }
@@ -513,24 +521,25 @@ function btRender(res,tf){
   if(!ok.length){$('btst').textContent='Ni podatkov.';return}
   var from=Math.min.apply(null,ok.map(function(r){return r.from}));
   $('btst').textContent=ok.length+' kovancev · '+(TFN[tf]||tf)+' · od '+new Date(from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+(bad.length?' · brez podatkov: '+bad.map(function(r){return r.s.replace(/USDT$/,'')}).join(', '):'');
-  var rowsV=[];BT_F.forEach(function(f,fi){BT_T.forEach(function(t,ti){var ix=fi*BT_T.length+ti,tr=[];ok.forEach(function(r){tr=tr.concat(r.V[ix].tr)});var st=btStats(tr);st.name=f[1]+', cilj '+t;rowsV.push(st)})});
+  var rowsV=[];BT_F.forEach(function(f,fi){BT_T.forEach(function(t,ti){var ix=fi*BT_T.length+ti,tr=[];ok.forEach(function(r){tr=tr.concat(r.V[ix].tr)});var st=btStats(tr);st.name=f[1]+', cilj '+BT_TN[t];rowsV.push(st)})});
   var best=rowsV.reduce(function(a,b){return b.n>=10&&(!a||b.avg>a.avg)?b:a},null);
   var cell=function(v,d){return '<td class="mono '+(v>0?'up':v<0?'dn':'')+'">'+(v>0?'+':'')+v.toFixed(d)+'</td>'};
   var h='<div class="card" style="margin-bottom:12px"><table style="min-width:560px"><thead><tr><th>Varianta</th><th>Tradeov</th><th>Zadetih</th><th>Skupaj R</th><th>Na trade</th><th>Max DD</th></tr></thead><tbody>'+
     rowsV.map(function(x){return '<tr'+(x===best?' style="background:var(--longbg)"':'')+'><td>'+x.name+(x===best?' <span class="fl liq">najboljša</span>':'')+'</td><td class="mono">'+x.n+'</td><td class="mono">'+x.w.toFixed(0)+' %</td>'+cell(x.R,1)+cell(x.avg,2)+'<td class="mono dn">'+(x.dd?'−':'')+x.dd.toFixed(1)+'R</td></tr>'}).join('')+'</tbody></table></div>';
-  var hx=BT_F.length*BT_T.length-BT_T.length;
+  var hx=vi('htf','H');
   function ls2(ix,name){var all=[];ok.forEach(function(r){all=all.concat(r.V[ix].tr)});
     return [[1,'Long'],[-1,'Short']].map(function(z){var x=btStats(all.filter(function(t){return t.d===z[0]}));
       return '<div class="tb"><div class="n mono '+(x.R>0?'up':x.R<0?'dn':'')+'">'+(x.R>0?'+':'')+x.R.toFixed(1)+'R</div><div class="t"><b>'+z[1]+'</b> ('+name+', cilj H) · '+x.n+' tradeov, '+x.w.toFixed(0)+' %</div></div>'}).join('')}
   h+='<div class="sum">'+ls2(0,'vsi')+ls2(hx,'+HTF')+'</div>'+
-    '<div class="lbl" style="margin:-4px 0 12px">'+ok.filter(function(r){return btStats(r.V[0].tr).R>0}).length+'/'+ok.length+' kovancev v plusu (vsi, cilj H)'+(ok.some(function(r){return r.noH})?' · brez HTF podatkov: '+ok.filter(function(r){return r.noH}).map(function(r){return r.s.replace(/USDT$/,'')}).join(', '):'')+'</div>';
-  h+='<div class="card"><table style="min-width:560px"><thead><tr><th>Kovanec</th><th>Od</th><th>Tradeov</th><th>Zadetih</th><th>R (vsi, H)</th><th>R (+čas, 2R)</th><th>R (+HTF, H)</th><th>Max DD</th></tr></thead><tbody>'+
-    ok.slice().sort(function(a,b){return btStats(b.V[0].tr).R-btStats(a.V[0].tr).R}).map(function(r){var a=btStats(r.V[0].tr),b=btStats(r.V[BT_T.length+1].tr),hh=btStats(r.V[hx].tr);
-      return '<tr><td><b>'+r.s.replace(/USDT$/,'')+'</b></td><td class="mono">'+new Date(r.from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+'</td><td class="mono">'+a.n+'</td><td class="mono">'+a.w.toFixed(0)+' %</td>'+cell(a.R,1)+cell(b.R,1)+cell(hh.R,1)+'<td class="mono dn">'+(a.dd?'−':'')+a.dd.toFixed(1)+'R</td></tr>'}).join('')+'</tbody></table></div>';
+    '<div class="lbl" style="margin:-4px 0 12px">'+ok.filter(function(r){return btStats(r.V[0].tr).R>0}).length+'/'+ok.length+' kovancev v plusu (vsi, cilj H)'+(ok.some(function(r){return r.noC3})?' · brez 3D podatkov: '+ok.filter(function(r){return r.noC3}).map(function(r){return r.s.replace(/USDT$/,'')}).join(', '):'')+(ok.some(function(r){return r.noH})?' · brez HTF podatkov: '+ok.filter(function(r){return r.noH}).map(function(r){return r.s.replace(/USDT$/,'')}).join(', '):'')+'</div>';
+  h+='<div class="card"><table style="min-width:560px"><thead><tr><th>Kovanec</th><th>Od</th><th>Tradeov</th><th>Zadetih</th><th>R (vsi, H)</th><th>R (+čas, 2R)</th><th>R (+HTF, H)</th><th>R (+3D, 3R)</th><th>Max DD</th></tr></thead><tbody>'+
+    ok.slice().sort(function(a,b){return btStats(b.V[0].tr).R-btStats(a.V[0].tr).R}).map(function(r){var a=btStats(r.V[0].tr),b=btStats(r.V[vi('cas','2R')].tr),hh=btStats(r.V[hx].tr),c3s=btStats(r.V[vi('c3','3R')].tr);
+      return '<tr><td><b>'+r.s.replace(/USDT$/,'')+'</b></td><td class="mono">'+new Date(r.from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+'</td><td class="mono">'+a.n+'</td><td class="mono">'+a.w.toFixed(0)+' %</td>'+cell(a.R,1)+cell(b.R,1)+cell(hh.R,1)+cell(c3s.R,1)+'<td class="mono dn">'+(a.dd?'−':'')+a.dd.toFixed(1)+'R</td></tr>'}).join('')+'</tbody></table></div>';
   $('btout').innerHTML=h+'<div id="czbox">'+czRender()+'</div>';
 }
 $('btgo').addEventListener('click',btGo);
 (function(){var v=ls('jay_bttf');$('bttf').value=v||$('tf').value;$('bttf').addEventListener('change',function(){ls('jay_bttf',$('bttf').value)});
+  var sl=ls('jay_btsl');if(sl)$('btsl').value=sl;$('btsl').addEventListener('change',function(){ls('jay_btsl',$('btsl').value)});
   var sy=ls('jay_btsym');if(sy)$('btsym').value=sy;$('btsym').addEventListener('change',function(){ls('jay_btsym',$('btsym').value)})})();
 
 /* ---------- Zgodovina signalov ---------- */
