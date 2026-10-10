@@ -43,7 +43,7 @@ input,select{border:1px solid var(--line);background:var(--card);color:var(--ink
 .alert{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:9px 12px;margin-bottom:12px;display:none}.alert.show{display:block}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
 table{border-collapse:collapse;width:100%;min-width:860px}
-th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th,td{padding:9px 7px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th{font-weight:500;color:var(--mut);font-size:12px}
 th:first-child,td:first-child,.l{text-align:left}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
@@ -58,6 +58,8 @@ th:first-child,td:first-child,.l{text-align:left}
 .lk{font-size:10px;font-weight:600;color:var(--acc);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:4px;text-decoration:none}
 .rw{cursor:pointer}.rw:hover td{background:color-mix(in srgb,var(--line) 35%,transparent)}
 .dt td{white-space:normal;background:var(--card);text-align:left;padding:12px}
+.dtw{position:sticky;left:12px;width:calc(min(1100px,100vw) - 58px)}
+.kv b{overflow-wrap:anywhere}
 .det{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:14px}
 @media (max-width:700px){.det{grid-template-columns:1fr}}
 .det svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
@@ -132,8 +134,8 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
   <div class="view on" id="v-scan">
   <div class="card">
     <table>
-      <thead><tr><th>Kovanec</th><th class="l">Smer</th><th class="l" title="Struktura na 1W (in 1M)">HTF</th><th class="l" title="Zaporedje sveč L-LL-HL na 3D / 1W">HTF sveče</th><th class="l">Stanje</th><th>Cena</th><th>Golden pocket</th><th>Do GP</th><th>Vstop</th><th>SL</th><th>TP</th><th>RR</th><th>Velikost</th></tr></thead>
-      <tbody id="out"><tr><td colspan="13" class="empty">Klikni "Skeniraj". Pregled 80 kovancev traja približno pol minute.</td></tr></tbody>
+      <thead><tr><th>Kovanec</th><th class="l">Smer</th><th class="l" title="Struktura na 1W (in 1M) · zaporedje sveč L-LL-HL na 3D / 1W">HTF</th><th class="l">Stanje</th><th>Cena</th><th>Golden pocket</th><th>Do GP</th><th>Vstop</th><th>SL</th><th>TP</th><th>RR</th><th>Velikost</th></tr></thead>
+      <tbody id="out"><tr><td colspan="12" class="empty">Klikni "Skeniraj". Pregled 80 kovancev traja približno pol minute.</td></tr></tbody>
     </table>
   </div>
 
@@ -601,14 +603,14 @@ function size(r){var a=+$('acct').value,p=+$('rpct').value;if(!(a>0&&p>0))return
 function render(){
   var list=rows.filter(function(r){return (side==='all'||r.dir===side)&&(stf==='all'||r.state<=2)&&passF(r)});
   list.sort(function(a,b){return a.state-b.state||(a.state===1?a.age-b.age:0)||(a.state===3?Math.abs(a.dist)-Math.abs(b.dist):0)||b.rr-a.rr});
-  if(!list.length){$('out').innerHTML='<tr><td colspan="13" class="empty">'+(rows.length?'Ni setupov s temi filtri. Poskusi "Stanje: Vse"'+(htfOn||hcOn?' ali izklopi filtra HTF':'')+'.':'Klikni "Skeniraj".')+'</td></tr>';return}
+  if(!list.length){$('out').innerHTML='<tr><td colspan="12" class="empty">'+(rows.length?'Ni setupov s temi filtri. Poskusi "Stanje: Vse"'+(htfOn||hcOn?' ali izklopi filtra HTF':'')+'.':'Klikni "Skeniraj".')+'</td></tr>';return}
   var h='';list.forEach(function(r,ix){var id=r.s+'|'+r.dir;var coin=r.s.replace(/USDT$/,'');
     h+='<tr class="rw" tabindex="0" data-id="'+id+'"><td><b>'+coin+'</b> <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'">BB</a></td>'+
-      '<td class="l"><span class="pill '+r.dir+'">'+(r.dir==='long'?'LONG':'SHORT')+'</span></td><td class="l">'+htfCell(r)+'</td><td class="l">'+hcCell(r)+'</td><td class="l">'+stCell(r)+'</td>'+
+      '<td class="l"><span class="pill '+r.dir+'">'+(r.dir==='long'?'LONG':'SHORT')+'</span></td><td class="l">'+htfCell(r)+' '+hcCell(r)+'</td><td class="l">'+stCell(r)+'</td>'+
       '<td class="mono">'+fp(r.price)+'</td><td class="mono">'+fp(Math.min(r.g1,r.g2))+'–'+fp(Math.max(r.g1,r.g2))+'</td>'+
       '<td class="mono '+(r.state===3?'':'mut')+'">'+(r.state===3?(Math.abs(r.dist)*100).toFixed(1)+' %':r.state===1?'–':'v coni')+'</td>'+
       '<td class="mono">'+fp(r.entry)+'</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono up">'+fp(r.tp)+'</td><td class="mono"><b>'+r.rr.toFixed(1)+'</b></td><td class="mono">'+size(r)+'</td></tr>';
-    if(open===id)h+='<tr class="dt"><td colspan="13">'+detail(r)+'</td></tr>';
+    if(open===id)h+='<tr class="dt"><td colspan="12"><div class="dtw">'+detail(r)+'</div></td></tr>';
   });
   $('out').innerHTML=h;
 }
