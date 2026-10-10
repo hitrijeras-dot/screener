@@ -16,7 +16,7 @@ grpT = "Čas"
 showQ   = input.bool(true, "Začetek kvartala", group=grpT)
 showM   = input.bool(true, "Začetek meseca", group=grpT)
 showW3  = input.bool(true, "3. teden v mesecu (15.–21.)", group=grpT)
-show23  = input.bool(false, "23D obdobja (od začetka kvartala)", group=grpT)
+show23  = input.bool(false, "23D obdobja (90-dnevni bloki od 1. 1.)", group=grpT)
 freshD  = input.int(5, "Nov mesec / kvartal velja še (dni)", minval=1, group=grpT)
 showTbl = input.bool(true, "Tabela stanja", group=grpT)
 
@@ -37,10 +37,15 @@ if newQ
     qStart := time
 if newMonth
     mStart := time
-p23   = na(qStart) ? na : math.floor((time - qStart) / 86400000 / 23)
-new23 = not na(p23) and not na(p23[1]) and p23 > p23[1] and not newQ
+// 23D: 90-dnevni bloki od 1. januarja, vsak razdeljen na 4 x 23 dni (kot ONLYWICKS Time Fractals)
+doy   = math.floor((time - timestamp("UTC", year, 1, 1, 0, 0)) / 86400000)
+blk   = math.min(3, math.floor(doy / 90))
+p23   = blk * 4 + math.min(3, math.floor((doy - blk * 90) / 23))
+new23 = not na(p23[1]) and p23 != p23[1] and not newQ
 freshTime = not na(mStart) and (time - mStart) < freshD * 86400000
-timeOK = week3 or freshTime
+intraday = timeframe.in_seconds() < 86400
+h6 = hour(time, "UTC")
+timeOK = intraday ? (h6 >= 12 and h6 < 18) : (week3 or freshTime)
 
 vline(col, sty, w) =>
     line.new(bar_index, low, bar_index, high, extend=extend.both, color=col, style=sty, width=w)
@@ -207,7 +212,7 @@ if bArmed and not bNew
             if na(bHL) or low < bHL
                 bHL := low
                 bHLx := bar_index
-        if bTouched and not bDone and close > open and close > b618 and bHL >= bLeg
+        if barstate.isconfirmed and bTouched and not bDone and close > open and close > b618 and bHL >= bLeg
             bullSig := true
             bDone := true
 bLiq  = not na(bL) and bL <= b618 * (1 + liqTol) and bL >= b79 * (1 - liqTol)
@@ -230,7 +235,7 @@ if sArmed and not sNew
             if na(sLH) or high > sLH
                 sLH := high
                 sLHx := bar_index
-        if sTouched and not sDone and close < open and close < s618 and sLH <= sLeg
+        if barstate.isconfirmed and sTouched and not sDone and close < open and close < s618 and sLH <= sLeg
             bearSig := true
             sDone := true
 sLiq = not na(sH) and sH >= s618 * (1 - liqTol) and sH <= s79 * (1 + liqTol)

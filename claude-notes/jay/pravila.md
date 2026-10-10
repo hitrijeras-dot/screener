@@ -19,6 +19,16 @@ Vir: Discord ONLY_WICKS → #pdf-sauce (4 PDF-ji: Candle Sequence Basic, Time-Fr
 | **3. 90m v 3. 6H** | **17:00–18:30** |
 | Dnevna sveča se zapre | 02:00 |
 
+## 23D in čas (popravek 10. 10.)
+- 23D = 90-dnevni blok od **1. januarja**, razdeljen na 4 × 23 dni (ne od začetka kvartala). 2026: 28. 9.–20. 10., 21. 10.–12. 11., 13. 11.–5. 12., 6. 12.–
+- Jayevi okvirji: vedno 6H, 90m, 23m; včasih 5m, 3m, 1m.
+- Mesec: W1 1.–7., W2 8.–14., W3 15.–21., W4 22.+; teden: Day1–4 pon–čet, vikend posebej.
+- Ključno: high/low 3. 6H, 3. 23m v 3. 90m.
+- Signal velja samo na **zaprti** sveči.
+
+## Upravljanje (Jay)
+- Derisk, ko je trade v profitu; TP1 delno, SL na BE ali v profit.
+
 ## Jayev recept (iz njegovih tradeov ZRO, VANA, TRUMP, JTO, POPCAT)
 1. Dolg padec → baza → sweep pod dno (LL) → sunek gor (gap/FVG) → umik, ki zdrži kot HL.
 2. HL v fib 0.5–0.79 (golden pocket 0.618–0.705/0.79) na stari likvidnosti / VAL HTF ranga.
