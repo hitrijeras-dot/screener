@@ -1,0 +1,272 @@
+//@version=5
+// Jay HL – dnevno trgovanje (day trade) backtest
+// Vstop: HL/LH na okviru grafa (5m / 23m / 90m), isti algoritem kot indikator "Jay HL · Time × Value".
+// Kontekst: struktura na višjem okviru (privzeto 6H) – smer ali cona (cena v ≥ 0.5 umiku zadnje HTF noge).
+// Izhod: SL / TP ali zaprtje ob koncu dneva (00:00 UTC = 02:00 poletni čas).
+strategy("Jay HL Dan BT", shorttitle="Jay Dan BT", overlay=true, initial_capital=10000, commission_type=strategy.commission.percent, commission_value=0.055, margin_long=5, margin_short=5, pyramiding=0, process_orders_on_close=true)
+
+pivLen  = input.int(5, "Swing: sveče levo/desno", minval=2)
+lookPiv = input.int(6, "Stari swingi za L / H", minval=2, maxval=20)
+gpA     = input.float(0.618, "GP od", step=0.001)
+gpB     = input.float(0.79, "GP do", step=0.001)
+liqTol  = input.float(1.5, "Toleranca likvidnosti (%)", step=0.1) / 100
+slBuf   = input.float(0.3, "SL pod/nad HL/LH (%)", step=0.1) / 100
+minSL   = input.float(0.35, "Najmanjši SL (%)", step=0.05) / 100
+htfTf   = input.timeframe("360", "Višji okvir (kontekst)")
+ctxSel  = input.string("cona HTF", "Strategija: kontekst", options=["vsi", "smer HTF", "cona HTF"])
+timSel  = input.bool(true, "Strategija: samo 3. 6H (12–18 UTC)")
+tpSel   = input.string("2R", "Strategija: cilj", options=["2R", "3R", "H"])
+fee     = 0.0011
+
+f_jay() =>
+    pl = ta.pivotlow(low, pivLen, pivLen)
+    ph = ta.pivothigh(high, pivLen, pivLen)
+    lowR  = ta.lowest(low, pivLen + 1)
+    highR = ta.highest(high, pivLen + 1)
+    var pls = array.new_float()
+    var plb = array.new_int()
+    var phs = array.new_float()
+    var phb = array.new_int()
+    var float bL = na
+    var float bLL = na
+    var int   bLLx = na
+    var bool  bArmed = false
+    var float bLeg = na
+    var float bH = na
+    var bool  bTouched = false
+    var bool  bDone = false
+    var float bHL = na
+    var float sH = na
+    var float sHH = na
+    var int   sHHx = na
+    var bool  sArmed = false
+    var float sLeg = na
+    var float sLo = na
+    var bool  sTouched = false
+    var bool  sDone = false
+    var float sLH = na
+    var int   lA = -1
+    var int   sA = -1
+    bNew = false
+    sNew = false
+    if not na(pl)
+        px = bar_index - pivLen
+        n = array.size(pls)
+        prevPL = n > 0 ? array.get(pls, n - 1) : na
+        if n > 0 and pl < prevPL
+            float swept = na
+            for i = math.max(0, n - lookPiv) to n - 1
+                v = array.get(pls, i)
+                if v > pl and (na(swept) or v < swept)
+                    swept := v
+            bL := swept
+            bLL := pl
+            bLLx := px
+            bArmed := false
+        m = array.size(phs)
+        lastPH  = m > 0 ? array.get(phs, m - 1) : na
+        lastPHx = m > 0 ? array.get(phb, m - 1) : na
+        if not na(sHH) and px > sHHx and n > 0 and pl < prevPL and not na(lastPH) and lastPHx >= sHHx and lastPH <= sHH
+            sArmed := true
+            sLeg := lastPH
+            sLo := pl
+            sTouched := highR >= sLo + (sLeg - sLo) * gpA
+            sDone := false
+            sLH := sTouched ? highR : na
+            sNew := true
+            sA := bar_index
+        array.push(pls, pl)
+        array.push(plb, px)
+        if array.size(pls) > 40
+            array.shift(pls)
+            array.shift(plb)
+    if not na(ph)
+        hx = bar_index - pivLen
+        m = array.size(phs)
+        prevPH = m > 0 ? array.get(phs, m - 1) : na
+        if m > 0 and ph > prevPH
+            float sw = na
+            for i = math.max(0, m - lookPiv) to m - 1
+                v = array.get(phs, i)
+                if v < ph and (na(sw) or v > sw)
+                    sw := v
+            sH := sw
+            sHH := ph
+            sHHx := hx
+            sArmed := false
+        n = array.size(pls)
+        lastPL  = n > 0 ? array.get(pls, n - 1) : na
+        lastPLx = n > 0 ? array.get(plb, n - 1) : na
+        if not na(bLL) and hx > bLLx and m > 0 and ph > prevPH and not na(lastPL) and lastPLx >= bLLx and lastPL >= bLL
+            bArmed := true
+            bLeg := lastPL
+            bH := ph
+            bTouched := lowR <= bH - (bH - bLeg) * gpA
+            bDone := false
+            bHL := bTouched ? lowR : na
+            bNew := true
+            lA := bar_index
+        array.push(phs, ph)
+        array.push(phb, hx)
+        if array.size(phs) > 40
+            array.shift(phs)
+            array.shift(phb)
+    bR = bH - bLeg
+    b618 = bH - bR * gpA
+    b79 = bH - bR * gpB
+    bull = false
+    if bArmed and not bNew
+        if close < bLeg
+            bArmed := false
+        else
+            if low <= b618
+                bTouched := true
+                if na(bHL) or low < bHL
+                    bHL := low
+            if bTouched and not bDone and close > open and close > b618 and bHL >= bLeg
+                bull := true
+                bDone := true
+    bLiq = not na(bL) and bL <= b618 * (1 + liqTol) and bL >= b79 * (1 - liqTol)
+    sR = sLeg - sLo
+    s618 = sLo + sR * gpA
+    s79 = sLo + sR * gpB
+    bear = false
+    if sArmed and not sNew
+        if close > sLeg
+            sArmed := false
+        else
+            if high >= s618
+                sTouched := true
+                if na(sLH) or high > sLH
+                    sLH := high
+            if sTouched and not sDone and close < open and close < s618 and sLH <= sLeg
+                bear := true
+                sDone := true
+    sLiq = not na(sH) and sH >= s618 * (1 - liqTol) and sH <= s79 * (1 + liqTol)
+    dir = bArmed and sArmed ? (lA >= sA ? 1 : -1) : bArmed ? 1 : sArmed ? -1 : 0
+    [bull, bear, bHL, sLH, bH, bLeg, sLo, sLeg, bArmed, sArmed, dir, bLiq, sLiq]
+
+[bullSig, bearSig, bHL, sLH, bH, bLeg, sLo, sLeg, bA, sA, cDir, bLiq, sLiq] = f_jay()
+[x1, x2, x3, x4, hBH, hBLeg, hSLo, hSLeg, hBA, hSA, hDir, x5, x6] = request.security(syminfo.tickerid, htfTf, f_jay(), lookahead=barmerge.lookahead_off)
+
+timeOK = hour(time, "UTC") >= 12 and hour(time, "UTC") < 18
+dayEndOf(t) => math.floor(t / 86400000) * 86400000 + 86400000
+
+// ===== 18 variant: kontekst (vsi / smer / cona) × čas (ves dan / 3. 6H) × cilj (2R / 3R / H) =====
+NV = 18
+var array<int>   vOpen = array.new_int(NV, 0)
+var array<float> vEn = array.new_float(NV, na)
+var array<float> vSt = array.new_float(NV, na)
+var array<float> vTp = array.new_float(NV, na)
+var array<int>   vBar = array.new_int(NV, 0)
+var array<float> vEnd = array.new_float(NV, na)
+var array<int>   vN = array.new_int(NV, 0)
+var array<int>   vW = array.new_int(NV, 0)
+var array<float> vR = array.new_float(NV, 0.0)
+var array<float> vPeak = array.new_float(NV, 0.0)
+var array<float> vDD = array.new_float(NV, 0.0)
+var array<int>   vEod = array.new_int(NV, 0)
+
+for k = 0 to NV - 1
+    d = array.get(vOpen, k)
+    if d != 0 and bar_index > array.get(vBar, k)
+        en = array.get(vEn, k)
+        st = array.get(vSt, k)
+        tp = array.get(vTp, k)
+        rk = math.abs(en - st)
+        float px = na
+        eod = false
+        if d == 1
+            px := low <= st ? st : high >= tp ? tp : na
+        else
+            px := high >= st ? st : low <= tp ? tp : na
+        if na(px) and time_close >= array.get(vEnd, k)
+            px := close
+            eod := true
+        if not na(px)
+            r = d * (px - en) / rk - fee * en / rk
+            array.set(vOpen, k, 0)
+            array.set(vN, k, array.get(vN, k) + 1)
+            if r > 0
+                array.set(vW, k, array.get(vW, k) + 1)
+            if eod
+                array.set(vEod, k, array.get(vEod, k) + 1)
+            cum = array.get(vR, k) + r
+            array.set(vR, k, cum)
+            pk = math.max(array.get(vPeak, k), cum)
+            array.set(vPeak, k, pk)
+            array.set(vDD, k, math.max(array.get(vDD, k), pk - cum))
+
+dEnd = dayEndOf(time_close)
+canEnter = dEnd - time_close >= 5 * 60000
+doEntry(int dir, float st, float ltfTgt, float htfTgt, bool inZone) =>
+    en = close
+    rk = math.abs(en - st)
+    if canEnter and rk > 0 and rk / en >= minSL
+        for c = 0 to 2
+            ctxOK = c == 0 or (c == 1 and hDir == dir) or (c == 2 and inZone)
+            for t = 0 to 1
+                tOK = t == 0 or timeOK
+                for p = 0 to 2
+                    k = c * 6 + t * 3 + p
+                    tp = p == 0 ? en + dir * 2 * rk : p == 1 ? en + dir * 3 * rk : (c == 2 ? htfTgt : ltfTgt)
+                    if ctxOK and tOK and array.get(vOpen, k) == 0 and dir * (tp - en) / rk >= 1
+                        array.set(vOpen, k, dir)
+                        array.set(vEn, k, en)
+                        array.set(vSt, k, st)
+                        array.set(vTp, k, tp)
+                        array.set(vBar, k, bar_index)
+                        array.set(vEnd, k, dEnd)
+    true
+
+zoneL = hBA and close <= hBH - (hBH - hBLeg) * 0.5 and close > hBLeg
+zoneS = hSA and close >= hSLo + (hSLeg - hSLo) * 0.5 and close < hSLeg
+if bullSig
+    doEntry(1, bHL * (1 - slBuf), bH, hBH, zoneL)
+if bearSig
+    doEntry(-1, sLH * (1 + slBuf), sLo, hSLo, zoneS)
+
+var int firstT = time
+var table tb = table.new(position.bottom_right, 6, NV + 2, bgcolor=color.new(color.black, 80))
+if barstate.islastconfirmedhistory or barstate.islast
+    cN = array.from("vsi", "smer", "cona")
+    tN = array.from("dan", "3.6H")
+    pN = array.from("2R", "3R", "H")
+    table.cell(tb, 0, 0, "var", text_color=color.white)
+    table.cell(tb, 1, 0, "N", text_color=color.white)
+    table.cell(tb, 2, 0, "W", text_color=color.white)
+    table.cell(tb, 3, 0, "R", text_color=color.white)
+    table.cell(tb, 4, 0, "DD", text_color=color.white)
+    table.cell(tb, 5, 0, "EOD", text_color=color.white)
+    for k = 0 to NV - 1
+        table.cell(tb, 0, k + 1, array.get(cN, int(k / 6)) + "_" + array.get(tN, int((k % 6) / 3)) + "_" + array.get(pN, k % 3), text_color=color.white)
+        table.cell(tb, 1, k + 1, str.tostring(array.get(vN, k)), text_color=color.white)
+        table.cell(tb, 2, k + 1, str.tostring(array.get(vW, k)), text_color=color.white)
+        table.cell(tb, 3, k + 1, str.tostring(array.get(vR, k), "#.##"), text_color=color.white)
+        table.cell(tb, 4, k + 1, str.tostring(array.get(vDD, k), "#.##"), text_color=color.white)
+        table.cell(tb, 5, k + 1, str.tostring(array.get(vEod, k)), text_color=color.white)
+    table.cell(tb, 0, NV + 1, "od " + str.format_time(firstT, "dd.MM.yy", "UTC") + " · " + str.tostring(bar_index) + " sveč", text_color=color.white)
+
+// pravi strategy (izbrana varianta) – za Strategy Tester
+ctxI = ctxSel == "vsi" ? 0 : ctxSel == "smer HTF" ? 1 : 2
+flat = strategy.position_size == 0
+if flat and canEnter and (not timSel or timeOK)
+    if bullSig
+        st = bHL * (1 - slBuf)
+        rk = close - st
+        tp = tpSel == "2R" ? close + 2 * rk : tpSel == "3R" ? close + 3 * rk : (ctxI == 2 ? hBH : bH)
+        if rk > 0 and rk / close >= minSL and (ctxI == 0 or (ctxI == 1 and hDir == 1) or (ctxI == 2 and zoneL)) and (tp - close) / rk >= 1
+            strategy.entry("L", strategy.long, qty=strategy.equity * 0.01 / rk)
+            strategy.exit("Lx", "L", stop=st, limit=tp)
+    if bearSig
+        st = sLH * (1 + slBuf)
+        rk = st - close
+        tp = tpSel == "2R" ? close - 2 * rk : tpSel == "3R" ? close - 3 * rk : (ctxI == 2 ? hSLo : sLo)
+        if rk > 0 and rk / close >= minSL and (ctxI == 0 or (ctxI == 1 and hDir == -1) or (ctxI == 2 and zoneS)) and (close - tp) / rk >= 1
+            strategy.entry("S", strategy.short, qty=strategy.equity * 0.01 / rk)
+            strategy.exit("Sx", "S", stop=st, limit=tp)
+if strategy.position_size != 0 and time_close >= dayEndOf(time)
+    strategy.close_all(comment="EOD")
+
+plotshape(bullSig, "HL", shape.triangleup, location.belowbar, color.new(#18966E, 0), size=size.tiny)
+plotshape(bearSig, "LH", shape.triangledown, location.abovebar, color.new(#CF4636, 0), size=size.tiny)
