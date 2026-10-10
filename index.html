@@ -68,7 +68,7 @@ textarea{width:100%;height:100px;margin-top:8px;border:1px solid var(--line);bac
 <div class="sub" id="sub">Top po 24h volatilnosti · USDT perpetuali</div></div><div class="ic"><button class="ib" id="thm" title="Tema">Tema</button><button class="ib" id="gear" title="Nastavitve">Nastavitve</button></div></div>
 <div class="kp" id="kp"></div>
 <div class="gl" id="gl"></div>
-<div class="bar"><button class="chip on" id="tabS">Skener</button><button class="chip" id="tabH">Zgodovina</button><span class="mut" id="sess"></span><span id="live" class="mut"></span></div>
+<div class="bar"><button class="chip on" id="tabS">Skener</button><button class="chip" id="tabH">Zgodovina</button><span class="mut" id="sess"></span><span id="live" class="mut"></span><button class="chip" id="nbtn">🔔 Obvestila</button></div>
 <div id="viewS">
 <div class="bar"><button class="btn" id="go">Osveži</button><label class="lbl"><input type="checkbox" id="auto" checked style="width:auto"> Samodejno osveži</label><span class="lbl">Razvrsti</span><select id="srt"><option value="sc">Ocena</option><option value="v5">Vol 5m</option><option value="v15">Vol 15m</option><option value="v1h">Vol 1h</option><option value="vol">24h sprememba</option><option value="obd">Bližina OB</option></select></div>
 <div class="set" id="set"><div class="g"><label>Izbor coinov<select id="vsel"><option value="v5" selected>Najbolj volatilni zdaj (5m)</option><option value="v15">Najbolj volatilni zdaj (15m)</option><option value="v1h">Najbolj volatilni zdaj (1h)</option><option value="24h">Največja 24h sprememba</option></select></label><label>Število coinov<input type="number" id="topn" value="30" min="5" max="60"></label><label>Min promet (M)<input type="number" id="minto" value="5" min="0"></label><label>Tveganje $<input type="number" id="risk" value="50" min="1"></label><label>Osveževanje (min, večkratnik 5)<input type="number" id="ivl" value="5" min="5" step="5"></label><label>Toleranca eq lows (%)<input type="number" id="eqt" value="0.15" min="0.02" step="0.01"></label><label>Velikost pisave<select id="fs"><option value="13px">Majhna</option><option value="14px" selected>Normalna</option><option value="16px">Velika</option></select></label></div></div>
@@ -209,15 +209,15 @@ var c1=k1.map(function(x){return x.c}),c4=k4.map(function(x){return x.c});
 var R1=rsi(c1),R4=rsi(c4);
 r.r1=Math.round(R1[R1.length-1]);r.r4=Math.round(R4[R4.length-1]);
 r.d1=diverge(k1,R1);r.d4=diverge(k4,R4);r.tr=trend(k1);
-var c=cisd(k5);r.ct=c.ct;r.cl=c.cl;r.ca=c.ca;r.sl=c.sl;r.sp=c.sp;r.t=c.t||0;r.h4=cisd(k4,240);r.hd=cisd(kD,1440);r.c1=cisd(k1,60);r.k5f=k5;var pd=kD[kD.length-2],bs=0,bw=[];if(pd){bs+=pd.c<pd.o?-1:1;bw.push('včerajšnja D sveča '+(pd.c<pd.o?'rdeča':'zelena'))}
+var c=cisd(k5);r.ct=c.ct;r.cl=c.cl;r.ca=c.ca;r.sl=c.sl;r.sp=c.sp;r.ob5=c.ob;r.t=c.t||0;r.h4=cisd(k4,240);r.hd=cisd(kD,1440);r.c1=cisd(k1,60);r.k5f=k5;var pd=kD[kD.length-2],bs=0,bw=[];if(pd){bs+=pd.c<pd.o?-1:1;bw.push('včerajšnja D sveča '+(pd.c<pd.o?'rdeča':'zelena'))}
 if(r.hd.ct==='bull'){bs+=2;bw.push('D CISD bull')}else if(r.hd.ct==='bear'){bs-=2;bw.push('D CISD bear')}
 if(r.h4.ct==='bull'){bs+=1.5;bw.push('4H CISD bull')}else if(r.h4.ct==='bear'){bs-=1.5;bw.push('4H CISD bear')}
 if(r.tr==='up'){bs+=0.5;bw.push('1H trend gor')}else if(r.tr==='down'){bs-=0.5;bw.push('1H trend dol')}
 r.bias=bs>0?'long':bs<0?'short':(pd&&pd.c<pd.o?'short':'long');r.bw=bw.join(' · ')+' (skupaj '+bs+')';
 var vv=volOf(k5);r.v5=vv.v5;r.v15=vv.v15;r.v1h=vv.v1h;r.s1=setup1(r,k1);r.eq=eq5(k5,r.bias==="long",r.p);r.k1=k1.slice(-48);r.k5=k5.slice(-72);score(r)},4,function(d){pr.firstChild.style.width=Math.round(d/list.length*100)+'%'});
-rows=list.filter(function(r){return !r.err});ts=Date.now();
+rows=list.filter(function(r){return !r.err});ts=Date.now();rows.forEach(function(r){try{eaxT(r)}catch(e){r.xg='';r.xs=0}try{r.p5=plan5(r)}catch(e){r.p5=null}});
 var dt=new Date(ts);$('sub').textContent='Top '+rows.length+' '+($('vsel').value==='24h'?'po 24h spremembi':'po trenutni volatilnosti ('+({v5:'5m',v15:'15m',v1h:'1h'}[$('vsel').value])+')')+' · '+dt.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
-connect();logHist();await evalHist();banner();render();renderHist();setTimeout(markSeen,3000);
+connect();logHist();await evalHist();banner();render();renderHist();claudeView();notifyNew();setTimeout(markSeen,3000);
 }catch(e){$('out').className='empty';$('out').textContent='Napaka pri branju Bybit API: '+e.message+'. Poskusi znova.'}
 btn.disabled=false;btn.textContent='Osveži';pr.style.display='none';pr.firstChild.style.width='0'}
 function ctText(r){var cb=(r.ct==='bear'||r.ct==='bull')&&!r.al;if(cb)return '<span class="mut">'+(r.ct==='bear'?'Bear':'Bull')+' CISD proti biasu · '+ago(r.ca)+'</span>';
@@ -284,8 +284,37 @@ var rows=[['Ocena','<span class="gh '+(sc>=5?'up':sc===4?'':'mut')+'">'+g+' ('+s
 ['EQH nad',eh?fp(eh)+' (+'+((eh/r.p-1)*100).toFixed(2)+' %)':'<span class="mut">—</span>'],
 ['EQL pod',el?fp(el)+' ('+((el/r.p-1)*100).toFixed(2)+' %)':'<span class="mut">—</span>'],
 ['Seja',kz?ok+sess.kz:'<span class="mut">izven killzone</span>'],
-['ATR 5m',at.toFixed(2)+' %']];
+['ATR 5m',at.toFixed(2)+' %']];var pp=r.p5||plan5(r);if(pp)rows.push(['Plan (5m CISD)',planTxt(pp)]);
 return '<div class="xwrap"><table class="xt"><tbody>'+rows.map(function(x){return '<tr><td>'+x[0]+'</td><td>'+x[1]+'</td></tr>'}).join('')+'</tbody></table></div>'}
+function plan5(r){if(!r.al||!r.sl||!r.cl)return null;var L=r.ct==='bull',k=r.k5f||[],ob=r.ob5||null,rk=parseFloat($('risk').value)||50;
+var buf=r.sl*0.0005,sl=L?r.sl-buf:r.sl+buf,e1=r.cl,e2=ob?(ob.lo+ob.hi)/2:e1;if(L?sl>=e1:sl<=e1)return null;
+var liq=null,i,j,m;for(i=3;i<k.length-2;i++){var x=L?k[i].h:k[i].l,pv=true;for(j=1;j<=2;j++){if(L?(k[i-j].h>x||k[i+j].h>x):(k[i-j].l<x||k[i+j].l<x)){pv=false;break}}if(!pv)continue;var sw=false;for(m=i+3;m<k.length;m++){if(L?k[m].h>x:k[m].l<x){sw=true;break}}if(sw)continue;if(L?x>e1:x<e1){if(liq===null||(L?x<liq:x>liq))liq=x}}
+function mk(e,lab){var d=Math.abs(e-sl),tp=L?e+2*d:e-2*d,note='2R',lr=liq!==null?Math.abs(liq-e)/d:null;if(lr!==null&&lr>=2){tp=liq;note='likvidnost'}return {lab:lab,e:e,sl:sl,tp:tp,rr:Math.abs(tp-e)/d,note:note,lr:lr,pc:d/e*100,q:rk/d}}
+function bl(p){return p.lr!==null&&p.lr<2}
+var a=mk(e1,'CISD'),b=(ob&&Math.abs(e2-e1)/e1>0.0005&&(L?(e2<e1&&e2>sl):(e2>e1&&e2<sl)))?mk(e2,'sredina OB'):null,best=a;
+if(b&&bl(a)&&!bl(b))best=b;best.alt=b&&best!==b?b:(best===b?a:null);best.liq=liq;
+best.skip=bl(best)||best.pc<0.5;best.why=bl(best)?'likvidnost '+fp(liq)+' pred 1:2 ('+best.lr.toFixed(1)+'R)':best.pc<0.5?'SL pod 0,5 % (provizije)':'';return best}
+function planTxt(p,short){if(!p)return '';var q=p.q>=100?p.q.toFixed(0):p.q.toPrecision(3);
+return (short?'':'<b>')+'Vstop ('+p.lab+') '+fp(p.e)+' · SL '+fp(p.sl)+' ('+p.pc.toFixed(2)+' %) · TP '+fp(p.tp)+' ('+p.note+') · RR '+p.rr.toFixed(1)+(short?'':'</b>')+' · '+q+' enot ('+(p.q*p.e).toFixed(0)+' USDT) pri '+($('risk').value||50)+' $'+(p.skip?(short?' · ⚠ ':' · <span class="dn">⚠ ')+p.why+(short?'':'</span>'):(short?' · OK':' · <span class="up">OK</span>'))}
+var CLM=/[?&]claude=1/.test(location.search);
+function claudeTxt(){var c=rows.filter(function(r){return (r.xs||0)>=3||r.al}).sort(function(a,b){return ((b.xs||0)-(a.xs||0))||(b.sc-a.sc)});
+var t='CLAUDE POGLED · '+new Date(ts).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'})+' · '+((sess&&sess.kz)||'izven killzone')+' · kandidatov '+c.length+' od '+rows.length+'\n';
+c.forEach(function(r){var p=r.p5;t+=r.s+' '+r.bias.toUpperCase()+' | EAX '+(r.xg||'-')+' ('+(r.xs||0)+'/6) | sc '+r.sc.toFixed(1)+' | cena '+fp(r.p)+' | 5m '+(r.ct||'-')+(r.ct?' CISD '+fp(r.cl)+' pred '+ago(r.ca)+' · sweep '+fp(r.sl):'')+' | RSI 1H/4H '+r.r1+'/'+r.r4+' | div '+(r.d1||'-')+'/'+(r.d4||'-')+' | trend '+(r.tr||'-')+' | 4H '+((r.h4||{}).ct||'-')+' D '+((r.hd||{}).ct||'-')+(r.eq?' | nepometen eq '+fp(r.eq):'')+(p?' | PLAN '+planTxt(p,true):'')+'\n'});
+if(!c.length)t+='Ni kandidatov (ocena C ali bolje ali CISD v smeri biasa).\n';return t}
+function claudeView(){var t=claudeTxt();window.__claude=t;var el=$('claude');if(!CLM){if(el)el.style.display='none';return}
+if(!el){el=document.createElement('pre');el.id='claude';el.style.cssText='white-space:pre-wrap;font-size:12px;line-height:1.45;padding:12px;border:1px solid var(--line,rgba(127,127,127,.3));border-radius:10px;overflow-x:auto;margin:0 0 12px';var o=$('out');o.parentNode.parentNode.insertBefore(el,o.parentNode)}el.style.display='block';el.textContent=t}
+var notif={};try{notif=JSON.parse(localStorage.getItem('notif')||'{}')}catch(e){}
+function nOn(){try{return localStorage.getItem('nOn')==='1'}catch(e){return false}}
+function beep(){try{var A=window.__ac||(window.__ac=new (window.AudioContext||window.webkitAudioContext)());[0,0.18].forEach(function(d){var o=A.createOscillator(),g=A.createGain();o.frequency.value=d?1320:880;g.gain.setValueAtTime(0.25,A.currentTime+d);g.gain.exponentialRampToValueAtTime(0.001,A.currentTime+d+0.15);o.connect(g).connect(A.destination);o.start(A.currentTime+d);o.stop(A.currentTime+d+0.16)})}catch(e){}}
+function notifyNew(){var ev=[];rows.forEach(function(r){var k1=r.al&&r.cl?r.s+'|c|'+r.cl:null,k2=(r.xg==='A'||r.xg==='A+')?r.s+'|a|'+r.cl:null;
+if(k1&&!notif[k1]){notif[k1]=Date.now();ev.push(r.s+' '+r.bias.toUpperCase()+': CISD po sweepu '+fp(r.cl)+(r.p5?' · RR '+r.p5.rr.toFixed(1)+(r.p5.skip?' ⚠':''):''))}
+else if(k2&&!notif[k2]){notif[k2]=Date.now();ev.push(r.s+' '+r.bias.toUpperCase()+': EAX ocena '+r.xg)}});
+var ks=Object.keys(notif);if(ks.length>300)ks.sort(function(a,b){return notif[a]-notif[b]}).slice(0,ks.length-300).forEach(function(k){delete notif[k]});
+try{localStorage.setItem('notif',JSON.stringify(notif))}catch(e){}
+if(!ev.length||!nOn())return;beep();try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
+var body=ev.slice(0,4).join('\n')+(ev.length>4?'\n+ še '+(ev.length-4):'');
+try{if(window.Notification&&Notification.permission==='granted'){if(navigator.serviceWorker&&navigator.serviceWorker.controller){navigator.serviceWorker.ready.then(function(g){g.showNotification('Moj Screener',{body:body,tag:'scr'})})}else new Notification('Moj Screener',{body:body,tag:'scr'})}}catch(e){}
+document.title='('+ev.length+') Moj Screener';setTimeout(function(){document.title='Moj Screener'},60000)}
 function detail(r){var lv=[];if(r.ct==='bear'||r.ct==='bull'){if(r.sl)lv.push({p:r.sl,c:'var(--warn)',t:'sweep '+fp(r.sl)});lv.push({p:r.cl,c:'var(--acc)',t:'CISD '+fp(r.cl)})}
 return '<div class="mut" style="margin-bottom:8px">Bias '+r.bias.toUpperCase()+' (HTF): '+r.bw+'</div>'+eaxT(r)+'<div class="gr">'+candles(r.k1,'1H · zadnjih 48')+candles(r.k5,'5m · zadnjih 72',lv)+'</div>'+setupHtml(r)+calc(r)}
 function render(){
@@ -349,7 +378,7 @@ ws.onopen=function(){setLive(true);var a=rows.map(function(r){return 'tickers.'+
 ws.onmessage=function(m){try{var j=JSON.parse(m.data);if(j.topic&&j.topic.indexOf('tickers.')===0&&j.data){var d=j.data;upd(d.symbol.replace(/USDT$/,''),d.lastPrice!=null?+d.lastPrice:null,d.price24hPcnt!=null?+d.price24hPcnt*100:null)}}catch(e){}};
 ws.onclose=function(){setLive(false);wsT=setTimeout(connect,3000)};ws.onerror=function(){try{ws.close()}catch(e){}}}
 setInterval(function(){if(ws&&ws.readyState===1)ws.send(JSON.stringify({op:'ping'}))},20000);
-setInterval(function(){var n=Date.now();if(!$('auto').checked||document.hidden||$('go').disabled)return;if(n-ts>=ivl*60000-15000&&n%300000>=8000&&n%300000<60000)scan()},5000);
+setInterval(function(){var n=Date.now();if(!$('auto').checked||(document.hidden&&!nOn())||$('go').disabled)return;if(n-ts>=ivl*60000-15000&&n%300000>=8000&&n%300000<60000)scan()},5000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&$('auto').checked&&!$('go').disabled&&Date.now()-ts>ivl*60000)scan()});
 function kpis(){var n=rows.length,lg=rows.filter(function(r){return r.sd==='long'}).length,sh=rows.filter(function(r){return r.sd==='short'}).length,s1=rows.filter(function(r){return r.s1}).length,wt=rows.filter(function(r){return r.s1&&r.eq}).length,al=rows.filter(function(r){return r.al}).length,hot=rows.filter(function(r){return r.s1&&!r.eq&&r.al}).length;
 var c=function(cl,nn,tt){return '<div class="k '+cl+'"><div class="n">'+nn+'</div><div class="t">'+tt+'</div></div>'};
@@ -374,7 +403,7 @@ var th='auto';try{th=localStorage.getItem('theme')||'auto'}catch(e){}
 function thApply(){var r=document.documentElement;if(th==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',th);$('thm').textContent=th==='auto'?'Tema: auto':th==='dark'?'Tema: temna':'Tema: svetla'}
 thApply();$('thm').onclick=function(){th=th==='auto'?'dark':th==='dark'?'light':'auto';try{localStorage.setItem('theme',th)}catch(e){}thApply()};
 $('srt').onchange=function(){sortK=$('srt').value;sortD=sortK==='obd'?1:-1;render()};
-$('risk').oninput=render;calcSess();renderHist();scan();
+$('risk').oninput=render;function nbtnUpd(){$('nbtn').textContent=nOn()?'🔔 Obvestila: vklop':'🔕 Obvestila: izklop';$('nbtn').className='chip'+(nOn()?' on':'')}nbtnUpd();$('nbtn').onclick=function(){var on=!nOn();try{localStorage.setItem('nOn',on?'1':'0')}catch(e){}if(on){beep();try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}}nbtnUpd()};calcSess();renderHist();scan();
 $('tabS').onclick=function(){$('viewS').style.display='';$('viewH').style.display='none';$('tabS').classList.add('on');$('tabH').classList.remove('on')};
 $('tabH').onclick=function(){$('viewS').style.display='none';$('viewH').style.display='';$('tabH').classList.add('on');$('tabS').classList.remove('on');renderHist()};
 $('hclr').onclick=function(){if(confirm('Izbrišem zgodovino signalov?')){hist=[];saveH();renderHist()}};
