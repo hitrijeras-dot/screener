@@ -428,7 +428,7 @@ if barstate.islast
     if st == 3
         lM := label.new(bar_index, isLong ? low : high, isLong ? "možen HL?" : "možen LH?", style=isLong ? label.style_label_up : label.style_label_down, color=color.new(cWho, 0), textcolor=color.white, size=size.small)
 
-var table tb = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 80), border_width=1)
+var table tb = table.new(position.top_right, 2, 12, bgcolor=color.new(color.black, 80), border_width=1)
 if showTbl and barstate.islast
     c1 = color.new(color.gray, 0)
     table.cell(tb, 0, 0, "Jay HL", text_color=cInk, text_size=size.small)
@@ -445,7 +445,7 @@ if showTbl and barstate.islast
         table.cell(tb, 0, 5, "Vstop", text_color=cInk, text_size=size.small)
         table.cell(tb, 1, 5, f(entry) + (nowEntry ? " (zdaj)" : " (ob zaprtju nad 0.618)"), text_color=c1, text_size=size.small)
         table.cell(tb, 0, 6, "SL", text_color=cDn, text_size=size.small)
-        table.cell(tb, 1, 6, f(sl) + " (" + str.tostring(risk / entry * 100, "#.#") + " %" + (slLeg or not nowEntry ? ", pod nogo" : ", pod HL") + ")", text_color=c1, text_size=size.small)
+        table.cell(tb, 1, 6, f(sl) + " (" + str.tostring(risk / entry * 100, "#.#") + " %)", text_color=c1, text_size=size.small)
         table.cell(tb, 0, 7, "TP", text_color=cUp, text_size=size.small)
         table.cell(tb, 1, 7, f(tp) + " · " + str.tostring(rr, "#.#") + "R", text_color=c1, text_size=size.small)
         table.cell(tb, 0, 8, isLong ? "TP do H" : "TP do L", text_color=cUp, text_size=size.small)
@@ -453,13 +453,8 @@ if showTbl and barstate.islast
         table.cell(tb, 0, 9, "Velikost", text_color=cInk, text_size=size.small)
         table.cell(tb, 1, 9, str.tostring(posUsd, "#") + " $ · tveganje " + str.tostring(riskUsd, "#") + " $", text_color=c1, text_size=size.small)
         table.cell(tb, 0, 10, "Konfluenca", text_color=cVal, text_size=size.small)
-        table.cell(tb, 1, 10, (liqNow ? "+liq " : "") + (timeOK ? "+čas" : "") + (not liqNow and not timeOK ? "–" : ""), text_color=c1, text_size=size.small)
-        hcNow = hcTxt(isLong)
-        table.cell(tb, 0, 12, "HTF sveče", text_color=cWho, text_size=size.small)
-        table.cell(tb, 1, 12, hcNow == "" ? "– (3D / 1W brez L-LL-HL)" : str.trim(((isLong ? c3L : c3S) ? "3D ✓  " : "") + ((isLong ? wLq : wSq) ? "1W ✓" : "")), text_color=hcNow == "" ? cInk : cUp, text_size=size.small)
-        legR = isLong ? bR : sR
-        table.cell(tb, 0, 13, "Ekstenzije", text_color=cUp, text_size=size.small)
-        table.cell(tb, 1, 13, isLong ? f(bH + bR * 0.27) + " / " + f(bH + bR * 0.65) + " / " + f(bH + bR) : f(sLo - sR * 0.27) + " / " + f(sLo - sR * 0.65) + " / " + f(sLo - sR), text_color=c1, text_size=size.small)
+        konf = str.trim((liqNow ? " +liq" : "") + (timeOK ? " +čas" : "") + hcTxt(isLong))
+        table.cell(tb, 1, 10, konf == "" ? "–" : konf, text_color=c1, text_size=size.small)
     otherSt = isLong ? sSt : lSt
     table.cell(tb, 0, 11, "Druga smer", text_color=cInk, text_size=size.small)
     table.cell(tb, 1, 11, (isLong ? "SHORT: " : "LONG: ") + (otherSt == 4 ? "potrjen" : otherSt == 3 ? "možen ob zaprtju" : otherSt == 2 ? "v coni" : otherSt == 1 ? "čaka umik" : "ni setupa"), text_color=c1, text_size=size.small)
