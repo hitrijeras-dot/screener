@@ -307,7 +307,7 @@ async function scan(){
     await histUpdate(res,tf);
     var tm=new Date().toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
     $('stat').textContent='Pregledanih '+list.length+' kovancev ob '+tm+(fails?' · '+fails+' brez podatkov':'');
-    render();
+    render();openLoad();
   }catch(e){$('err').textContent='Napaka pri branju Bybita: '+e.message+'. Poskusi znova čez minuto.';$('err').className='alert show'}
   btn.disabled=false;busy=false;planAuto();
 }
@@ -446,12 +446,45 @@ function render(){
   });
   $('out').innerHTML=h;
 }
-$('out').addEventListener('click',function(e){if(e.target.closest('a'))return;var tr=e.target.closest('.rw');if(!tr)return;var id=tr.getAttribute('data-id');open=open===id?null:id;render()});
+$('out').addEventListener('click',function(e){if(e.target.closest('a'))return;
+  var tb=e.target.closest('[data-dtf]');if(tb){dtf=tb.getAttribute('data-dtf');render();return}
+  var tr=e.target.closest('.rw');if(!tr)return;var id=tr.getAttribute('data-id');open=open===id?null:id;dtf=null;render();openLoad()});
+function openLoad(){var id=open,r=id&&rows.filter(function(x){return x.s+'|'+x.dir===id})[0];if(r)mtfLoad(r).then(function(){if(open===id)render()})}
 $('out').addEventListener('keydown',function(e){if(e.key==='Enter'){var tr=e.target.closest('.rw');if(tr)tr.click()}});
 
 /* ---------- Risba setupa (kot na TV) ---------- */
+/* ---------- Več okvirjev v odprti vrstici ---------- */
+var MTF=['D','360','90','23'],mtf={},dtf=null;
+function mtfKey(sym,tf){return sym+'|'+tf+'|'+(+$('piv').value||5)}
+async function mtfLoad(r){
+  var tfs=MTF.filter(function(tf){var m=mtf[mtfKey(r.s,tf)];return tf!==$('tf').value&&!(m&&Date.now()-m.at<5*6e4)});
+  await Promise.all(tfs.map(async function(tf){var key=mtfKey(r.s,tf);
+    try{var k=await klines(r.s,tf),live=null;if(k.length&&k[k.length-1].e>Date.now())live=k.pop();mtf[key]=mtfMake(r.s,tf,k,live)}catch(e){mtf[key]={err:1,at:Date.now()}}}));
+}
+function mtfMake(sym,tf,k,live){var piv=+$('piv').value||5,st=jayScan(k,{piv:piv,freshD:5,tfMin:(TFS[tf]||TFS.D).min});
+  var su=jaySetups(k,live,st,{fresh:+$('fresh').value||7});su.forEach(function(x){x.s=sym});
+  return {k:k,live:live,su:su,dir:htfDir(k,piv,0),at:Date.now()}}
+function mtfGet(r,tf){if(tf===$('tf').value){var c=cache[r.s];if(!c)return null;var key=mtfKey(r.s,tf)+'|cur';if(!mtf[key]||mtf[key].k!==c.k)mtf[key]=mtfMake(r.s,tf,c.k,c.live);return mtf[key]}
+  return mtf[mtfKey(r.s,tf)]||null}
 function detail(r){
-  var c=cache[r.s];if(!c)return '';
+  var cur=$('tf').value,sel=dtf||cur;
+  var tabs=(MTF.indexOf(cur)<0?[cur].concat(MTF):MTF);
+  var dirs=tabs.map(function(tf){var m=mtfGet(r,tf);return {tf:tf,m:m,d:m&&!m.err?(m.dir==null?0:m.dir):null}});
+  var want=r.dir==='long'?1:-1,known=dirs.filter(function(x){return x.d!==null}),same=known.filter(function(x){return x.d===want}).length,loading=known.length<dirs.length&&dirs.some(function(x){return !x.m});
+  var head='<div class="bar" style="margin-bottom:8px">'+tabs.map(function(tf){var x=dirs[tabs.indexOf(tf)];
+      return '<button class="chip'+(tf===sel?' on':'')+'" data-dtf="'+tf+'" type="button">'+(TFN[tf]||tf)+' '+(x.d===null?'<span class="mut">…</span>':arrow(x.d))+'</button>'}).join('')+
+    '<span class="lbl"><b>Poravnava:</b> '+(loading?'nalagam …':same+'/'+known.length+' okvirjev v smeri '+(want===1?'↑ long':'↓ short'))+'</span></div>';
+  if(sel===cur)return head+chart(r,cache[r.s],cur);
+  var m=mtfGet(r,sel);
+  if(!m)return head+'<div class="empty">Nalagam '+(TFN[sel]||sel)+' …</div>';
+  if(m.err)return head+'<div class="empty">Ni podatkov za '+(TFN[sel]||sel)+'.</div>';
+  var r2=m.su.filter(function(x){return x.dir===r.dir})[0]||m.su[0];
+  if(!r2)return head+'<div class="empty">'+(m.dir?'Na '+(TFN[sel]||sel)+' je struktura '+arrow(m.dir)+', a ni svežega setupa (signal je starejši ali je cena že ušla iz cone).':'Na '+(TFN[sel]||sel)+' ni aktivne strukture (L → LL → H ali H → HH → L).')+'</div>';
+  r2.htf=r.htf;r2.htfM=r.htfM;
+  return head+'<div class="lbl" style="margin-bottom:6px">'+(TFN[sel]||sel)+': <span class="pill '+r2.dir+'">'+(r2.dir==='long'?'LONG':'SHORT')+'</span> '+stCell(r2)+'</div>'+chart(r2,m,sel);
+}
+function chart(r,c,tf){
+  if(!c)return '';
   var k=c.k.slice();if(c.live)k.push(c.live);
   var n=k.length,from=Math.max(0,Math.min(r.Lx!=null?r.Lx-6:n-90,n-90)),bars=k.slice(from),W=760,H=360,pl=8,pr=72,pt=16,pb=24,ext=14;
   var lo=Infinity,hi=-Infinity;bars.forEach(function(x){lo=Math.min(lo,x.l);hi=Math.max(hi,x.h)});
@@ -483,7 +516,7 @@ function detail(r){
   // čas: začetki mesecev + 3. teden
   bars.forEach(function(x,j){var d=new Date(x.t),dd=d.getUTCDate(),i=from+j,prev=j?new Date(bars[j-1].t).getUTCDate():dd;
     if(j&&dd<prev){var qs=d.getUTCMonth()%3===0;s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+pt+'" y2="'+(H-pb)+'" stroke="var(--time)" stroke-width="'+(qs?1.6:1)+'" stroke-dasharray="'+(qs?'':'3 4')+'" opacity=".7"/>'+(qs?'<text x="'+(X(i)+4)+'" y="'+(pt+10)+'" font-size="11" font-weight="700" fill="var(--time)">Q'+(Math.floor(d.getUTCMonth()/3)+1)+'</text>':'')}
-    if(dd>=15&&dd<=21&&$('tf').value!=='W')s+='<rect x="'+(X(i)-cw/2)+'" y="'+pt+'" width="'+cw+'" height="'+(H-pt-pb)+'" fill="var(--time)" opacity=".05"/>'});
+    if(dd>=15&&dd<=21&&tf!=='W')s+='<rect x="'+(X(i)-cw/2)+'" y="'+pt+'" width="'+cw+'" height="'+(H-pt-pb)+'" fill="var(--time)" opacity=".05"/>'});
   // os
   for(var g=0;g<=4;g++){var p=lo+(hi-lo)*g/4;s+='<text x="'+(W-4)+'" y="'+(Y(p)+4)+'" text-anchor="end" font-size="10" fill="var(--mut)" font-family="ui-monospace,Menlo,monospace">'+fp(p)+'</text>'}
   s+='</svg>';
@@ -492,7 +525,7 @@ function detail(r){
     '<span>Struktura</span><b>'+(up?'L '+fp(r.L)+' → LL '+fp(r.LL)+' → H '+fp(r.H):'H '+fp(r.L)+' → HH '+fp(r.LL)+' → L '+fp(r.H))+'</b>'+
     '<span>Golden pocket</span><b>'+fp(r.g1)+' – '+fp(r.g2)+'</b>'+
     (r.HL!=null?'<span>'+(up?'HL':'LH')+'</span><b>'+fp(r.HL)+'</b>':'')+
-    '<span>Vstop</span><b>'+fp(r.entry)+(r.state===1?' (zdaj)':' (ob zaprtju nad 0.618)')+'</b>'+
+    '<span>Vstop</span><b>'+fp(r.entry)+(r.state===1?' (zdaj)':' (ob zaprtju '+(up?'nad':'pod')+' 0.618)')+'</b>'+
     '<span>SL</span><b>'+fp(r.sl)+' ('+(Math.abs(r.entry-r.sl)/r.entry*100).toFixed(1)+' %)</b>'+
     '<span>TP</span><b>'+fp(r.tp)+' · '+r.rr.toFixed(1)+'R</b>'+
     '<span>TP do '+(up?'H':'L')+'</span><b>'+fp(r.tpH)+' · '+r.rrH.toFixed(1)+'R</b>'+
