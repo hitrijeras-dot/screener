@@ -1,0 +1,11 @@
+{
+  "name": "Zanka", "short_name": "Zanka",
+  "description": "Looper za MIDI klaviaturo: snemaj, dodajaj plasti.",
+  "lang": "sl", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "any",
+  "background_color": "#141312", "theme_color": "#141312",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
