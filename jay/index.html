@@ -102,6 +102,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
     <div class="g">
       <label>Časovni okvir<select id="tf"><option value="D3">3D (swing)</option><option value="D" selected>1D (swing)</option><option value="360">6H</option><option value="90">90m</option><option value="23">23m</option><option value="5">5m</option><option value="3">3m</option><option value="1">1m</option><option value="W">1W</option></select></label>
       <label>Koliko kovancev (po prometu)<input id="topn" type="number" min="10" max="300" step="10" value="80"></label>
+      <label>Model<select id="model"><option value="hl">Jay HL – swingi (kot TV indikator)</option><option value="12">1-2 setup – sweep + sunek (nov)</option></select></label>
       <label>Swing: sveče levo/desno<input id="piv" type="number" min="2" max="10" value="5"></label>
       <label>Potrjen HL velja še (sveč)<input id="fresh" type="number" min="1" max="30" value="7"></label>
       <label>Račun ($)<input id="acct" type="number" min="0" step="100" value="10000"></label>
@@ -158,6 +159,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
         <label style="grid-column:1/-1">Kovanci (ločeni z vejico)<input id="btsym" type="text" value="BTC, ETH, SOL, XRP, DOGE, AVAX, LINK, SUI, TIA, ARB, OP, INJ, NEAR, APT, WIF, ZRO, TRUMP, JTO, POPCAT, SPX, ENA, SEI, 1000PEPE, VANA"></label>
         <label>Okvir<select id="bttf"><option value="D3">3D</option><option value="D" selected>1D</option><option value="360">6H</option><option value="90">90m</option><option value="23">23m</option><option value="5">5m</option><option value="3">3m</option><option value="1">1m</option><option value="W">1W</option></select></label>
         <label>Vstop s CISD na nižjem okviru<select id="btltf"><option value="">Izklop</option><option value="auto" selected>Samodejno (3D→6H, 1D→1H, 6H→15m, 90m→5m, 23m→1m)</option><option value="360">6H</option><option value="60">1H</option><option value="15">15m</option><option value="5">5m</option><option value="1">1m</option></select></label>
+        <label>Model<select id="btmodel"><option value="hl">Jay HL – swingi (kot TV)</option><option value="12">1-2 setup – sweep + sunek</option></select></label>
         <label>SL<select id="btsl"><option value="hl">pod HL / nad LH (0.3 %)</option><option value="leg">pod dnom noge – 100 % fib</option></select></label>
         <label>Okno za CISD (sveč višjega okvira)<input id="btw" type="number" min="1" max="20" value="5"></label>
         <label>Zgodovina (sveč)<select id="btn"><option value="1000">1000</option><option value="2500" selected>2500</option><option value="5000">5000</option></select></label>
@@ -254,13 +256,76 @@ function jaySetups(k,live,st,o){
 }
 /*CORE-END*/
 
+/*MODEL12*/
+/* Jayev "1-2" setup (sweep -> sunek -> umik v GP brez gapa navzdol). Ločen model, CORE (jayScan) ostane kot TV indikator.
+   1 sweep: sveča gre pod nepobran swing low (3 levo / 2 desno), v največ 3 svečah zapre nazaj nad njim.
+   2 sunek: v največ 20 svečah od sweepa zaprtje nad zadnjim swing highom pred sweepom (zlom strukture); gap = bull FVG med sweepom in zlomom.
+   Fib od dna sweepa (100 %) do vrha sunka (0 %); vrh se premika, dokler cena ne pride do 0.618. Umik brez bear FVG = "brez gapa dol".
+   HL = zaprta zelena sveča nad 0.618 po dotiku, dno umika nad dnom sweepa. Neveljavno: zaprtje pod dnom sweepa.
+   Long logika; short = ista logika na zrcalnih svečah (cene × −1). */
+function j12Long(k,o,onSig){
+  var A=o.gpA||0.618,B=o.gpB||0.786,tol=o.liqTol==null?0.015:o.liqTol,fD=o.freshD||5,pl=[],ph=[],cand=null,a=null;
+  function pv(c,hi){if(c<3||c+2>=k.length)return false;var v=hi?k[c].h:k[c].l;for(var j=1;j<=3;j++){var x=hi?k[c-j].h:k[c-j].l;if(hi?x>=v:x<=v)return false}
+    for(j=1;j<=2;j++){x=hi?k[c+j].h:k[c+j].l;if(hi?x>v:x<v)return false}return true}
+  for(var i=0;i<k.length;i++){var K=k[i],c=i-2;
+    if(c>=3){if(pv(c,false)){pl.push({v:k[c].l,x:c,br:false});if(pl.length>40)pl.shift()}if(pv(c,true)){ph.push({v:k[c].h,x:c});if(ph.length>40)ph.shift()}}
+    if(a){if(K.c<a.lo)a=null;
+      else if(!a.done){var g1=a.top-(a.top-a.lo)*A;
+        if(!a.touched){if(K.l<=g1){a.touched=true;a.HL=K.l;a.HLx=i}else if(K.h>a.top){a.top=K.h;a.topX=i}}
+        else if(K.l<a.HL){a.HL=K.l;a.HLx=i}
+        if(i-2>a.topX&&K.h<k[i-2].l)a.ngd=false;
+        g1=a.top-(a.top-a.lo)*A;var g2=a.top-(a.top-a.lo)*B;
+        if(a.touched&&K.c>K.o&&K.c>g1&&a.HL>=a.lo){a.done=true;var liq=false;
+          pl.concat(ph).forEach(function(q){if(q.x<a.s&&q.v<=g1*(1+tol)&&q.v>=g2*(1-tol))liq=true});
+          a.sig={i:i,t:K.t,close:K.c,HL:a.HL,HLx:a.HLx,H:a.top,Hx:a.topX,leg:a.lo,legX:a.loX,L:a.sw,Lx:a.swX,LL:a.lo,LLx:a.loX,liq:liq,time:jayTimeOK(K.t,fD,o.tfMin),gap:a.gap&&a.ngd};
+          if(onSig)onSig(a.sig)}}}
+    if(!a||a.done){
+      if(cand){if(K.l<cand.lo){cand.lo=K.l;cand.loX=i}
+        if(!cand.rec&&K.c>cand.sw)cand.rec=true;
+        if(!cand.rec&&i-cand.s>3)cand=null;
+        else if(cand.rec&&K.c<cand.lo)cand=null;
+        else if(cand.rec&&K.c>cand.bos){var gap=false,top=-Infinity,tx=i;for(var x=cand.s;x<=i;x++){if(k[x].h>top){top=k[x].h;tx=x}if(x>=cand.s+2&&k[x].l>k[x-2].h)gap=true}
+          a={lo:cand.lo,loX:cand.loX,sw:cand.sw,swX:cand.swX,s:cand.s,top:top,topX:tx,touched:false,done:false,HL:null,HLx:null,gap:gap,ngd:true,sig:null};cand=null}
+        else if(i-cand.s>20)cand=null}
+      if(!cand&&!(a&&!a.done)){var sp=null;pl.forEach(function(q){if(!q.br&&q.x<i&&K.l<q.v&&(!sp||q.v<sp.v))sp=q});
+        if(sp){var bos=null;for(var j=ph.length-1;j>=0;j--)if(ph[j].x<i&&ph[j].v>sp.v){bos=ph[j].v;break}
+          if(bos===null){bos=-Infinity;for(j=Math.max(0,i-10);j<i;j++)bos=Math.max(bos,k[j].h)}
+          cand={sw:sp.v,swX:sp.x,s:i,lo:K.l,loX:i,rec:K.c>sp.v,bos:bos}}}}
+    pl.forEach(function(q){if(K.l<q.v)q.br=true});
+  }
+  return {a:a,n:k.length};
+}
+function j12Neg(k){return k.map(function(x){return {t:x.t,e:x.e,o:-x.o,h:-x.l,l:-x.h,c:-x.c}})}
+function jay12Scan(k,o){var on=o.onSig;
+  var L=j12Long(k,o,on?function(g){on(g,'long')}:null),kn=j12Neg(k);
+  var S=j12Long(kn,o,on?function(g){on({i:g.i,t:g.t,close:-g.close,LH:-g.HL,LHx:g.HLx,lo:-g.H,lox:g.Hx,leg:-g.leg,legX:g.legX,H:-g.L,Hx:g.Lx,HH:-g.LL,HHx:g.LLx,liq:g.liq,time:g.time,gap:g.gap},'short')}:null);
+  return {L:L,S:S,kn:kn};
+}
+function jay12Setups(k,live,st,o){
+  var out=[],A=o.gpA||0.618,B=o.gpB||0.786,fresh=o.fresh||7;
+  function below(v){return v-Math.abs(v)*0.003}
+  function build(a,kk,lv,dir){if(!a)return;var n=kk.length,price=lv?lv.c:kk[n-1].c,R=a.top-a.lo,g1=a.top-R*A,g2=a.top-R*B,
+      x={dir:dir,L:a.sw,Lx:a.swX,LL:a.lo,LLx:a.loX,H:a.top,Hx:a.topX,leg:a.lo,legX:a.loX,g1:g1,g2:g2,g50:a.top-R*0.5,liq:false,price:price,gap:a.gap&&a.ngd};
+    if(a.done&&a.sig){var age=n-1-a.sig.i,sl=below(a.sig.HL);if(!(age<fresh&&price>sl&&price<a.top))return;
+      Object.assign(x,{state:1,age:age,HL:a.sig.HL,HLx:a.sig.HLx,entry:price,sl:sl,tp:Math.max(a.top,price+2*(price-sl)),tpH:a.top,time:a.sig.time,liq:a.sig.liq,sigX:a.sig.i})}
+    else{var sl2=below(a.lo),touched=a.touched||!!(lv&&lv.l<=g1),maybe=touched&&lv&&lv.c>lv.o&&lv.c>g1&&lv.l>=a.lo;
+      Object.assign(x,{state:maybe?0:touched?2:3,HL:a.HL!==null?a.HL:(touched&&lv?lv.l:null),HLx:a.HL!==null?a.HLx:(touched?n:null),entry:g1,sl:sl2,tp:Math.max(a.top,g1+2*(g1-sl2)),tpH:a.top})}
+    if(dir==='short')['L','LL','H','leg','g1','g2','g50','price','HL','entry','sl','tp','tpH'].forEach(function(f){if(x[f]!=null)x[f]=-x[f]});
+    x.dist=dir==='long'?(x.price-x.g1)/x.price:(x.g1-x.price)/x.price;
+    x.rr=Math.abs(x.tp-x.entry)/Math.abs(x.entry-x.sl);x.rrH=Math.abs(x.tpH-x.entry)/Math.abs(x.entry-x.sl);out.push(x)}
+  build(st.L.a,k,live,'long');
+  build(st.S.a,st.kn,live?{t:live.t,o:-live.o,h:-live.l,l:-live.h,c:-live.c}:null,'short');
+  return out;
+}
+/*MODEL12-END*/
+
 (function(){
 var API='https://api.bybit.com/v5/market/';
 var $=function(i){return document.getElementById(i)};
 var rows=[],side='all',stf='act',open=null,cache={},busy=false,newKeys={};
 var TZ='Europe/Ljubljana';
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
-['tf','topn','piv','fresh','acct','rpct','auto','slm'].forEach(function(id){var v=ls('jay_'+id);if(v!==null&&v!==undefined)$(id).value=v;$(id).addEventListener('change',function(){ls('jay_'+id,$(id).value)})});
+['tf','topn','piv','fresh','acct','rpct','auto','slm','model'].forEach(function(id){var v=ls('jay_'+id);if(v!==null&&v!==undefined)$(id).value=v;$(id).addEventListener('change',function(){ls('jay_'+id,$(id).value)})});
 function fp(p){if(p==null||isNaN(p))return '–';var a=Math.abs(p);return a>=1000?p.toFixed(1):a>=100?p.toFixed(2):a>=1?p.toFixed(3):a>=0.1?p.toFixed(4):a>=0.01?p.toFixed(5):a>=0.001?p.toFixed(6):p.toPrecision(4)}
 function dfmt(t){return new Date(t).toLocaleDateString('sl-SI',{day:'numeric',month:'numeric',timeZone:'UTC'})}
 async function jget(u){var r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
@@ -312,11 +377,11 @@ async function scan(){
     async function one(t){
       try{var k=await klines(t.symbol,tf);var now=Date.now(),last=k[k.length-1],live=null;
         if(last&&last.e>now){live=k.pop()}
-        var st=jayScan(k,{piv:piv,freshD:5,tfMin:tfMin});
+        var m12=$('model').value==='12',st=m12?jay12Scan(k,{freshD:5,tfMin:tfMin}):jayScan(k,{piv:piv,freshD:5,tfMin:tfMin});
         var hd=await htfOf(t.symbol,tf,piv);
-        var su=jaySetups(k,live,st,{fresh:fresh});su.forEach(applySL);
+        var su=(m12?jay12Setups:jaySetups)(k,live,st,{fresh:fresh});su.forEach(applySL);
         cache[t.symbol]={k:k,live:live};
-        su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;x.tH=k[x.Hx]?k[x.Hx].t:x.Hx;x.key=x.s+'|'+tf+'|'+x.dir+'|'+x.tH;x.htf=hd.w;x.htfM=hd.m;var up=x.dir==='long';x.hc3=!!(hd.c3&&(up?hd.c3.L:hd.c3.S));x.hw1=!!(hd.w1&&(up?hd.w1.L:hd.w1.S));res.push(x)});
+        su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;x.tH=k[x.Hx]?k[x.Hx].t:x.Hx;x.key=(m12?'12|':'')+x.s+'|'+tf+'|'+x.dir+'|'+x.tH;x.htf=hd.w;x.htfM=hd.m;var up=x.dir==='long';x.hc3=!!(hd.c3&&(up?hd.c3.L:hd.c3.S));x.hw1=!!(hd.w1&&(up?hd.w1.L:hd.w1.S));res.push(x)});
       }catch(e){fails++}
       done++;$('pg').style.width=(100*done/list.length)+'%';$('stat').textContent='Pregledujem '+done+'/'+list.length+' …';
     }
@@ -412,7 +477,7 @@ htfBtn();
 $('hcf').addEventListener('click',function(){hcOn=!hcOn;ls('jay_hc',hcOn?'1':'0');hcBtn();render()});hcBtn();
 
 /* ---------- Backtest (kot jay_hl_backtest_strategija.pine) ---------- */
-var BT_F=[['vsi','vsi'],['cas','+čas'],['liq','+liq'],['htf','+HTF'],['c3','+3D sveče']],BT_T=['H','2R','3R','e27'],BT_TN={H:'H','2R':'2R','3R':'3R',e27:'−0.27'};
+var BT_F=[['vsi','vsi'],['cas','+čas'],['liq','+liq'],['htf','+HTF'],['c3','+3D sveče'],['gap','+gap, brez gapa dol']],BT_T=['H','2R','3R','e27'],BT_TN={H:'H','2R':'2R','3R':'3R',e27:'−0.27'};
 function vi(f,t){for(var i=0;i<BT_F.length;i++)if(BT_F[i][0]===f)return i*BT_T.length+BT_T.indexOf(t);return 0}
 /* 3D HTF sveče skozi zgodovino: zastavica po vsaki zaprti 3D sveči (iz 1D, sidro epoch), velja od njenega zaprtja */
 async function btC3(sym){var kd=await klines(sym,'D',{n:1000,pages:3}),o=closed3D(kd),out=[];
@@ -427,8 +492,9 @@ async function btHtf(sym,tf,piv){var M=tf==='W',k=await kl(sym,M?'M':'W',M?200:1
   for(var j=0;j<k.length;j++){var d=htfDir(k.slice(0,j+1),piv,0);out.push({e:k[j].e,d:d||0})}
   return out}
 function htfAt(H,t){var d=0;if(!H)return 0;for(var j=0;j<H.length&&H[j].e<=t;j++)d=H[j].d;return d}
-function btRun(k,tfMin,piv,H,C3,leg){
-  var sigs=[];jayScan(k,{piv:piv,freshD:5,tfMin:tfMin,onSig:function(g,d){sigs.push({g:g,d:d})}});
+function btRun(k,tfMin,piv,H,C3,leg,m12){
+  var sigs=[],oo={piv:piv,freshD:5,tfMin:tfMin,onSig:function(g,d){sigs.push({g:g,d:d})}};if(m12)jay12Scan(k,oo);else jayScan(k,oo);
+  sigs.sort(function(a,b){return a.g.i-b.g.i});
   var V=[];BT_F.forEach(function(f){BT_T.forEach(function(t){V.push({f:f[0],t:t,o:null,tr:[]})})});
   var si=0;
   for(var i=0;i<k.length;i++){var c=k[i];
@@ -437,7 +503,7 @@ function btRun(k,tfMin,piv,H,C3,leg){
       if(r!==null){v.tr.push({t:c.t,R:r,d:o.d});v.o=null}});
     while(si<sigs.length&&sigs[si].g.i===i){var S=sigs[si++],g=S.g,up=S.d==='long',en=g.close,st=btSL(g,up,leg),rk=Math.abs(en-st);
       var te=k[i].e||k[i].t,hd=htfAt(H,te),c3=c3At(C3,te,up);
-      V.forEach(function(v){if(v.o||!(rk>0)||(up?st>=en:st<=en)||(v.f==='cas'&&!g.time)||(v.f==='liq'&&!g.liq)||(v.f==='htf'&&hd!==(up?1:-1))||(v.f==='c3'&&!c3))return;
+      V.forEach(function(v){if(v.o||!(rk>0)||(up?st>=en:st<=en)||(v.f==='cas'&&!g.time)||(v.f==='liq'&&!g.liq)||(v.f==='htf'&&hd!==(up?1:-1))||(v.f==='c3'&&!c3)||(v.f==='gap'&&!g.gap))return;
         var tp=btTP(g,up,en,rk,v.t);if(Math.abs(tp-en)/rk<1)return;v.o={d:up?1:-1,en:en,st:st,tp:tp}})}
   }
   return {V:V,open:V.map(function(v){return v.o?1:0}),sigs:sigs};
@@ -458,12 +524,12 @@ function btCisd(kH,kL,sigs,W,H,C3,leg){
   function sim(K,en,sl,tp,f){var rk=en-sl,fr=FEE*Math.abs(en)/rk;for(var q=f;q<n;q++){if(K[q].l<=sl)return {R:-1-fr,t:K[q].t};if(K[q].h>=tp)return {R:(tp-en)/rk-fr,t:K[q].t}}return null}
   function tgt(en,sl,Ht,t,Hg){var rk=en-sl;return t==='H'?Ht:t==='e27'?Ht+(Ht-Hg)*0.27:en+(t==='2R'?2:3)*rk}
   function add(key,en,sl,tp,t0,f,K,fl){if(!(en>sl)||(tp-en)/(en-sl)<1||busy[key]>t0)return;var r=sim(K,en,sl,tp,f);
-    if(r){out[key].push({t:r.t,R:r.R,d:fl.d,cas:fl.cas,liq:fl.liq,htf:fl.htf,c3:fl.c3});busy[key]=r.t}else busy[key]=Infinity}
+    if(r){out[key].push({t:r.t,R:r.R,d:fl.d,cas:fl.cas,liq:fl.liq,htf:fl.htf,c3:fl.c3,gap:fl.gap});busy[key]=r.t}else busy[key]=Infinity}
   var L0=kL[0].t+75*(kL[1].t-kL[0].t);
   sigs.forEach(function(S){var g=S.g,up=S.d==='long',sb=kH[g.i];if(!sb||sb.e<L0||sb.e>kL[n-1].t)return;
     var K=up?kL:(neg||(neg=kL.map(function(x){return {t:x.t,o:-x.o,h:-x.l,l:-x.h,c:-x.c}}))),sg=up?1:-1;
     var Ht=up?g.H:-g.lo,Hg=sg*g.leg,hsl=sg*btSL(g,up,leg),hd=htfAt(H,sb.e);
-    var fl={d:sg,cas:!!g.time,liq:!!g.liq,htf:hd===sg,c3:c3At(C3,sb.e,up)};st.sig++;
+    var fl={d:sg,cas:!!g.time,liq:!!g.liq,htf:hd===sg,c3:c3At(C3,sb.e,up),gap:!!g.gap};st.sig++;
     var i0=idx(sb.e),wEnd=kH[Math.min(g.i+W,kH.length-1)].e,en=sg*g.close;
     BT_T.forEach(function(t){add('A'+t,en,hsl,tgt(en,hsl,Ht,t,Hg),sb.e,i0,K,fl)});
     var cand=null,conf=-1;
@@ -478,7 +544,7 @@ function btCisd(kH,kL,sigs,W,H,C3,leg){
     if(!(lvl>sl)||lvl>=enB)return;var filled=false;
     BT_T.forEach(function(t){var key='C'+t,tp=tgt(lvl,sl,Ht,t,Hg);if(!((tp-lvl)/(lvl-sl)>=1))return;
       for(var f=conf+1;f<Math.min(n,conf+25);f++){if(K[f].l<=lvl){filled=true;
-          if(K[f].l<=sl){if(busy[key]<=K[f].t){out[key].push({t:K[f].t,R:-1-FEE*Math.abs(lvl)/(lvl-sl),d:fl.d,cas:fl.cas,liq:fl.liq,htf:fl.htf,c3:fl.c3});busy[key]=K[f].t}}
+          if(K[f].l<=sl){if(busy[key]<=K[f].t){out[key].push({t:K[f].t,R:-1-FEE*Math.abs(lvl)/(lvl-sl),d:fl.d,cas:fl.cas,liq:fl.liq,htf:fl.htf,c3:fl.c3,gap:fl.gap});busy[key]=K[f].t}}
           else add(key,lvl,sl,tp,K[f].t,f+1,K,fl);return}
         if(K[f].h>=tp)return}});
     if(filled)st.fill++;
@@ -492,16 +558,16 @@ async function btGo(){
   var tf=$('bttf').value,c=TFS[tf]||TFS.D,nb=+$('btn').value,piv=+$('piv').value||5;
   var per=c.agg?c.agg/(c.base||+c.api):1,pages=Math.min(30,Math.ceil((nb*per+per)/1000));
   var syms=$('btsym').value.toUpperCase().split(/[\s,;]+/).filter(Boolean).map(function(x){return /USDT$/.test(x)?x:x+'USDT'});
-  var leg=$('btsl').value==='leg',ltf=$('btltf').value,W=Math.max(1,+$('btw').value||5);if(ltf==='auto')ltf={D3:'360',D:'60','360':'15','90':'5','23':'1'}[tf]||'';
+  var m12=$('btmodel').value==='12',leg=$('btsl').value==='leg',ltf=$('btltf').value,W=Math.max(1,+$('btw').value||5);if(ltf==='auto')ltf={D3:'360',D:'60','360':'15','90':'5','23':'1'}[tf]||'';
   var res=[],done=0,q=syms.slice();
   async function one(sym){try{var k=await klines(sym,tf,{n:1000,pages:pages});if(k.length&&k[k.length-1].e>Date.now())k.pop();if(k.length>nb)k=k.slice(-nb);
-      if(k.length<30)throw 0;var H=null,C3=null;try{H=await btHtf(sym,tf,piv)}catch(e){}try{C3=await btC3(sym)}catch(e){}var r=btRun(k,c.min,piv,H,C3,leg);r.noC3=!C3;r.noH=!H;r.s=sym;r.from=k[0].t;r.bars=k.length;
+      if(k.length<30)throw 0;var H=null,C3=null;try{H=await btHtf(sym,tf,piv)}catch(e){}try{C3=await btC3(sym)}catch(e){}var r=btRun(k,c.min,piv,H,C3,leg,m12);r.noC3=!C3;r.noH=!H;r.s=sym;r.from=k[0].t;r.bars=k.length;
       if(ltf&&ltf!==tf){try{var kL=await klines(sym,ltf,{n:1000,pages:25});if(kL.length&&kL[kL.length-1].e>Date.now())kL.pop();r.cz=btCisd(k,kL,r.sigs,W,H,C3,leg)}catch(e){}}
       r.sigs=null;res.push(r)}catch(e){res.push({s:sym,err:1})}
     done++;$('btst').textContent='Računam '+done+'/'+syms.length+' …'}
   async function worker(){while(q.length)await one(q.shift())}
   await Promise.all([worker(),worker(),worker()]);
-  btLast={res:res,tf:tf,ltf:ltf,W:W};btRender(res,tf);btn.disabled=false;
+  btLast={res:res,tf:tf,ltf:ltf,W:W,m12:m12};btRender(res,tf);btn.disabled=false;
 }
 var btLast=null,czF=ls('jay_czf')||'vsi';
 function czRender(){var L=btLast;if(!L||!L.ltf)return '';
@@ -513,7 +579,7 @@ function czRender(){var L=btLast;if(!L||!L.ltf)return '';
   var best=rowsC.reduce(function(a,b){return b.n>=10&&(!a||b.avg>a.avg)?b:a},null);
   return '<h3 style="margin:20px 0 6px;font-size:16px">Vstop s CISD na '+(TFN[L.ltf]||L.ltf)+'</h3>'+
     '<div class="lbl" style="margin-bottom:8px">Obdobje nižjega okvira od '+new Date(from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+' · HTF signalov: '+S.sig+' · CISD najden: '+S.cisd+(S.sig?' ('+(S.cisd/S.sig*100).toFixed(0)+' %)':'')+' · retest izpolnjen: '+S.fill+' · okno '+L.W+' sveč '+(TFN[L.tf]||L.tf)+'. A, B in C so na istih signalih, zato so primerljivi.</div>'+
-    '<div class="bar" style="margin-bottom:8px"><span class="lbl">Filter:</span>'+BT_F.map(function(f){return '<button class="chip'+(czF===f[0]?' on':'')+'" data-czf="'+f[0]+'" type="button">'+f[1]+'</button>'}).join('')+'</div>'+
+    '<div class="bar" style="margin-bottom:8px"><span class="lbl">Filter:</span>'+BT_F.filter(function(f){return f[0]!=='gap'||L.m12}).map(function(f){return '<button class="chip'+(czF===f[0]?' on':'')+'" data-czf="'+f[0]+'" type="button">'+f[1]+'</button>'}).join('')+'</div>'+
     '<div class="card"><table style="min-width:560px"><thead><tr><th>Vstop</th><th>Tradeov</th><th>Zadetih</th><th>Skupaj R</th><th>Na trade</th><th>Max DD</th></tr></thead><tbody>'+
     rowsC.map(function(x,i){return '<tr'+(x===best?' style="background:var(--longbg)"':'')+(i%3===0&&i?' style="border-top:2px solid var(--line)"':'')+'><td>'+x.name+(x===best?' <span class="fl liq">najboljša</span>':'')+'</td><td class="mono">'+x.n+'</td><td class="mono">'+x.w.toFixed(0)+' %</td>'+cell(x.R,1)+cell(x.avg,2)+'<td class="mono dn">'+(x.dd?'−':'')+x.dd.toFixed(1)+'R</td></tr>'}).join('')+'</tbody></table></div>';
 }
@@ -522,8 +588,8 @@ function btRender(res,tf){
   var ok=res.filter(function(r){return !r.err}),bad=res.filter(function(r){return r.err});
   if(!ok.length){$('btst').textContent='Ni podatkov.';return}
   var from=Math.min.apply(null,ok.map(function(r){return r.from}));
-  $('btst').textContent=ok.length+' kovancev · '+(TFN[tf]||tf)+' · od '+new Date(from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+(bad.length?' · brez podatkov: '+bad.map(function(r){return r.s.replace(/USDT$/,'')}).join(', '):'');
-  var rowsV=[];BT_F.forEach(function(f,fi){BT_T.forEach(function(t,ti){var ix=fi*BT_T.length+ti,tr=[];ok.forEach(function(r){tr=tr.concat(r.V[ix].tr)});var st=btStats(tr);st.name=f[1]+', cilj '+BT_TN[t];rowsV.push(st)})});
+  $('btst').textContent=(btLast&&btLast.m12?'Model 1-2 · ':'Model Jay HL · ')+ok.length+' kovancev · '+(TFN[tf]||tf)+' · od '+new Date(from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+(bad.length?' · brez podatkov: '+bad.map(function(r){return r.s.replace(/USDT$/,'')}).join(', '):'');
+  var rowsV=[];BT_F.forEach(function(f,fi){if(f[0]==='gap'&&!(btLast&&btLast.m12))return;BT_T.forEach(function(t,ti){var ix=fi*BT_T.length+ti,tr=[];ok.forEach(function(r){tr=tr.concat(r.V[ix].tr)});var st=btStats(tr);st.name=f[1]+', cilj '+BT_TN[t];rowsV.push(st)})});
   var best=rowsV.reduce(function(a,b){return b.n>=10&&(!a||b.avg>a.avg)?b:a},null);
   var cell=function(v,d){return '<td class="mono '+(v>0?'up':v<0?'dn':'')+'">'+(v>0?'+':'')+v.toFixed(d)+'</td>'};
   var h='<div class="card" style="margin-bottom:12px"><table style="min-width:560px"><thead><tr><th>Varianta</th><th>Tradeov</th><th>Zadetih</th><th>Skupaj R</th><th>Na trade</th><th>Max DD</th></tr></thead><tbody>'+
@@ -541,6 +607,7 @@ function btRender(res,tf){
 }
 $('btgo').addEventListener('click',btGo);
 (function(){var v=ls('jay_bttf');$('bttf').value=v||$('tf').value;$('bttf').addEventListener('change',function(){ls('jay_bttf',$('bttf').value)});
+  var bm=ls('jay_btmodel');if(bm)$('btmodel').value=bm;$('btmodel').addEventListener('change',function(){ls('jay_btmodel',$('btmodel').value)});
   var sl=ls('jay_btsl');if(sl)$('btsl').value=sl;$('btsl').addEventListener('change',function(){ls('jay_btsl',$('btsl').value)});
   var sy=ls('jay_btsym');if(sy)$('btsym').value=sy;$('btsym').addEventListener('change',function(){ls('jay_btsym',$('btsym').value)})})();
 
@@ -632,14 +699,14 @@ $('slm').addEventListener('change',function(){rows.forEach(applySL);for(var key 
 
 /* ---------- Več okvirjev v odprti vrstici ---------- */
 var MTF=['D','360','90','23'],mtf={},dtf=null;
-function mtfKey(sym,tf){return sym+'|'+tf+'|'+(+$('piv').value||5)}
+function mtfKey(sym,tf){return sym+'|'+tf+'|'+(+$('piv').value||5)+'|'+$('model').value}
 async function mtfLoad(r){
   var tfs=MTF.filter(function(tf){var m=mtf[mtfKey(r.s,tf)];return tf!==$('tf').value&&!(m&&Date.now()-m.at<5*6e4)});
   await Promise.all(tfs.map(async function(tf){var key=mtfKey(r.s,tf);
     try{var k=await klines(r.s,tf),live=null;if(k.length&&k[k.length-1].e>Date.now())live=k.pop();mtf[key]=mtfMake(r.s,tf,k,live)}catch(e){mtf[key]={err:1,at:Date.now()}}}));
 }
-function mtfMake(sym,tf,k,live){var piv=+$('piv').value||5,st=jayScan(k,{piv:piv,freshD:5,tfMin:(TFS[tf]||TFS.D).min});
-  var su=jaySetups(k,live,st,{fresh:+$('fresh').value||7});su.forEach(function(x){x.s=sym;applySL(x)});
+function mtfMake(sym,tf,k,live){var piv=+$('piv').value||5,m12=$('model').value==='12',tm=(TFS[tf]||TFS.D).min,st=m12?jay12Scan(k,{freshD:5,tfMin:tm}):jayScan(k,{piv:piv,freshD:5,tfMin:tm});
+  var su=(m12?jay12Setups:jaySetups)(k,live,st,{fresh:+$('fresh').value||7});su.forEach(function(x){x.s=sym;applySL(x)});
   return {k:k,live:live,su:su,dir:htfDir(k,piv,0),at:Date.now()}}
 function mtfGet(r,tf){if(tf===$('tf').value){var c=cache[r.s];if(!c)return null;var key=mtfKey(r.s,tf)+'|cur';if(!mtf[key]||mtf[key].k!==c.k)mtf[key]=mtfMake(r.s,tf,c.k,c.live);return mtf[key]}
   return mtf[mtfKey(r.s,tf)]||null}
