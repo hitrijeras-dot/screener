@@ -1,0 +1,11 @@
+{
+  "name": "Jay HL Screener", "short_name": "Jay HL",
+  "description": "Screener za Jayev Time × Value stil: L → LL → HL v golden pocketu (Bybit USDT perp).",
+  "lang": "sl", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "any",
+  "background_color": "#0f1217", "theme_color": "#0f1217",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

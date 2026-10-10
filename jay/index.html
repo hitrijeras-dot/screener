@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Jay HL">
+<meta name="theme-color" content="#0f1217">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Jay HL Screener</title>
+<style>
+/* Isti sistem barv kot Moj Screener; dodane vloge Time / Value / Who */
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#667085;--line:#e3e6eb;--long:#0b8a74;--longbg:#dff5ef;--short:#c4452f;--shortbg:#fbe6e1;--acc:#1f4fd8;--warn:#b7791f;--warnbg:#fdf3dc;--time:#c0185a;--timebg:#fbe3ec;--val:#2c68d2;--valbg:#e3ecfb;--gp:rgba(44,104,210,.13)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--mut:#8a93a3;--line:#262c36;--long:#3fd1b3;--longbg:#12342d;--short:#ff7b63;--shortbg:#3a1d18;--acc:#7a9bff;--warn:#e8b04a;--warnbg:#33290f;--time:#ff5c95;--timebg:#3a1424;--val:#6f9bff;--valbg:#18233a;--gp:rgba(111,155,255,.16)}}
+:root[data-theme=dark]{--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--mut:#8a93a3;--line:#262c36;--long:#3fd1b3;--longbg:#12342d;--short:#ff7b63;--shortbg:#3a1d18;--acc:#7a9bff;--warn:#e8b04a;--warnbg:#33290f;--time:#ff5c95;--timebg:#3a1424;--val:#6f9bff;--valbg:#18233a;--gp:rgba(111,155,255,.16)}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.w{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.ib{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;text-decoration:none;font-size:13px}
+.timeband{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.tb{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.tb .n{font-size:18px;font-weight:700;line-height:1.15}.tb .t{color:var(--mut);font-size:12px;margin-top:2px}
+.tb.on{border-color:var(--time);background:var(--timebg)}.tb.on .n{color:var(--time)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+button{font:inherit;color:var(--ink)}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.l.on{background:var(--long);border-color:var(--long);color:var(--bg)}
+.chip.s.on{background:var(--short);border-color:var(--short);color:var(--bg)}
+.btn{border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:600}
+.btn:disabled{opacity:.6}
+.set{display:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}.set.show{display:block}
+.set .g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.set label{display:flex;flex-direction:column;gap:4px;color:var(--mut);font-size:12px}
+input,select{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:7px 10px;font:inherit;width:100%}
+.lbl{color:var(--mut);font-size:12px}
+.prog{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:12px}.prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+.alert{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:9px 12px;margin-bottom:12px;display:none}.alert.show{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:860px}
+th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--mut);font-size:12px}
+th:first-child,td:first-child,.l{text-align:left}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
+.pill.long{background:var(--longbg);color:var(--long)}.pill.short{background:var(--shortbg);color:var(--short)}
+.st{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
+.st.s1{background:var(--longbg);color:var(--long)}.st.s1s{background:var(--shortbg);color:var(--short)}
+.st.s2{background:var(--valbg);color:var(--val)}.st.s3{color:var(--mut);border:1px solid var(--line)}
+.st.s0{background:var(--warnbg);color:var(--warn)}
+.fl{display:inline-block;border-radius:4px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:4px}
+.fl.liq{background:var(--valbg);color:var(--val)}.fl.cas{background:var(--timebg);color:var(--time)}
+.lk{font-size:10px;font-weight:600;color:var(--acc);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:4px;text-decoration:none}
+.rw{cursor:pointer}.rw:hover td{background:color-mix(in srgb,var(--line) 35%,transparent)}
+.dt td{white-space:normal;background:var(--card);text-align:left;padding:12px}
+.det{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:14px}
+@media (max-width:700px){.det{grid-template-columns:1fr}}
+.det svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;align-content:start}
+.kv span:nth-child(odd){color:var(--mut)}
+.kv b{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600}
+.empty{padding:40px;text-align:center;color:var(--mut)}
+.note{color:var(--mut);font-size:12px;margin-top:16px;max-width:90ch}
+.up{color:var(--long)}.dn{color:var(--short)}.mut{color:var(--mut)}
+a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="hd">
+    <div>
+      <h1>Jay HL Screener</h1>
+      <div class="sub">Time × Value · L → LL → HL v golden pocketu (in obratno za short) · Bybit USDT perp</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <a class="ib" href="../">Moj Screener</a>
+      <button class="ib" id="setb" type="button">Nastavitve</button>
+    </div>
+  </div>
+
+  <div class="timeband" id="timeband"></div>
+
+  <div class="set" id="set">
+    <div class="g">
+      <label>Časovni okvir<select id="tf"><option value="D">1D (swing)</option><option value="360">6H</option><option value="90">90m</option><option value="23">23m</option><option value="5">5m</option><option value="3">3m</option><option value="1">1m</option><option value="W">1W</option></select></label>
+      <label>Koliko kovancev (po prometu)<input id="topn" type="number" min="10" max="300" step="10" value="80"></label>
+      <label>Swing: sveče levo/desno<input id="piv" type="number" min="2" max="10" value="5"></label>
+      <label>Potrjen HL velja še (sveč)<input id="fresh" type="number" min="1" max="30" value="7"></label>
+      <label>Račun ($)<input id="acct" type="number" min="0" step="100" value="10000"></label>
+      <label>Tveganje na trade (%)<input id="rpct" type="number" min="0.1" max="5" step="0.1" value="1"></label>
+    </div>
+  </div>
+
+  <div class="bar">
+    <button class="btn" id="scan" type="button">Skeniraj</button>
+    <button class="chip on" data-side="all" type="button">Vse</button>
+    <button class="chip l" data-side="long" type="button">Long</button>
+    <button class="chip s" data-side="short" type="button">Short</button>
+    <span class="lbl" style="margin-left:4px">Stanje:</span>
+    <button class="chip on" data-st="act" type="button">Za trejd</button>
+    <button class="chip" data-st="all" type="button">Vse</button>
+    <span class="lbl" id="stat"></span>
+  </div>
+  <div class="prog"><i id="pg"></i></div>
+  <div class="alert" id="err"></div>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>Kovanec</th><th class="l">Smer</th><th class="l">Stanje</th><th>Cena</th><th>Golden pocket</th><th>Do GP</th><th>Vstop</th><th>SL</th><th>TP</th><th>RR</th><th>Velikost</th></tr></thead>
+      <tbody id="out"><tr><td colspan="11" class="empty">Klikni "Skeniraj". Pregled 80 kovancev traja približno pol minute.</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <b>Pravila (ista kot indikator Jay HL na TradingView):</b> LL = nov swing low pod prejšnjim, L = staro dno, ki ga je LL pobral. Ko se nato zlomi zadnji vrh navzgor (H), se iz zadnjega dna do H potegne fib. Golden pocket = 0.618–0.79. <b>Potrjen HL</b> = cena je bila v coni in sveča se je zaprla zelena nad 0.618. <b>+liq</b> = staro L leži v coni. <b>+čas</b> = 3. teden v mesecu (15.–21.) ali prvih 5 dni meseca (UTC). Na 1D/1W je +čas 3. teden ali začetek meseca, na 6H/90m/23m/5m/3m/1m pa 3. 6H dneva (14:00–20:00 poletni čas). 90m in 23m sta sestavljena iz 30m/1m sveč od 00:00 UTC. SL pod HL (za setup v coni pod dnom noge), TP = H oz. vsaj 2R. Short je zrcalno: H → HH → LH. Backtest (24 kovancev, 1D, 2020–2026): najboljše "+čas" s ciljem 2R–3R. Ni finančni nasvet – pred vstopom preveri nižji okvir.
+  </div>
+</div>
+
+<script>
+/*CORE*/
+function jayPivot(k,c,P,hi){
+  if(c-P<0||c+P>=k.length)return false;
+  var v=hi?k[c].h:k[c].l;
+  for(var j=1;j<=P;j++){var a=hi?k[c-j].h:k[c-j].l;if(hi?a>=v:a<=v)return false}
+  for(j=1;j<=P;j++){var b=hi?k[c+j].h:k[c+j].l;if(hi?b>v:b<v)return false}
+  return true;
+}
+/* Čas: 1D/1W = 3. teden v mesecu ali prvih 5 dni meseca; pod 1D = 3. 6H dneva (12–18 UTC = 14–20 poletni čas) */
+function jayTimeOK(t,freshD,tfMin){if(tfMin&&tfMin<1440){var h=new Date(t).getUTCHours();return h>=12&&h<18}
+  var d=new Date(t).getUTCDate();return (d>=15&&d<=21)||d<=freshD}
+function jayScan(k,o){
+  var P=o.piv||5,LP=o.look||6,A=o.gpA||0.618,B=o.gpB||0.79,tol=o.liqTol==null?0.015:o.liqTol,fD=o.freshD||5;
+  var pls=[],phs=[];
+  var b={L:null,Lx:null,LL:null,LLx:null,armed:false,leg:null,legX:null,H:null,Hx:null,touched:false,done:false,HL:null,HLx:null,sig:null};
+  var s={H:null,Hx:null,HH:null,HHx:null,armed:false,leg:null,legX:null,lo:null,lox:null,touched:false,done:false,LH:null,LHx:null,sig:null};
+  for(var i=0;i<k.length;i++){
+    var bNew=false,sNew=false,c=i-P,pl=null,ph=null;
+    if(c>=P){if(jayPivot(k,c,P,false))pl=k[c].l;if(jayPivot(k,c,P,true))ph=k[c].h}
+    var lowR=Infinity,highR=-Infinity;for(var j=Math.max(0,i-P);j<=i;j++){if(k[j].l<lowR)lowR=k[j].l;if(k[j].h>highR)highR=k[j].h}
+    if(pl!==null){
+      var n=pls.length,prevPL=n?pls[n-1].v:null;
+      if(n&&pl<prevPL){var sw=null,swX=null;for(var q=Math.max(0,n-LP);q<n;q++){var v=pls[q].v;if(v>pl&&(sw===null||v<sw)){sw=v;swX=pls[q].x}}
+        b.L=sw;b.Lx=swX;b.LL=pl;b.LLx=c;b.armed=false}
+      var m=phs.length,lastPH=m?phs[m-1]:null;
+      if(o.short!==false&&s.HH!==null&&c>s.HHx&&n&&pl<prevPL&&lastPH&&lastPH.x>=s.HHx&&lastPH.v<=s.HH){
+        s.armed=true;s.leg=lastPH.v;s.legX=lastPH.x;s.lo=pl;s.lox=c;s.touched=highR>=s.lo+(s.leg-s.lo)*A;s.done=false;s.LH=s.touched?highR:null;s.LHx=i;sNew=true}
+      pls.push({v:pl,x:c});if(pls.length>40)pls.shift();
+    }
+    if(ph!==null){
+      var m2=phs.length,prevPH=m2?phs[m2-1].v:null;
+      if(m2&&ph>prevPH){var sw2=null,sw2X=null;for(q=Math.max(0,m2-LP);q<m2;q++){v=phs[q].v;if(v<ph&&(sw2===null||v>sw2)){sw2=v;sw2X=phs[q].x}}
+        s.H=sw2;s.Hx=sw2X;s.HH=ph;s.HHx=c;s.armed=false}
+      var n2=pls.length,lastPL=n2?pls[n2-1]:null;
+      if(o.long!==false&&b.LL!==null&&c>b.LLx&&m2&&ph>prevPH&&lastPL&&lastPL.x>=b.LLx&&lastPL.v>=b.LL){
+        b.armed=true;b.leg=lastPL.v;b.legX=lastPL.x;b.H=ph;b.Hx=c;b.touched=lowR<=b.H-(b.H-b.leg)*A;b.done=false;b.HL=b.touched?lowR:null;b.HLx=i;bNew=true}
+      phs.push({v:ph,x:c});if(phs.length>40)phs.shift();
+    }
+    var K=k[i];
+    if(b.armed&&!bNew){var R=b.H-b.leg,b618=b.H-R*A,b79=b.H-R*B;
+      if(K.c<b.leg)b.armed=false;
+      else{if(K.l<=b618){b.touched=true;if(b.HL===null||K.l<b.HL){b.HL=K.l;b.HLx=i}}
+        if(b.touched&&!b.done&&K.c>K.o&&K.c>b618&&b.HL>=b.leg){b.done=true;
+          b.sig={i:i,t:K.t,close:K.c,HL:b.HL,HLx:b.HLx,H:b.H,Hx:b.Hx,leg:b.leg,legX:b.legX,L:b.L,Lx:b.Lx,LL:b.LL,LLx:b.LLx,
+            liq:b.L!==null&&b.L<=b618*(1+tol)&&b.L>=b79*(1-tol),time:jayTimeOK(K.t,fD,o.tfMin)}}}}
+    if(s.armed&&!sNew){var R2=s.leg-s.lo,s618=s.lo+R2*A,s79=s.lo+R2*B;
+      if(K.c>s.leg)s.armed=false;
+      else{if(K.h>=s618){s.touched=true;if(s.LH===null||K.h>s.LH){s.LH=K.h;s.LHx=i}}
+        if(s.touched&&!s.done&&K.c<K.o&&K.c<s618&&s.LH<=s.leg){s.done=true;
+          s.sig={i:i,t:K.t,close:K.c,LH:s.LH,LHx:s.LHx,lo:s.lo,lox:s.lox,leg:s.leg,legX:s.legX,H:s.H,Hx:s.Hx,HH:s.HH,HHx:s.HHx,
+            liq:s.H!==null&&s.H>=s618*(1-tol)&&s.H<=s79*(1+tol),time:jayTimeOK(K.t,fD,o.tfMin)}}}}
+  }
+  return {b:b,s:s,n:k.length};
+}
+/* Iz stanja naredi setup za tabelo. k = zaprte sveče, live = zadnja (nezaprta) sveča ali null */
+function jaySetups(k,live,st,o){
+  var out=[],n=k.length,A=o.gpA||0.618,B=o.gpB||0.79,fresh=o.fresh||7,price=live?live.c:k[n-1].c,b=st.b,s=st.s;
+  if(b.armed&&b.H!==null){
+    var R=b.H-b.leg,g1=b.H-R*A,g2=b.H-R*B,liq=b.L!==null&&b.L<=g1*1.015&&b.L>=g2*0.985,base={dir:'long',L:b.L,Lx:b.Lx,LL:b.LL,LLx:b.LLx,H:b.H,Hx:b.Hx,leg:b.leg,legX:b.legX,g1:g1,g2:g2,g50:b.H-R*0.5,liq:liq,price:price};
+    if(b.done&&b.sig){var age=n-1-b.sig.i,sl=b.sig.HL*0.997;
+      if(age<fresh&&price>sl&&price<b.H){var e=price,tp=Math.max(b.H,e+2*(e-sl));
+        out.push(Object.assign(base,{state:1,age:age,HL:b.sig.HL,HLx:b.sig.HLx,entry:e,sl:sl,tp:tp,tpH:b.H,time:b.sig.time,liq:b.sig.liq,sigX:b.sig.i}))}}
+    else if(!b.done){var e2=g1,sl2=b.leg*0.997,tp2=Math.max(b.H,e2+2*(e2-sl2)),touched=b.touched||(live&&live.l<=g1),
+        maybe=touched&&live&&live.c>live.o&&live.c>g1&&live.l>=b.leg;
+      out.push(Object.assign(base,{state:maybe?0:touched?2:3,HL:b.HL!==null?b.HL:(touched&&live?live.l:null),HLx:b.HL!==null?b.HLx:(touched?n:null),entry:e2,sl:sl2,tp:tp2,tpH:b.H,dist:(price-g1)/price}))}
+  }
+  if(s.armed&&s.HH!==null&&s.lo!==null){
+    var R2=s.leg-s.lo,h1=s.lo+R2*A,h2=s.lo+R2*B,liq2=s.H!==null&&s.H>=h1*0.985&&s.H<=h2*1.015,base2={dir:'short',L:s.H,Lx:s.Hx,LL:s.HH,LLx:s.HHx,H:s.lo,Hx:s.lox,leg:s.leg,legX:s.legX,g1:h1,g2:h2,g50:s.lo+R2*0.5,liq:liq2,price:price};
+    if(s.done&&s.sig){var age2=n-1-s.sig.i,sl3=s.sig.LH*1.003;
+      if(age2<fresh&&price<sl3&&price>s.lo){var e3=price,tp3=Math.min(s.lo,e3-2*(sl3-e3));
+        out.push(Object.assign(base2,{state:1,age:age2,HL:s.sig.LH,HLx:s.sig.LHx,entry:e3,sl:sl3,tp:tp3,tpH:s.lo,time:s.sig.time,liq:s.sig.liq,sigX:s.sig.i}))}}
+    else if(!s.done){var e4=h1,sl4=s.leg*1.003,tp4=Math.min(s.lo,e4-2*(sl4-e4)),touched2=s.touched||(live&&live.h>=h1),
+        maybe2=touched2&&live&&live.c<live.o&&live.c<h1&&live.h<=s.leg;
+      out.push(Object.assign(base2,{state:maybe2?0:touched2?2:3,HL:s.LH!==null?s.LH:(touched2&&live?live.h:null),HLx:s.LH!==null?s.LHx:(touched2?n:null),entry:e4,sl:sl4,tp:tp4,tpH:s.lo,dist:(h1-price)/price}))}
+  }
+  out.forEach(function(x){x.rr=Math.abs(x.tp-x.entry)/Math.abs(x.entry-x.sl);x.rrH=Math.abs(x.tpH-x.entry)/Math.abs(x.entry-x.sl)});
+  return out;
+}
+/*CORE-END*/
+
+(function(){
+var API='https://api.bybit.com/v5/market/';
+var $=function(i){return document.getElementById(i)};
+var rows=[],side='all',stf='act',open=null,cache={};
+var TZ='Europe/Ljubljana';
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+['tf','topn','piv','fresh','acct','rpct'].forEach(function(id){var v=ls('jay_'+id);if(v!==null&&v!==undefined)$(id).value=v;$(id).addEventListener('change',function(){ls('jay_'+id,$(id).value)})});
+function fp(p){if(p==null||isNaN(p))return '–';var a=Math.abs(p);return a>=1000?p.toFixed(1):a>=100?p.toFixed(2):a>=1?p.toFixed(3):a>=0.1?p.toFixed(4):a>=0.01?p.toFixed(5):a>=0.001?p.toFixed(6):p.toPrecision(4)}
+function dfmt(t){return new Date(t).toLocaleDateString('sl-SI',{day:'numeric',month:'numeric',timeZone:'UTC'})}
+async function jget(u){var r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
+async function kl(sym,iv,n,end){var r=await jget(API+'kline?category=linear&symbol='+sym+'&interval='+iv+'&limit='+n+(end?'&end='+end:''));
+  return r.list.reverse().map(function(x){return {t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4]}})}
+/* Okvirji: 90m in 23m Bybit nima -> sestavimo iz 30m / 1m, sidro vsak dan ob 00:00 UTC (kot Jayevi fraktali) */
+var TFS={D:{api:'D',min:1440,n:500},'360':{api:'360',min:360,n:700},'90':{api:'30',min:90,agg:90,n:1000},'23':{api:'1',min:23,agg:23,n:1000,pages:3},
+  '5':{api:'5',min:5,n:700},'3':{api:'3',min:3,n:700},'1':{api:'1',min:1,n:700},W:{api:'W',min:10080,n:300}};
+function aggr(k,mins){var ms=mins*6e4,out=[],cur=null;k.forEach(function(x){var day=Math.floor(x.t/864e5)*864e5,b=day+Math.floor((x.t-day)/ms)*ms;
+  if(!cur||cur.t!==b){cur={t:b,o:x.o,h:x.h,l:x.l,c:x.c,e:Math.min(b+ms,day+864e5)};out.push(cur)}else{cur.h=Math.max(cur.h,x.h);cur.l=Math.min(cur.l,x.l);cur.c=x.c}});
+  if(out.length>1)out.shift();return out}
+async function klines(sym,tf){var c=TFS[tf]||TFS.D,pages=c.pages||1,all=[],end=null;
+  for(var p=0;p<pages;p++){var k=await kl(sym,c.api,c.n,end);if(!k.length)break;all=k.concat(all);end=k[0].t-1;if(k.length<c.n)break}
+  if(c.agg)return aggr(all,c.agg);
+  var ms=tf==='D'?864e5:tf==='W'?6048e5:(+c.api)*6e4;all.forEach(function(x){x.e=x.t+ms});return all}
+
+/* ---------- Čas ---------- */
+function timeBand(){
+  var now=new Date(),d=now.getUTCDate(),m=now.getUTCMonth(),y=now.getUTCFullYear();
+  var w3=d>=15&&d<=21,fresh=d<=5,qm=m%3===0;
+  var q=Math.floor(m/3)+1;
+  var nextW3=d<15?new Date(Date.UTC(y,m,15)):d>21?new Date(Date.UTC(y,m+1,15)):null;
+  var days=nextW3?Math.ceil((nextW3-now)/864e5):0;
+  var wk=Math.min(5,Math.floor((d-1)/7)+1);
+  var mu=now.getUTCHours()*60+now.getUTCMinutes(),b6=Math.floor(mu/360)+1,b90=Math.floor((mu%360)/90)+1;
+  function lt(minUtc){var dd=new Date(Date.UTC(y,m,d)+minUtc*6e4);return dd.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit',timeZone:TZ})}
+  var s6=(b6-1)*360,s90=s6+(b90-1)*90;
+  var cells=[
+    {on:w3||fresh,n:w3?'+čas: 3. teden':fresh?'+čas: nov mesec':'1D: čas ne',t:w3?'15.–21. v mesecu – Jayevo okno za swing':fresh?'prvih 5 dni meseca':'3. teden čez '+days+' '+(days===1?'dan':days===2?'dneva':'dni')+' (za 1D)'},
+    {on:b6===3,n:b6+'. 6H',t:lt(s6)+'–'+lt(s6+360)+(b6===3?' · dostava, vstop':b6===2?' · past/manipulacija':b6===1?' · odpiranje':' · zaključek')},
+    {on:b6===3&&b90===3,n:b90+'. 90m',t:lt(s90)+'–'+lt(s90+90)+' (v '+b6+'. 6H)'},
+    {on:qm&&fresh,n:'Q'+q+' · '+wk+'. teden',t:now.toLocaleDateString('sl-SI',{day:'numeric',month:'long',timeZone:TZ})+(qm&&fresh?' · začetek kvartala':'')}
+  ];
+  $('timeband').innerHTML=cells.map(function(c){return '<div class="tb'+(c.on?' on':'')+'"><div class="n">'+c.n+'</div><div class="t">'+c.t+'</div></div>'}).join('');
+}
+timeBand();setInterval(timeBand,60000);
+
+/* ---------- Skeniranje ---------- */
+async function scan(){
+  var btn=$('scan');btn.disabled=true;$('err').className='alert';
+  var tf=$('tf').value,topn=Math.max(10,Math.min(300,+$('topn').value||80)),piv=+$('piv').value||5,fresh=+$('fresh').value||7;
+  try{
+    var tk=await jget(API+'tickers?category=linear');
+    var list=tk.list.filter(function(x){return /USDT$/.test(x.symbol)&&+x.turnover24h>0}).sort(function(a,b){return b.turnover24h-a.turnover24h}).slice(0,topn);
+    var res=[],done=0,fails=0;cache={};
+    var tfMin=(TFS[tf]||TFS.D).min;
+    if(tf==='23'&&topn>30){topn=30;list=list.slice(0,30)}
+    async function one(t){
+      try{var k=await klines(t.symbol,tf);var now=Date.now(),last=k[k.length-1],live=null;
+        if(last&&last.e>now){live=k.pop()}
+        var st=jayScan(k,{piv:piv,freshD:5,tfMin:tfMin});
+        var su=jaySetups(k,live,st,{fresh:fresh});
+        cache[t.symbol]={k:k,live:live};
+        su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;res.push(x)});
+      }catch(e){fails++}
+      done++;$('pg').style.width=(100*done/list.length)+'%';$('stat').textContent='Pregledujem '+done+'/'+list.length+' …';
+    }
+    var q=list.slice();
+    async function worker(){while(q.length){await one(q.shift());await new Promise(function(r){setTimeout(r,60)})}}
+    await Promise.all([worker(),worker(),worker(),worker(),worker()]);
+    rows=res;
+    var tm=new Date().toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
+    $('stat').textContent='Pregledanih '+list.length+' kovancev ob '+tm+(fails?' · '+fails+' brez podatkov':'');
+    render();
+  }catch(e){$('err').textContent='Napaka pri branju Bybita: '+e.message+'. Poskusi znova čez minuto.';$('err').className='alert show'}
+  btn.disabled=false;
+}
+
+/* ---------- Tabela ---------- */
+var stName={0:'Možen HL danes',1:'Potrjen',2:'V coni',3:'Čaka umik'};
+function stCell(r){var cls=r.state===1?(r.dir==='long'?'s1':'s1s'):r.state===0?'s0':r.state===2?'s2':'s3';
+  var t=r.state===1?(r.dir==='long'?'Potrjen HL':'Potrjen LH')+' · '+(r.age===0?'zadnja sveča':r.age+' sveč nazaj'):r.state===0?(r.dir==='long'?'Možen HL ob zaprtju':'Možen LH ob zaprtju'):stName[r.state];
+  return '<span class="st '+cls+'">'+t+'</span>'+(r.liq?'<span class="fl liq">+liq</span>':'')+(r.state===1&&r.time?'<span class="fl cas">+čas</span>':'')}
+function size(r){var a=+$('acct').value,p=+$('rpct').value;if(!(a>0&&p>0))return '–';var risk=a*p/100,q=risk/Math.abs(r.entry-r.sl);
+  return '<span title="tveganje '+risk.toFixed(0)+' $">'+(q*r.entry>=1000?(q*r.entry/1000).toFixed(1)+'k $':(q*r.entry).toFixed(0)+' $')+'</span>'}
+function render(){
+  var list=rows.filter(function(r){return (side==='all'||r.dir===side)&&(stf==='all'||r.state<=2)});
+  list.sort(function(a,b){return a.state-b.state||(a.state===1?a.age-b.age:0)||(a.state===3?Math.abs(a.dist)-Math.abs(b.dist):0)||b.rr-a.rr});
+  if(!list.length){$('out').innerHTML='<tr><td colspan="11" class="empty">'+(rows.length?'Ni setupov s temi filtri. Poskusi "Stanje: Vse".':'Klikni "Skeniraj".')+'</td></tr>';return}
+  var h='';list.forEach(function(r,ix){var id=r.s+'|'+r.dir;var coin=r.s.replace(/USDT$/,'');
+    h+='<tr class="rw" tabindex="0" data-id="'+id+'"><td><b>'+coin+'</b> <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'">BB</a></td>'+
+      '<td class="l"><span class="pill '+r.dir+'">'+(r.dir==='long'?'LONG':'SHORT')+'</span></td><td class="l">'+stCell(r)+'</td>'+
+      '<td class="mono">'+fp(r.price)+'</td><td class="mono">'+fp(Math.min(r.g1,r.g2))+'–'+fp(Math.max(r.g1,r.g2))+'</td>'+
+      '<td class="mono '+(r.state===3?'':'mut')+'">'+(r.state===3?(Math.abs(r.dist)*100).toFixed(1)+' %':r.state===1?'–':'v coni')+'</td>'+
+      '<td class="mono">'+fp(r.entry)+'</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono up">'+fp(r.tp)+'</td><td class="mono"><b>'+r.rr.toFixed(1)+'</b></td><td class="mono">'+size(r)+'</td></tr>';
+    if(open===id)h+='<tr class="dt"><td colspan="11">'+detail(r)+'</td></tr>';
+  });
+  $('out').innerHTML=h;
+}
+$('out').addEventListener('click',function(e){if(e.target.closest('a'))return;var tr=e.target.closest('.rw');if(!tr)return;var id=tr.getAttribute('data-id');open=open===id?null:id;render()});
+$('out').addEventListener('keydown',function(e){if(e.key==='Enter'){var tr=e.target.closest('.rw');if(tr)tr.click()}});
+
+/* ---------- Risba setupa (kot na TV) ---------- */
+function detail(r){
+  var c=cache[r.s];if(!c)return '';
+  var k=c.k.slice();if(c.live)k.push(c.live);
+  var n=k.length,from=Math.max(0,Math.min(r.Lx!=null?r.Lx-6:n-90,n-90)),bars=k.slice(from),W=760,H=360,pl=8,pr=72,pt=16,pb=24,ext=14;
+  var lo=Infinity,hi=-Infinity;bars.forEach(function(x){lo=Math.min(lo,x.l);hi=Math.max(hi,x.h)});
+  [r.tp,r.sl,r.g1,r.g2].forEach(function(v){lo=Math.min(lo,v);hi=Math.max(hi,v)});var pad=(hi-lo)*0.06;lo-=pad;hi+=pad;
+  var N=bars.length+ext,cw=(W-pl-pr)/N,X=function(i){return pl+(i-from+0.5)*cw},Y=function(p){return pt+(hi-p)/(hi-lo)*(H-pt-pb)};
+  var up=r.dir==='long',s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Setup '+r.s+'">';
+  var xe=X(n-1+ext);
+  // GP
+  s+='<rect x="'+X(Math.max(from,r.legX))+'" y="'+Y(Math.max(r.g1,r.g2))+'" width="'+(xe-X(Math.max(from,r.legX)))+'" height="'+Math.abs(Y(r.g1)-Y(r.g2))+'" fill="var(--gp)"/>';
+  // pozicija (kot Long/Short orodje)
+  var px=r.state===1?X(n-1):X(n-1);
+  s+='<rect x="'+px+'" y="'+Y(up?r.tp:r.entry)+'" width="'+(xe-px)+'" height="'+Math.abs(Y(r.tp)-Y(r.entry))+'" fill="var(--long)" opacity=".16"/>';
+  s+='<rect x="'+px+'" y="'+Y(up?r.entry:r.sl)+'" width="'+(xe-px)+'" height="'+Math.abs(Y(r.entry)-Y(r.sl))+'" fill="var(--short)" opacity=".18"/>';
+  // fib črte
+  [[0.5,r.g50],[0.618,r.g1],[0.79,r.g2]].forEach(function(f){s+='<line x1="'+X(Math.max(from,r.legX))+'" x2="'+xe+'" y1="'+Y(f[1])+'" y2="'+Y(f[1])+'" stroke="var(--val)" stroke-width="1" opacity=".7"/>'+
+    '<text x="'+(xe+4)+'" y="'+(Y(f[1])+4)+'" font-size="11" fill="var(--val)" font-family="ui-monospace,Menlo,monospace">'+f[0]+'</text>'});
+  // staro L (likvidnost)
+  if(r.L!=null&&r.Lx!=null&&r.Lx>=from)s+='<line x1="'+X(r.Lx)+'" x2="'+xe+'" y1="'+Y(r.L)+'" y2="'+Y(r.L)+'" stroke="var(--val)" stroke-width="1.6" stroke-dasharray="2 4"/>';
+  // sveče
+  bars.forEach(function(x,j){var i=from+j,u=x.c>=x.o,col=u?'var(--long)':'var(--short)',yt=Y(Math.max(x.o,x.c)),yb=Y(Math.min(x.o,x.c));
+    s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'" stroke-width="1"/><rect x="'+(X(i)-cw*0.32)+'" y="'+yt+'" width="'+(cw*0.64)+'" height="'+Math.max(1,yb-yt)+'" fill="'+col+'"'+(i===n-1&&c.live?' opacity=".55"':'')+'/>'});
+  // vstop/SL/TP
+  [[r.entry,'var(--ink)',(up?'LONG ':'SHORT ')+fp(r.entry)],[r.sl,'var(--short)','SL '+fp(r.sl)],[r.tp,'var(--long)','TP '+fp(r.tp)]].forEach(function(z){
+    s+='<line x1="'+px+'" x2="'+xe+'" y1="'+Y(z[0])+'" y2="'+Y(z[0])+'" stroke="'+z[1]+'" stroke-width="1"/><text x="'+(px+4)+'" y="'+(Y(z[0])-4)+'" font-size="11" font-weight="600" fill="'+z[1]+'" font-family="ui-monospace,Menlo,monospace">'+z[2]+'</text>'});
+  // oznake
+  function lab(i,p,t,col,below){if(i==null||i<from)return '';return '<text x="'+X(i)+'" y="'+(below?Y(p)+15:Y(p)-6)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+col+'">'+t+'</text>'}
+  s+=lab(r.Lx,r.L,up?'L':'H','var(--val)',up)+lab(r.LLx,r.LL,up?'LL':'HH','var(--warn)',up)+lab(r.Hx,r.H,up?'H':'L','var(--mut)',!up);
+  if(r.HL!=null&&r.HLx!=null)s+=lab(Math.min(r.HLx,n-1),r.HL,up?'HL':'LH','var(--val)',up);
+  // čas: začetki mesecev + 3. teden
+  bars.forEach(function(x,j){var d=new Date(x.t),dd=d.getUTCDate(),i=from+j,prev=j?new Date(bars[j-1].t).getUTCDate():dd;
+    if(j&&dd<prev){var qs=d.getUTCMonth()%3===0;s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+pt+'" y2="'+(H-pb)+'" stroke="var(--time)" stroke-width="'+(qs?1.6:1)+'" stroke-dasharray="'+(qs?'':'3 4')+'" opacity=".7"/>'+(qs?'<text x="'+(X(i)+4)+'" y="'+(pt+10)+'" font-size="11" font-weight="700" fill="var(--time)">Q'+(Math.floor(d.getUTCMonth()/3)+1)+'</text>':'')}
+    if(dd>=15&&dd<=21&&$('tf').value!=='W')s+='<rect x="'+(X(i)-cw/2)+'" y="'+pt+'" width="'+cw+'" height="'+(H-pt-pb)+'" fill="var(--time)" opacity=".05"/>'});
+  // os
+  for(var g=0;g<=4;g++){var p=lo+(hi-lo)*g/4;s+='<text x="'+(W-4)+'" y="'+(Y(p)+4)+'" text-anchor="end" font-size="10" fill="var(--mut)" font-family="ui-monospace,Menlo,monospace">'+fp(p)+'</text>'}
+  s+='</svg>';
+  var a=+$('acct').value,pc=+$('rpct').value,risk=a*pc/100,qty=risk/Math.abs(r.entry-r.sl);
+  var kv='<div class="kv">'+
+    '<span>Struktura</span><b>'+(up?'L '+fp(r.L)+' → LL '+fp(r.LL)+' → H '+fp(r.H):'H '+fp(r.L)+' → HH '+fp(r.LL)+' → L '+fp(r.H))+'</b>'+
+    '<span>Golden pocket</span><b>'+fp(r.g1)+' – '+fp(r.g2)+'</b>'+
+    (r.HL!=null?'<span>'+(up?'HL':'LH')+'</span><b>'+fp(r.HL)+'</b>':'')+
+    '<span>Vstop</span><b>'+fp(r.entry)+(r.state===1?' (zdaj)':' (ob zaprtju nad 0.618)')+'</b>'+
+    '<span>SL</span><b>'+fp(r.sl)+' ('+(Math.abs(r.entry-r.sl)/r.entry*100).toFixed(1)+' %)</b>'+
+    '<span>TP</span><b>'+fp(r.tp)+' · '+r.rr.toFixed(1)+'R</b>'+
+    '<span>TP do '+(up?'H':'L')+'</span><b>'+fp(r.tpH)+' · '+r.rrH.toFixed(1)+'R</b>'+
+    (risk>0?'<span>Velikost</span><b>'+(qty*r.entry).toFixed(0)+' $ ('+qty.toPrecision(4)+' kos) · tveganje '+risk.toFixed(0)+' $</b>':'')+
+    '<span>Konfluenca</span><b>'+(r.liq?'+liq ':'')+(r.time?'+čas':'')+(!r.liq&&!r.time?'–':'')+'</b>'+
+    '</div>';
+  return '<div class="det"><div>'+s+'</div>'+kv+'</div>';
+}
+
+/* ---------- Kontrole ---------- */
+document.querySelectorAll('[data-side]').forEach(function(b){b.addEventListener('click',function(){side=b.getAttribute('data-side');document.querySelectorAll('[data-side]').forEach(function(x){x.classList.toggle('on',x===b)});render()})});
+document.querySelectorAll('[data-st]').forEach(function(b){b.addEventListener('click',function(){stf=b.getAttribute('data-st');document.querySelectorAll('[data-st]').forEach(function(x){x.classList.toggle('on',x===b)});render()})});
+$('setb').addEventListener('click',function(){$('set').classList.toggle('show')});
+$('scan').addEventListener('click',scan);
+['acct','rpct'].forEach(function(id){$(id).addEventListener('input',render)});
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+scan();
+})();
+</script>
+</body>
+</html>
