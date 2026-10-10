@@ -59,6 +59,8 @@ th:first-child,td:first-child,.l{text-align:left}
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .note{color:var(--mut);font-size:12px;margin-top:16px}
 textarea{width:100%;height:100px;margin-top:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:8px;font:12px ui-monospace,monospace;display:none}
+.trd{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px}.trd .set{border:0;padding:10px 0 0;margin:0}.trd .set input{width:100%}
+.ti{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.ti:first-child{border-top:0}.ti .x{margin-left:auto;display:flex;gap:6px}.ti.warn{background:var(--warnbg);margin:0 -12px;padding:7px 12px}
 .prog{height:3px;background:var(--line);border-radius:2px;margin-bottom:10px;overflow:hidden;display:none}.prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
 </style>
 </head>
@@ -67,11 +69,14 @@ textarea{width:100%;height:100px;margin-top:8px;border:1px solid var(--line);bac
 <div class="hd"><div><h1>Moj Screener</h1>
 <div class="sub" id="sub">Top po 24h volatilnosti · USDT perpetuali</div></div><div class="ic"><button class="ib" id="thm" title="Tema">Tema</button><button class="ib" id="gear" title="Nastavitve">Nastavitve</button></div></div>
 <div class="kp" id="kp"></div>
+<div class="trd" id="trd"><div class="hd"><b>Odprti trade-i</b><button class="ib" id="tradd">Dodaj</button></div>
+<div class="set" id="trf"><div class="g"><label>Simbol<input type="text" id="t_s" placeholder="SAND" autocapitalize="characters"></label><label>Smer<select id="t_d"><option value="L">Long</option><option value="S">Short</option></select></label><label>Vstop<input type="text" inputmode="decimal" id="t_e"></label><label>SL<input type="text" inputmode="decimal" id="t_sl"></label><label>TP<input type="text" inputmode="decimal" id="t_tp"></label><label>Količina (enote)<input type="text" inputmode="decimal" id="t_q"></label></div><div style="margin-top:10px"><button class="btn" id="trsave">Shrani</button> <span class="mut" id="trmsg"></span></div></div>
+<div id="trl" class="mut">Ni vpisanih trade-ov.</div></div>
 <div class="gl" id="gl"></div>
 <div class="bar"><button class="chip on" id="tabS">Skener</button><button class="chip" id="tabH">Zgodovina</button><span class="mut" id="sess"></span><span id="live" class="mut"></span><button class="chip" id="nbtn">🔔 Obvestila</button></div>
 <div id="viewS">
 <div class="bar"><button class="btn" id="go">Osveži</button><label class="lbl"><input type="checkbox" id="auto" checked style="width:auto"> Samodejno osveži</label><span class="lbl">Razvrsti</span><select id="srt"><option value="sc">Ocena</option><option value="v5">Vol 5m</option><option value="v15">Vol 15m</option><option value="v1h">Vol 1h</option><option value="vol">24h sprememba</option><option value="obd">Bližina OB</option></select></div>
-<div class="set" id="set"><div class="g"><label>Izbor coinov<select id="vsel"><option value="v5" selected>Najbolj volatilni zdaj (5m)</option><option value="v15">Najbolj volatilni zdaj (15m)</option><option value="v1h">Najbolj volatilni zdaj (1h)</option><option value="24h">Največja 24h sprememba</option></select></label><label>Število coinov<input type="number" id="topn" value="30" min="5" max="60"></label><label>Min promet (M)<input type="number" id="minto" value="5" min="0"></label><label>Tveganje $<input type="number" id="risk" value="50" min="1"></label><label>Osveževanje (min, večkratnik 5)<input type="number" id="ivl" value="5" min="5" step="5"></label><label>Toleranca eq lows (%)<input type="number" id="eqt" value="0.15" min="0.02" step="0.01"></label><label>Velikost pisave<select id="fs"><option value="13px">Majhna</option><option value="14px" selected>Normalna</option><option value="16px">Velika</option></select></label></div></div>
+<div class="set" id="set"><div class="g"><label>Izbor coinov<select id="vsel"><option value="v5" selected>Najbolj volatilni zdaj (5m)</option><option value="v15">Najbolj volatilni zdaj (15m)</option><option value="v1h">Najbolj volatilni zdaj (1h)</option><option value="24h">Največja 24h sprememba</option></select></label><label>Število coinov<input type="number" id="topn" value="30" min="5" max="60"></label><label>Min promet (M)<input type="number" id="minto" value="5" min="0"></label><label>Račun (USDT)<input type="number" id="acct" min="0" placeholder="npr. 5000"></label><label>Tveganje % računa<input type="number" id="rpct" value="1" min="0.1" step="0.1"></label><label>Tveganje $ (če račun ni vpisan)<input type="number" id="risk" value="50" min="1"></label><label>Osveževanje (min, večkratnik 5)<input type="number" id="ivl" value="5" min="5" step="5"></label><label>Toleranca eq lows (%)<input type="number" id="eqt" value="0.15" min="0.02" step="0.01"></label><label>Velikost pisave<select id="fs"><option value="13px">Majhna</option><option value="14px" selected>Normalna</option><option value="16px">Velika</option></select></label></div></div>
 <div class="prog" id="prog"><i></i></div>
 <div class="alert" id="alert"></div>
 <div class="bar">
@@ -93,7 +98,7 @@ textarea{width:100%;height:100px;margin-top:8px;border:1px solid var(--line);bac
 <textarea id="ta" readonly></textarea>
 </div>
 <div id="viewH" style="display:none"><div class="bar"><span id="hstat" class="lbl"></span><button class="chip" id="hclr">Počisti zgodovino</button></div><div class="card"><div id="hout" class="empty">Zgodovina je prazna.</div></div></div>
-<div class="note">Bias (HTF) = včerajšnja D sveča ±1, potrjen D CISD ±2, potrjen 4H CISD ±1,5, 1H trend ±0,5; trejdaš samo v smeri biasa (podrobnosti ob kliku na vrstico). CISD šteje samo v smeri biasa. Vstop šele po zaprti 5m sveči s potrjenim CISD. Ocena: RSI 1H/4H (70/30) +1,5/+2, divergenca 1H/4H +1,5/+2,5, trend 1H +1, potrjen 5m CISD +3, nepotrjen sweep ne šteje. 4H/D potrjen CISD v isti smeri +1,5/+2. Potrjen 5m CISD v London/NY killzone +0,5. Kalkulator: vstop limit na CISD levelu, SL za sweep ekstremom, TP 1R in 2R. 1H CISD retrace: OB iz teles sveč serije, vstop 1 na CISD levelu, vstop 2 (DCA) na 50 % OB, SL za skrajnim wickom, TP 2R ali naslednja nepometena 1H likvidnost; potrjen 1H CISD v smeri biasa +2. Podatki iz Bybit javnega API-ja, zgodovina je shranjena samo v tvojem telefonu. Ni finančni nasvet.</div>
+<div class="note">Bias (HTF) = včerajšnja D sveča ±1, potrjen D CISD ±2, potrjen 4H CISD ±1,5, 1H trend ±0,5; trejdaš samo v smeri biasa (podrobnosti ob kliku na vrstico). CISD šteje samo v smeri biasa. Vstop šele po zaprti 5m sveči s potrjenim CISD. Ocena: RSI 1H/4H (70/30) +1,5/+2, divergenca 1H/4H +1,5/+2,5, trend 1H +1, potrjen 5m CISD +3, nepotrjen sweep ne šteje. 4H/D potrjen CISD v isti smeri +1,5/+2. Potrjen 5m CISD v London/NY killzone +0,5. Kalkulator: vstop limit na CISD levelu, SL za sweep ekstremom, TP 1R in 2R. 1H CISD retrace: OB iz teles sveč serije, vstop 1 na CISD levelu, vstop 2 (DCA) na 50 % OB, SL za skrajnim wickom, TP 2R ali naslednja nepometena 1H likvidnost; potrjen 1H CISD v smeri biasa +2. Podatki iz Bybit javnega API-ja, zgodovina, nastavitve in odprti trade-i so shranjeni samo v tej napravi (brskalniku). Časi so po slovenskem času. Ni finančni nasvet.</div>
 </div>
 <script>
 (function(){
@@ -103,12 +108,18 @@ var rows=[],ts=0,side='all',sigs={},open={},sortK='sc',sortD=-1,seen={},favs={},
 try{favs=JSON.parse(localStorage.getItem('fav')||'{}')}catch(e){}
 try{seen=JSON.parse(localStorage.getItem('seen')||'{}')}catch(e){}
 var $=function(i){return document.getElementById(i)};
-function fp(p){return p>=100?p.toFixed(2):p>=1?p.toFixed(3):p>=0.01?p.toFixed(4):p.toFixed(6)}
+function fp(p){return p>=100?p.toFixed(2):p>=1?p.toFixed(3):p>=0.1?p.toFixed(4):p>=0.01?p.toFixed(5):p.toFixed(6)}
 function ago(m){return m<=0?'zdaj':m<60?m+' min':Math.round(m/60)+' h'}
-function calcSess(){var p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'numeric',hour12:false}).formatToParts(new Date());
-var h=+p.filter(function(x){return x.type==='hour'})[0].value%24,m=+p.filter(function(x){return x.type==='minute'})[0].value,t=h+m/60;
+var TZ='Europe/Ljubljana';
+function tm(d){return new Date(d).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit',timeZone:TZ})}
+function hm(tz,d){var p=new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'numeric',hour12:false}).formatToParts(d);
+return (+p.filter(function(x){return x.type==='hour'})[0].value%24)+(+p.filter(function(x){return x.type==='minute'})[0].value)/60}
+function calcSess(){var now=new Date(),t=hm('America/New_York',now),df=Math.round(((hm(TZ,now)-t)%24+24)%24);
+function z(a,b){function f(x){return ('0'+((x+df)%24)).slice(-2)}return f(a)+'-'+f(b)}
 var kz=(t>=2&&t<5)?'London killzone':(t>=7&&t<10)?'NY killzone':'';
-sess={kz:kz,txt:kz?('Seja: '+kz+' (+0,5 za potrjen CISD)'):'Seja: zunaj killzone (London 02-05, NY 07-10 po NY času)'};$('sess').textContent=sess.txt}
+sess={kz:kz,txt:kz?('Seja: '+kz+' (+0,5 za potrjen CISD)'):'Seja: zunaj killzone (London '+z(2,5)+', NY '+z(7,10)+' po slovenskem času)'};$('sess').textContent=sess.txt}
+function rkUsd(){var a=parseFloat($('acct').value),p=parseFloat($('rpct').value);if(a>0&&p>0)return a*p/100;return parseFloat($('risk').value)||50}
+function rkTxt(){var r=rkUsd();return (r>=10?r.toFixed(0):r.toFixed(2))+' $'}
 function key(r){return r.s+'|'+r.sd+'|'+r.ct}
 async function jget(u){var r=await fetch(u);if(!r.ok)throw new Error(r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
 async function kl(sym,iv,n){var r=await jget(API+'kline?category=linear&symbol='+sym+'USDT&interval='+iv+'&limit='+n);
@@ -193,9 +204,10 @@ while(i<items.length){var it=items[i++];try{await fn(it)}catch(e){it.err=1}cb(++
 async function scan(){
 calcSess();var btn=$('go');btn.disabled=true;btn.textContent='Skeniram...';var pr=$('prog');pr.style.display='block';
 try{
-var tk=(await jget(API+'tickers?category=linear')).list.filter(function(t){return /USDT$/.test(t.symbol)&&!/^(1000|10000)/.test(t.symbol)});
+var tk=(await jget(API+'tickers?category=linear')).list.filter(function(t){return /USDT$/.test(t.symbol)});
 var minTo=+$('minto').value*1e6,topn=Math.min(60,Math.max(5,+$('topn').value||30));
 var all=tk.map(function(t){return {s:t.symbol.replace(/USDT$/,''),p:+t.lastPrice,ch:+t.price24hPcnt*100,to:+t.turnover24h/1e6,_to:+t.turnover24h,rg:(+t.highPrice24h-+t.lowPrice24h)/(+t.lastPrice||1)}}).filter(function(x){return x._to>=minTo&&x.p>0});
+tk.forEach(function(t){var s0=t.symbol.replace(/USDT$/,'');if(trades.some(function(x){return x.s===s0}))trPx[s0]=+t.lastPrice});trRender();
 gl={g:all.slice().sort(function(a,b){return b.ch-a.ch}).slice(0,8),l:all.slice().sort(function(a,b){return a.ch-b.ch}).slice(0,8)};
 var vm=$('vsel').value,list;
 if(vm==='24h'){list=all.slice().sort(function(a,b){return Math.abs(b.ch)-Math.abs(a.ch)}).slice(0,topn)}
@@ -216,7 +228,7 @@ if(r.tr==='up'){bs+=0.5;bw.push('1H trend gor')}else if(r.tr==='down'){bs-=0.5;b
 r.bias=bs>0?'long':bs<0?'short':(pd&&pd.c<pd.o?'short':'long');r.bw=bw.join(' · ')+' (skupaj '+bs+')';
 var vv=volOf(k5);r.v5=vv.v5;r.v15=vv.v15;r.v1h=vv.v1h;r.s1=setup1(r,k1);r.eq=eq5(k5,r.bias==="long",r.p);r.k1=k1.slice(-48);r.k5=k5.slice(-72);score(r)},4,function(d){pr.firstChild.style.width=Math.round(d/list.length*100)+'%'});
 rows=list.filter(function(r){return !r.err});ts=Date.now();rows.forEach(function(r){try{eaxT(r)}catch(e){r.xg='';r.xs=0}try{r.p5=plan5(r)}catch(e){r.p5=null}});
-var dt=new Date(ts);$('sub').textContent='Top '+rows.length+' '+($('vsel').value==='24h'?'po 24h spremembi':'po trenutni volatilnosti ('+({v5:'5m',v15:'15m',v1h:'1h'}[$('vsel').value])+')')+' · '+dt.toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
+var dt=new Date(ts);$('sub').textContent='Top '+rows.length+' '+($('vsel').value==='24h'?'po 24h spremembi':'po trenutni volatilnosti ('+({v5:'5m',v15:'15m',v1h:'1h'}[$('vsel').value])+')')+' · '+tm(dt);
 connect();logHist();await evalHist();banner();render();renderHist();claudeView();notifyNew();setTimeout(markSeen,3000);
 }catch(e){$('out').className='empty';$('out').textContent='Napaka pri branju Bybit API: '+e.message+'. Poskusi znova.'}
 btn.disabled=false;btn.textContent='Osveži';pr.style.display='none';pr.firstChild.style.width='0'}
@@ -249,20 +261,20 @@ k.forEach(function(x,i){var cx=P+i*w+w/2,c=x.c>=x.o?'var(--long)':'var(--short)'
 s+='<line x1="'+cx+'" x2="'+cx+'" y1="'+y(x.h)+'" y2="'+y(x.l)+'" stroke="'+c+'"/><rect x="'+(cx-w*.35)+'" width="'+(w*.7)+'" y="'+Math.min(y(x.o),y(x.c))+'" height="'+Math.max(1,Math.abs(y(x.o)-y(x.c)))+'" fill="'+c+'"/>'});
 (lv||[]).forEach(function(l){if(l.p){var yy=y(l.p);s+='<line x1="'+P+'" x2="'+(W-P)+'" y1="'+yy+'" y2="'+yy+'" stroke="'+l.c+'" stroke-dasharray="4 3"/><text x="'+(W-P-2)+'" y="'+(yy-3)+'" text-anchor="end" font-size="10" fill="'+l.c+'">'+l.t+'</text>'}});
 return s+'<text x="6" y="12" font-size="11" fill="var(--mut)">'+title+'</text><text x="6" y="'+(H-6)+'" font-size="10" fill="var(--mut)">'+fp(lo)+'</text><text x="'+(W-6)+'" y="12" text-anchor="end" font-size="10" fill="var(--mut)">'+fp(hi)+'</text></svg>'}
-function calc(r){var rk=parseFloat($('risk').value)||50;try{localStorage.setItem('risk',rk)}catch(e){}
+function calc(r){var rk=rkUsd();try{localStorage.setItem('risk',$('risk').value)}catch(e){}
 if(!r.al)return '<div class="mut" style="margin-top:10px">Kalkulator: čakaj na potrjen 5m CISD v smeri biasa (bias HTF: '+(r.bias==='long'?'samo long':'samo short')+').</div>';
 var lg=r.ct==='bull',e=r.cl,sl=r.sl,d=Math.abs(e-sl);
 if(!sl||(lg&&sl>=e)||(!lg&&sl<=e))return '<div class="mut" style="margin-top:10px">Kalkulator: SL ni veljaven glede na CISD level.</div>';
 var q=rk/d,tp1=lg?e+d:e-d,tp2=lg?e+2*d:e-2*d;
-return '<div style="margin-top:10px;font-size:13px"><b>'+(lg?'LONG':'SHORT')+'</b> · vstop limit na CISD '+fp(e)+' · SL '+fp(sl)+' ('+(d/e*100).toFixed(2)+'%) · TP 1R '+fp(tp1)+' · TP 2R '+fp(tp2)+' · velikost '+(q>=100?q.toFixed(0):q.toPrecision(3))+' ('+(q*e).toFixed(0)+' USDT) pri tveganju '+rk+' $</div>'}
+return '<div style="margin-top:10px;font-size:13px"><b>'+(lg?'LONG':'SHORT')+'</b> · vstop limit na CISD '+fp(e)+' · SL '+fp(sl)+' ('+(d/e*100).toFixed(2)+'%) · TP 1R '+fp(tp1)+' · TP 2R '+fp(tp2)+' · velikost '+(q>=100?q.toFixed(0):q.toPrecision(3))+' ('+(q*e).toFixed(0)+' USDT) pri tveganju '+rkTxt()+'</div>'}
 function setupHtml(r){var s=r.s1;
 if(!s)return '<div class="mut" style="margin-top:10px">1H CISD retrace setup: ni (potreben potrjen 1H CISD v smeri biasa).</div>';
-var rk=parseFloat($('risk').value)||50,d=Math.abs(s.sl-s.avg),Q=rk/d,h=Q/2,pc=d/s.avg*100,inz=r.p>=s.lo&&r.p<=s.hi;
+var rk=rkUsd(),d=Math.abs(s.sl-s.avg),Q=rk/d,h=Q/2,pc=d/s.avg*100,inz=r.p>=s.lo&&r.p<=s.hi;
 var eqw=r.eq?'<div class="dn" style="margin-top:10px;font-size:13px"><b>POČAKAJ:</b> nepometen 5m '+(s.L?'EQL (equal lows) pri ':'EQH (equal highs) pri ')+fp(r.eq)+' – likvidnost še ni pobrana, vstopi šele po sweepu + 5m CISD.</div>':'';
 return eqw+'<div style="margin-top:10px;font-size:13px"><b>1H CISD retrace · '+(s.L?'LONG':'SHORT')+'</b> (CISD pred '+ago(s.ca)+', OB telesa '+fp(s.lo)+' – '+fp(s.hi)+(inz?', cena je zdaj v OB':'')+')<br>'
 +'Vstop 1 (CISD level) '+fp(s.e1)+' · RR '+s.rr1.toFixed(1)+' | Vstop 2 (50 % OB, DCA) '+fp(s.e2)+' · RR '+s.rr2.toFixed(1)+' | povprečje '+fp(s.avg)+' · RR '+s.rra.toFixed(1)+'<br>'
 +'SL '+fp(s.sl)+' (za najvišjim/najnižjim wickom, '+pc.toFixed(2)+' % od povprečja'+(pc<0.5?' <span class="dn">pod 0,5 %</span>':'')+') · TP '+fp(s.tp)+' ('+(s.liq?'naslednja nepometena 1H likvidnost':'2R')+')<br>'
-+'Velikost: 2 × '+(h>=100?h.toFixed(0):h.toPrecision(3))+' enot ('+(h*s.avg).toFixed(0)+' USDT vsaka) pri tveganju '+rk+' $, če se napolnita oba vstopa</div>'}
++'Velikost: 2 × '+(h>=100?h.toFixed(0):h.toPrecision(3))+' enot ('+(h*s.avg).toFixed(0)+' USDT vsaka) pri tveganju '+rkTxt()+', če se napolnita oba vstopa</div>'}
 function eaxT(r){var k=r.k5f||[],n=k.length,L=r.bias==='long',ok='<span class="up">✓</span> ',no='<span class="dn">✗</span> ';
 var ci=r.ct?Math.max(0,n-1-Math.round(r.ca/5)):-1,cb=r.ct==='bull'||r.ct==='bear',cdir=r.ct==='bull'||r.ct==='sweep-lo'?'long':'short';
 var swOk=!!r.ct&&cdir===r.bias,cisdOk=cb&&r.al,fvg=false,ret=false,i;
@@ -286,7 +298,7 @@ var rows=[['Ocena','<span class="gh '+(sc>=5?'up':sc===4?'':'mut')+'">'+g+' ('+s
 ['Seja',kz?ok+sess.kz:'<span class="mut">izven killzone</span>'],
 ['ATR 5m',at.toFixed(2)+' %']];var pp=r.p5||plan5(r);if(pp)rows.push(['Plan (5m CISD)',planTxt(pp)]);
 return '<div class="xwrap"><table class="xt"><tbody>'+rows.map(function(x){return '<tr><td>'+x[0]+'</td><td>'+x[1]+'</td></tr>'}).join('')+'</tbody></table></div>'}
-function plan5(r){if(!r.al||!r.sl||!r.cl)return null;var L=r.ct==='bull',k=r.k5f||[],ob=r.ob5||null,rk=parseFloat($('risk').value)||50;
+function plan5(r){if(!r.al||!r.sl||!r.cl)return null;var L=r.ct==='bull',k=r.k5f||[],ob=r.ob5||null,rk=rkUsd();
 var buf=r.sl*0.0005,sl=L?r.sl-buf:r.sl+buf,e1=r.cl,e2=ob?(ob.lo+ob.hi)/2:e1;if(L?sl>=e1:sl<=e1)return null;
 var liq=null,i,j,m;for(i=3;i<k.length-2;i++){var x=L?k[i].h:k[i].l,pv=true;for(j=1;j<=2;j++){if(L?(k[i-j].h>x||k[i+j].h>x):(k[i-j].l<x||k[i+j].l<x)){pv=false;break}}if(!pv)continue;var sw=false;for(m=i+3;m<k.length;m++){if(L?k[m].h>x:k[m].l<x){sw=true;break}}if(sw)continue;if(L?x>e1:x<e1){if(liq===null||(L?x<liq:x>liq))liq=x}}
 function mk(e,lab){var d=Math.abs(e-sl),tp=L?e+2*d:e-2*d,note='2R',lr=liq!==null?Math.abs(liq-e)/d:null;if(lr!==null&&lr>=2){tp=liq;note='likvidnost'}return {lab:lab,e:e,sl:sl,tp:tp,rr:Math.abs(tp-e)/d,note:note,lr:lr,pc:d/e*100,q:rk/d}}
@@ -295,10 +307,10 @@ var a=mk(e1,'CISD'),b=(ob&&Math.abs(e2-e1)/e1>0.0005&&(L?(e2<e1&&e2>sl):(e2>e1&&
 if(b&&bl(a)&&!bl(b))best=b;best.alt=b&&best!==b?b:(best===b?a:null);best.liq=liq;
 var inv=L?r.p<=sl:r.p>=sl,late=L?r.p>=best.tp:r.p<=best.tp;best.dead=inv||late;best.skip=inv||late||bl(best)||best.pc<0.5;best.why=inv?'NEVELJAVNO: cena že čez SL':late?'ZAMUJENO: cena že čez TP':bl(best)?'likvidnost '+fp(liq)+' pred 1:2 ('+best.lr.toFixed(1)+'R)':best.pc<0.5?'SL pod 0,5 % (provizije)':'';return best}
 function planTxt(p,short){if(!p)return '';var q=p.q>=100?p.q.toFixed(0):p.q.toPrecision(3);
-return (short?'':'<b>')+'Vstop ('+p.lab+') '+fp(p.e)+' · SL '+fp(p.sl)+' ('+p.pc.toFixed(2)+' %) · TP '+fp(p.tp)+' ('+p.note+') · RR '+p.rr.toFixed(1)+(short?'':'</b>')+' · '+q+' enot ('+(p.q*p.e).toFixed(0)+' USDT) pri '+($('risk').value||50)+' $'+(p.skip?(short?' · ⚠ ':' · <span class="dn">⚠ ')+p.why+(short?'':'</span>'):(short?' · OK':' · <span class="up">OK</span>'))}
+return (short?'':'<b>')+'Vstop ('+p.lab+') '+fp(p.e)+' · SL '+fp(p.sl)+' ('+p.pc.toFixed(2)+' %) · TP '+fp(p.tp)+' ('+p.note+') · RR '+p.rr.toFixed(1)+(short?'':'</b>')+' · '+q+' enot ('+(p.q*p.e).toFixed(0)+' USDT) pri '+rkTxt()+(p.skip?(short?' · ⚠ ':' · <span class="dn">⚠ ')+p.why+(short?'':'</span>'):(short?' · OK':' · <span class="up">OK</span>'))}
 var CLM=/[?&]claude=1/.test(location.search);
 function claudeTxt(){var c=rows.filter(function(r){return (r.xs||0)>=3||r.al}).sort(function(a,b){return ((b.xs||0)-(a.xs||0))||(b.sc-a.sc)});
-var t='CLAUDE POGLED · '+new Date(ts).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'})+' · '+((sess&&sess.kz)||'izven killzone')+' · kandidatov '+c.length+' od '+rows.length+'\n';
+var t='CLAUDE POGLED · '+tm(ts)+' · '+((sess&&sess.kz)||'izven killzone')+' · kandidatov '+c.length+' od '+rows.length+'\n';
 c.forEach(function(r){var p=r.p5;t+=r.s+' '+r.bias.toUpperCase()+' | EAX '+(r.xg||'-')+' ('+(r.xs||0)+'/6) | sc '+r.sc.toFixed(1)+' | cena '+fp(r.p)+' | 5m '+(r.ct||'-')+(r.ct?' CISD '+fp(r.cl)+' pred '+ago(r.ca)+' · sweep '+fp(r.sl):'')+' | RSI 1H/4H '+r.r1+'/'+r.r4+' | div '+(r.d1||'-')+'/'+(r.d4||'-')+' | trend '+(r.tr||'-')+' | 4H '+((r.h4||{}).ct||'-')+' D '+((r.hd||{}).ct||'-')+(r.eq?' | nepometen eq '+fp(r.eq):'')+(p?' | PLAN '+planTxt(p,true):'')+'\n'});
 if(!c.length)t+='Ni kandidatov (ocena C ali bolje ali CISD v smeri biasa).\n';return t}
 function claudeView(){var t=claudeTxt();window.__claude=t;var el=$('claude');if(!CLM){if(el)el.style.display='none';return}
@@ -311,16 +323,16 @@ if(k1&&!notif[k1]){notif[k1]=Date.now();ev.push(r.s+' '+r.bias.toUpperCase()+': 
 else if(k2&&!notif[k2]){notif[k2]=Date.now();ev.push(r.s+' '+r.bias.toUpperCase()+': EAX ocena '+r.xg)}});
 var ks=Object.keys(notif);if(ks.length>300)ks.sort(function(a,b){return notif[a]-notif[b]}).slice(0,ks.length-300).forEach(function(k){delete notif[k]});
 try{localStorage.setItem('notif',JSON.stringify(notif))}catch(e){}
-if(!ev.length||!nOn())return;beep();try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
-var body=ev.slice(0,4).join('\n')+(ev.length>4?'\n+ še '+(ev.length-4):'');
-try{if(window.Notification&&Notification.permission==='granted'){if(navigator.serviceWorker&&navigator.serviceWorker.controller){navigator.serviceWorker.ready.then(function(g){g.showNotification('Moj Screener',{body:body,tag:'scr'})})}else new Notification('Moj Screener',{body:body,tag:'scr'})}}catch(e){}
-document.title='('+ev.length+') Moj Screener';setTimeout(function(){document.title='Moj Screener'},60000)}
+if(!ev.length||!nOn())return;ping(ev.slice(0,4).join('\n')+(ev.length>4?'\n+ še '+(ev.length-4):''),ev.length,'scr')}
+function ping(body,n,tag){beep();try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
+try{if(window.Notification&&Notification.permission==='granted'){if(navigator.serviceWorker&&navigator.serviceWorker.controller){navigator.serviceWorker.ready.then(function(g){g.showNotification('Moj Screener',{body:body,tag:tag})})}else new Notification('Moj Screener',{body:body,tag:tag})}}catch(e){}
+document.title='('+n+') Moj Screener';setTimeout(function(){document.title='Moj Screener'},60000)}
 function detail(r){var lv=[];if(r.ct==='bear'||r.ct==='bull'){if(r.sl)lv.push({p:r.sl,c:'var(--warn)',t:'sweep '+fp(r.sl)});lv.push({p:r.cl,c:'var(--acc)',t:'CISD '+fp(r.cl)})}
 return '<div class="mut" style="margin-bottom:8px">Bias '+r.bias.toUpperCase()+' (HTF): '+r.bw+'</div>'+eaxT(r)+'<div class="gr">'+candles(r.k1,'1H · zadnjih 48')+candles(r.k5,'5m · zadnjih 72',lv)+'</div>'+setupHtml(r)+calc(r)}
 function render(){
 var out=$('out');
 if(!rows.length){out.className='empty';out.textContent='Pritisni Osveži.';return}
-rows.forEach(function(r){r.vol=Math.abs(r.ch);r.obd=r.s1?((r.p>=r.s1.lo&&r.p<=r.s1.hi)?0:Math.min(Math.abs(r.p-r.s1.lo),Math.abs(r.p-r.s1.hi))/r.p*100):999});kpis();glRender();
+rows.forEach(function(r){try{r.p5=plan5(r)}catch(e){r.p5=null}r.vol=Math.abs(r.ch);r.obd=r.s1?((r.p>=r.s1.lo&&r.p<=r.s1.hi)?0:Math.min(Math.abs(r.p-r.s1.lo),Math.abs(r.p-r.s1.hi))/r.p*100):999});kpis();glRender();
 var list=rows.filter(pass).sort(function(a,b){if(!!favs[a.s]!==!!favs[b.s])return favs[a.s]?-1:1;var x=a[sortK],y=b[sortK];if(typeof x==='string')return sortD*x.localeCompare(y);return sortD*((x-y)||(b.sc-a.sc))});
 if(!list.length){out.className='empty';out.textContent='Noben simbol ne ustreza filtrom.';return}
 out.className='';
@@ -337,7 +349,7 @@ out.querySelectorAll('tr.rw').forEach(function(tr){tr.onclick=function(e){if(e.t
 out.querySelectorAll('.star').forEach(function(s){s.onclick=function(e){e.stopPropagation();var f=s.dataset.f;if(favs[f])delete favs[f];else favs[f]=1;try{localStorage.setItem('fav',JSON.stringify(favs))}catch(x){}render()}});
 var L=list.filter(function(r){return r.sd==='long'&&r.sc>=2}),S=list.filter(function(r){return r.sd==='short'&&r.sc>=2});
 var f=function(a){return a.map(function(r){return 'BYBIT:'+r.s+'USDT.P'}).join(',')};
-$('ta').dataset.txt='###LONG,'+f(L)+',###SHORT,'+f(S)}
+$('ta').dataset.txt='###SMC X LONG,'+f(L)+',###SMC X SHORT,'+f(S)}
 function saveH(){try{localStorage.setItem('hist',JSON.stringify(hist.slice(-200)))}catch(e){}}
 function logHist(){rows.forEach(function(r){
 if(!(r.al&&r.sc>=4&&r.ca<=30&&r.sl))return;
@@ -364,8 +376,30 @@ var fin=hist.filter(function(h){return h.st==='2R'||h.st==='1R'||h.st==='SL'||h.
 $('hstat').textContent='Vstopi: '+fin.length+' · 2R: '+w2+' · vsaj 1R: '+w1+' · SL: '+sl+(fin.length?' · uspešnost vsaj 1R: '+Math.round(w1/fin.length*100)+'%':'');
 o.className='';var h='<table><thead><tr><th>Čas</th><th class="l">Simbol</th><th class="l">Smer</th><th>Ocena</th><th>Vstop</th><th>SL</th><th>TP 2R</th><th class="l">Stanje</th></tr></thead><tbody>';
 hist.slice().reverse().forEach(function(x){var d=Math.abs(x.e-x.sl),tp=x.side==='long'?x.e+2*d:x.e-2*d,col=x.st==='2R'||x.st==='1R'?'up':x.st==='SL'?'dn':'mut';
-h+='<tr><td class="mono">'+new Date(x.t).toLocaleString('sl-SI',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+'</td><td class="l"><b>'+x.s+'</b></td><td class="l"><span class="pill '+x.side+'">'+x.side.toUpperCase()+'</span></td><td class="mono">'+x.sc.toFixed(1)+'</td><td class="mono">'+fp(x.e)+'</td><td class="mono">'+fp(x.sl)+'</td><td class="mono">'+fp(tp)+'</td><td class="l '+col+'">'+(x.st==='pending'?'čaka vstop':x.st==='live'?'v teku'+(x.h1?' (1R doseženo)':''):x.st)+'</td></tr>'});
+h+='<tr><td class="mono">'+new Date(x.t).toLocaleString('sl-SI',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit',timeZone:TZ})+'</td><td class="l"><b>'+x.s+'</b></td><td class="l"><span class="pill '+x.side+'">'+x.side.toUpperCase()+'</span></td><td class="mono">'+x.sc.toFixed(1)+'</td><td class="mono">'+fp(x.e)+'</td><td class="mono">'+fp(x.sl)+'</td><td class="mono">'+fp(tp)+'</td><td class="l '+col+'">'+(x.st==='pending'?'čaka vstop':x.st==='live'?'v teku'+(x.h1?' (1R doseženo)':''):x.st)+'</td></tr>'});
 o.innerHTML=h+'</tbody></table>'}
+var trades=[],trPx={},trEd=-1,trT=0;try{trades=JSON.parse(localStorage.getItem('trades')||'[]')}catch(e){}
+function trSave(){try{localStorage.setItem('trades',JSON.stringify(trades))}catch(e){}}
+function num(v){return parseFloat(String(v||'').replace(/\s/g,'').replace(',','.'))}
+function trRender(){var o=$('trl');if(!trades.length){o.className='mut';o.innerHTML='Ni vpisanih trade-ov.';return}o.className='';
+o.innerHTML=trades.map(function(t,i){var p=trPx[t.s],L=t.L,be=L?t.sl>=t.e:t.sl<=t.e,w=false;
+var h='<b>'+t.s+'</b><span class="pill '+(L?'long':'short')+'">'+(L?'LONG':'SHORT')+'</span><span class="mono mut">vstop '+fp(t.e)+' · SL '+fp(t.sl)+(be?' (BE)':'')+' · TP '+fp(t.tp)+'</span>';
+if(p){var pn=(L?p-t.e:t.e-p)*t.q,ds=(L?p-t.sl:t.sl-p)/p*100,dt=(L?t.tp-p:p-t.tp)/p*100,rr=be?'':' ('+(pn/(Math.abs(t.e-t.sl)*t.q)).toFixed(2)+'R)';w=ds>0&&ds<0.3;
+h+='<span class="mono">cena <b>'+fp(p)+'</b></span><span class="mono '+(pn>=0?'up':'dn')+'">'+(pn>=0?'+':'')+pn.toFixed(2)+' USDT'+rr+'</span><span class="mono'+(w||ds<=0?' dn':'')+'">do SL '+(ds<=0?'dosežen':ds.toFixed(2)+' %')+'</span><span class="mono'+(dt<=0?' up':'')+'">do TP '+(dt<=0?'dosežen':dt.toFixed(2)+' %')+'</span>'}
+else h+='<span class="mut">cena se nalaga</span>';
+return '<div class="ti'+(w?' warn':'')+'">'+h+'<span class="x"><a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+t.s+'USDT.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+t.s+'USDT">BB</a><button class="ib" data-te="'+i+'">Uredi</button><button class="ib" data-td="'+i+'">Odstrani</button></span></div>'}).join('');
+o.querySelectorAll('[data-te]').forEach(function(b){b.onclick=function(){var t=trades[+b.dataset.te];trEd=+b.dataset.te;$('t_s').value=t.s;$('t_d').value=t.L?'L':'S';$('t_e').value=t.e;$('t_sl').value=t.sl;$('t_tp').value=t.tp;$('t_q').value=t.q;$('trmsg').textContent='Urejaš '+t.s;$('trf').classList.add('show')}});
+o.querySelectorAll('[data-td]').forEach(function(b){b.onclick=function(){var t=trades[+b.dataset.td];if(confirm('Odstranim '+t.s+' iz seznama? (Pozicija na Bybitu ostane nespremenjena.)')){trades.splice(+b.dataset.td,1);trSave();trRender()}}})}
+function trHit(){trades.forEach(function(t){var p=trPx[t.s];if(!p)return;var L=t.L,sl=L?p<=t.sl:p>=t.sl,tp=L?p>=t.tp:p<=t.tp,k=sl?'SL':tp?'TP':'';
+if(k&&t.hit!==k){t.hit=k;trSave();if(nOn())ping(t.s+' '+(L?'LONG':'SHORT')+': '+k+' dosežen pri '+fp(p),1,'trd')}})}
+function trTick(s,p){if(!trades.some(function(t){return t.s===s}))return;trPx[s]=p;trHit();if(!trT)trT=setTimeout(function(){trT=0;trRender()},1000)}
+$('tradd').onclick=function(){trEd=-1;['t_s','t_e','t_sl','t_tp','t_q'].forEach(function(k){$(k).value=''});$('trmsg').textContent='';$('trf').classList.toggle('show')};
+$('trsave').onclick=async function(){var s=$('t_s').value.toUpperCase().replace(/^BYBIT:/,'').replace(/\.P$/,'').replace(/USDT$/,'').trim(),L=$('t_d').value==='L',e=num($('t_e').value),sl=num($('t_sl').value),tp=num($('t_tp').value),q=num($('t_q').value),m=$('trmsg');
+if(!s||!(e>0&&sl>0&&tp>0&&q>0)){m.textContent='Izpolni vsa polja (številke večje od 0).';return}
+if(L?!(tp>e&&sl<tp):!(tp<e&&sl>tp)){m.textContent=L?'Pri longu mora biti TP nad vstopom in SL pod TP.':'Pri shortu mora biti TP pod vstopom in SL nad TP.';return}
+try{var r=await jget(API+'tickers?category=linear&symbol='+s+'USDT');trPx[s]=+r.list[0].lastPrice}catch(x){m.textContent='Simbola '+s+'USDT ni na Bybit perpetualih.';return}
+var t={s:s,L:L,e:e,sl:sl,tp:tp,q:q};if(trEd>=0)trades[trEd]=t;else trades.push(t);trEd=-1;trSave();$('trf').classList.remove('show');m.textContent='';trHit();trRender();if(rows.length)connect()};
+trRender();
 var ws=null,wsT=0;
 function setLive(on){var e=$('live');e.textContent=on?'● cene v živo':'○ ni žive povezave';e.className=on?'up':'mut'}
 function setCell(sym,sel,txt,cls){var tr=document.querySelector('tr.rw[data-s="'+sym+'"]');if(!tr)return;var c=tr.querySelector(sel);if(!c)return;c.textContent=txt;if(cls!==undefined)c.className='mono '+(sel==='.pc'?'pc':'cc')+' '+cls}
@@ -374,15 +408,15 @@ if(p!=null&&p!==r.p){var up=p>r.p;r.p=p;setCell(sym,'.pc',fp(p));var tr=document
 if(ch!=null){r.ch=ch;setCell(sym,'.cc',(ch>=0?'+':'')+ch.toFixed(1),ch>=0?'up':'dn')}}
 function connect(){clearTimeout(wsT);if(ws){try{ws.onclose=null;ws.close()}catch(e){}}if(!rows.length)return;
 ws=new WebSocket('wss://stream.bybit.com/v5/public/linear');
-ws.onopen=function(){setLive(true);var a=rows.map(function(r){return 'tickers.'+r.s+'USDT'});for(var i=0;i<a.length;i+=10)ws.send(JSON.stringify({op:'subscribe',args:a.slice(i,i+10)}))};
-ws.onmessage=function(m){try{var j=JSON.parse(m.data);if(j.topic&&j.topic.indexOf('tickers.')===0&&j.data){var d=j.data;upd(d.symbol.replace(/USDT$/,''),d.lastPrice!=null?+d.lastPrice:null,d.price24hPcnt!=null?+d.price24hPcnt*100:null)}}catch(e){}};
+ws.onopen=function(){setLive(true);var a=rows.map(function(r){return r.s});trades.forEach(function(t){if(a.indexOf(t.s)<0)a.push(t.s)});a=a.map(function(s){return 'tickers.'+s+'USDT'});for(var i=0;i<a.length;i+=10)ws.send(JSON.stringify({op:'subscribe',args:a.slice(i,i+10)}))};
+ws.onmessage=function(m){try{var j=JSON.parse(m.data);if(j.topic&&j.topic.indexOf('tickers.')===0&&j.data){var d=j.data;if(d.lastPrice!=null)trTick(d.symbol.replace(/USDT$/,''),+d.lastPrice);upd(d.symbol.replace(/USDT$/,''),d.lastPrice!=null?+d.lastPrice:null,d.price24hPcnt!=null?+d.price24hPcnt*100:null)}}catch(e){}};
 ws.onclose=function(){setLive(false);wsT=setTimeout(connect,3000)};ws.onerror=function(){try{ws.close()}catch(e){}}}
 setInterval(function(){if(ws&&ws.readyState===1)ws.send(JSON.stringify({op:'ping'}))},20000);
 setInterval(function(){var n=Date.now();if(!$('auto').checked||(document.hidden&&!nOn())||$('go').disabled)return;if(n-ts>=ivl*60000-15000&&n%300000>=8000&&n%300000<60000)scan()},5000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&$('auto').checked&&!$('go').disabled&&Date.now()-ts>ivl*60000)scan()});
 function kpis(){var n=rows.length,lg=rows.filter(function(r){return r.sd==='long'}).length,sh=rows.filter(function(r){return r.sd==='short'}).length,s1=rows.filter(function(r){return r.s1}).length,wt=rows.filter(function(r){return r.s1&&r.eq}).length,al=rows.filter(function(r){return r.al}).length,hot=rows.filter(function(r){return r.s1&&!r.eq&&r.al}).length;
 var c=function(cl,nn,tt){return '<div class="k '+cl+'"><div class="n">'+nn+'</div><div class="t">'+tt+'</div></div>'};
-$('kp').innerHTML=c('',sess.kz?sess.kz.replace(' killzone',''):'Izven','Seja')+c('l',lg,'Bias long')+c('s',sh,'Bias short')+c('',s1,'1H CISD setupi')+c('w',wt,'Počakaj (eq nepometen)')+c('l',hot,'Pripravljeni (1H + 5m CISD)')+c('',al,'Potrjen 5m CISD')+c('',ts?new Date(ts).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'}):'-','Zadnji sken')}
+$('kp').innerHTML=c('',sess.kz?sess.kz.replace(' killzone',''):'Izven','Seja')+c('l',lg,'Bias long')+c('s',sh,'Bias short')+c('',s1,'1H CISD setupi')+c('w',wt,'Počakaj (eq nepometen)')+c('l',hot,'Pripravljeni (1H + 5m CISD)')+c('',al,'Potrjen 5m CISD')+c('',ts?tm(ts):'-','Zadnji sken')}
 function banner(){
 var n=rows.filter(function(r){return r.sc>=4&&r.al&&!seen[key(r)]});var a=$('alert');
 if(n.length){a.className='alert show';a.textContent='Nov signal: '+n.map(function(r){return r.s+' '+r.sd.toUpperCase()+' ('+r.sc.toFixed(1)+')'}).join(', ');
@@ -393,11 +427,12 @@ document.querySelectorAll('[data-side]').forEach(function(b){b.onclick=function(
 document.querySelectorAll('[data-sig]').forEach(function(b){b.onclick=function(){var k=b.dataset.sig;sigs[k]=!sigs[k];b.classList.toggle('on',sigs[k]);render()}});
 $('minsc').oninput=render;$('go').onclick=scan;
 try{var rs=localStorage.getItem('risk');if(rs)$('risk').value=rs}catch(e){}
-function cfgSave(){try{localStorage.setItem('cfg',JSON.stringify({topn:$('topn').value,minto:$('minto').value,ivl:$('ivl').value,eqt:$('eqt').value,fs:$('fs').value,vsel:$('vsel').value}))}catch(e){}}
+function cfgSave(){try{localStorage.setItem('cfg',JSON.stringify({topn:$('topn').value,minto:$('minto').value,ivl:$('ivl').value,eqt:$('eqt').value,fs:$('fs').value,vsel:$('vsel').value,acct:$('acct').value,rpct:$('rpct').value}))}catch(e){}}
 function cfgApply(){ivl=Math.max(5,+$('ivl').value||5);eqTol=Math.max(0.0002,(+$('eqt').value||0.15)/100);document.documentElement.style.setProperty('--fs',$('fs').value)}
-try{var cf=JSON.parse(localStorage.getItem('cfg')||'{}');['topn','minto','ivl','eqt','fs','vsel'].forEach(function(k){if(cf[k])$(k).value=cf[k]})}catch(e){}
+try{var cf=JSON.parse(localStorage.getItem('cfg')||'{}');['topn','minto','ivl','eqt','fs','vsel','acct','rpct'].forEach(function(k){if(cf[k])$(k).value=cf[k]})}catch(e){}
 cfgApply();
-['topn','minto','ivl','eqt','fs','vsel'].forEach(function(k){$(k).onchange=function(){cfgSave();cfgApply();if(k==='eqt'||k==='topn'||k==='minto'||k==='vsel')scan()}});
+['topn','minto','ivl','eqt','fs','vsel','acct','rpct'].forEach(function(k){$(k).onchange=function(){cfgSave();cfgApply();if(k==='eqt'||k==='topn'||k==='minto'||k==='vsel')scan();else render()}});
+$('acct').oninput=$('rpct').oninput=render;
 $('gear').onclick=function(){$('set').classList.toggle('show')};
 var th='auto';try{th=localStorage.getItem('theme')||'auto'}catch(e){}
 function thApply(){var r=document.documentElement;if(th==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',th);$('thm').textContent=th==='auto'?'Tema: auto':th==='dark'?'Tema: temna':'Tema: svetla'}
