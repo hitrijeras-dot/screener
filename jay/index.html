@@ -66,6 +66,12 @@ th:first-child,td:first-child,.l{text-align:left}
 .kv b{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600}
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .note{color:var(--mut);font-size:12px;margin-top:16px;max-width:90ch}
+.tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.tab{border:0;background:none;padding:8px 14px;cursor:pointer;color:var(--mut);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:600}
+.tab.on{color:var(--ink);border-bottom-color:var(--acc)}
+.view{display:none}.view.on{display:block}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.sum .tb .n.up{color:var(--long)}.sum .tb .n.dn{color:var(--short)}
 .fl.new{background:var(--warnbg);color:var(--warn)}
 .up{color:var(--long)}.dn{color:var(--short)}.mut{color:var(--mut)}
 a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
@@ -85,6 +91,8 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
   </div>
 
   <div class="timeband" id="timeband"></div>
+
+  <div class="tabs" role="tablist"><button class="tab on" data-view="scan" type="button">Screener</button><button class="tab" data-view="hist" type="button">Zgodovina</button></div>
 
   <div class="set" id="set">
     <div class="g">
@@ -116,11 +124,25 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
   <div class="prog"><i id="pg"></i></div>
   <div class="alert" id="err"></div>
 
+  <div class="view on" id="v-scan">
   <div class="card">
     <table>
       <thead><tr><th>Kovanec</th><th class="l">Smer</th><th class="l">Stanje</th><th>Cena</th><th>Golden pocket</th><th>Do GP</th><th>Vstop</th><th>SL</th><th>TP</th><th>RR</th><th>Velikost</th></tr></thead>
       <tbody id="out"><tr><td colspan="11" class="empty">Klikni "Skeniraj". Pregled 80 kovancev traja približno pol minute.</td></tr></tbody>
     </table>
+  </div>
+
+  </div>
+
+  <div class="view" id="v-hist">
+    <div class="sum" id="hsum"></div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Signal</th><th class="l">Kovanec</th><th class="l">Okvir</th><th class="l">Smer</th><th>Vstop</th><th>SL</th><th>TP</th><th class="l">Konfluenca</th><th class="l">Izid</th><th>R</th></tr></thead>
+        <tbody id="hout"></tbody>
+      </table>
+    </div>
+    <div class="bar" style="margin-top:12px"><button class="ib" id="hclr" type="button">Počisti zgodovino</button><span class="lbl">Shranjeno samo v tem brskalniku. Vstop = zaprtje signalne sveče, SL pod HL, TP = H oz. vsaj 2R, provizija 0.11 % vključena v R. Če sveča zadene SL in TP hkrati, šteje SL.</span></div>
   </div>
 
   <div class="note">
@@ -279,6 +301,7 @@ async function scan(){
     await Promise.all([worker(),worker(),worker(),worker(),worker()]);
     rows=res;
     checkNew(res,tf);
+    await histUpdate(res,tf);
     var tm=new Date().toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
     $('stat').textContent='Pregledanih '+list.length+' kovancev ob '+tm+(fails?' · '+fails+' brez podatkov':'');
     render();
@@ -331,6 +354,55 @@ function ack(){if(Object.keys(newKeys).length){newKeys={};setTitle();render()}}
 document.addEventListener('pointerdown',function(e){if(!e.target.closest('#scan'))ack()});
 document.addEventListener('keydown',ack);
 notifBtn();
+
+/* ---------- Zgodovina signalov ---------- */
+var FEE=0.0011,TFN={D:'1D','360':'6H','90':'90m','23':'23m','5':'5m','3':'3m','1':'1m',W:'1W'};
+function hLoad(){try{return JSON.parse(ls('jay_hist')||'[]')||[]}catch(e){return []}}
+function hSave(h){ls('jay_hist',JSON.stringify(h.slice(-500)))}
+/* Izid trade-a na svečah od zadnjega preverjanja naprej. Zaprte sveče premaknejo "chk", odprta samo preveri. */
+function hCheck(x,k,live){
+  var all=live?k.concat([live]):k,up=x.dir==='long',risk=Math.abs(x.e-x.sl),fr=FEE*x.e/risk;
+  for(var i=0;i<all.length;i++){var c=all[i];if(c.t<=x.chk)continue;
+    var hitSL=up?c.l<=x.sl:c.h>=x.sl,hitTP=up?c.h>=x.tp:c.l<=x.tp;
+    if(hitSL||hitTP){x.res=hitSL?'SL':'TP';x.R=+((hitSL?-1:Math.abs(x.tp-x.e)/risk)-fr).toFixed(2);x.tx=c.t;return true}
+    if(c!==live)x.chk=c.t}
+  x.last=all.length?all[all.length-1].c:x.last;return false}
+async function histUpdate(res,tf){
+  var h=hLoad(),ids={};h.forEach(function(x){ids[x.id]=1});
+  res.forEach(function(r){if(r.state!==1)return;var c=cache[r.s];if(!c||!c.k[r.sigX])return;var sc=c.k[r.sigX],e=sc.c,sl=r.sl,id=r.key+'|'+sc.t;
+    if(ids[id]||(r.dir==='long'?e<=sl:e>=sl))return;
+    var tp=r.dir==='long'?Math.max(r.tpH,e+2*(e-sl)):Math.min(r.tpH,e-2*(sl-e));
+    h.push({id:id,s:r.s,tf:tf,dir:r.dir,t:sc.t,e:e,sl:sl,tp:tp,liq:!!r.liq,time:!!r.time,chk:sc.t,res:null,R:null});ids[id]=1});
+  var extra=0;
+  for(var i=0;i<h.length;i++){var x=h[i];if(x.res)continue;
+    var c=x.tf===tf?cache[x.s]:null;
+    if(!c&&extra<20){extra++;try{var k=await klines(x.s,x.tf),now=Date.now(),lv=null;if(k.length&&k[k.length-1].e>now)lv=k.pop();c={k:k,live:lv}}catch(e){c=null}}
+    if(c)hCheck(x,c.k,c.live)}
+  hSave(h);renderHist();
+}
+function hStats(list){var cl=list.filter(function(x){return x.res}),w=cl.filter(function(x){return x.R>0}).length,R=cl.reduce(function(a,x){return a+x.R},0);
+  return {n:cl.length,open:list.length-cl.length,w:cl.length?w/cl.length*100:0,R:R}}
+function renderHist(){
+  var h=hLoad();
+  var groups=[['Vsi signali',h],['+čas',h.filter(function(x){return x.time})],['+liq',h.filter(function(x){return x.liq})],['Brez +čas',h.filter(function(x){return !x.time})]];
+  $('hsum').innerHTML=groups.map(function(g){var st=hStats(g[1]);
+    return '<div class="tb"><div class="n mono '+(st.R>0?'up':st.R<0?'dn':'')+'">'+(st.R>0?'+':'')+st.R.toFixed(1)+'R</div><div class="t"><b>'+g[0]+'</b> · '+st.n+' zaprtih'+(st.n?', '+st.w.toFixed(0)+' % zadetih':'')+(st.open?' · '+st.open+' odprtih':'')+'</div></div>'}).join('');
+  if(!h.length){$('hout').innerHTML='<tr><td colspan="10" class="empty">Še ni potrjenih signalov. Vsak potrjen HL/LH, ki ga screener najde, se shrani sem in sproti dobi izid.</td></tr>';return}
+  $('hout').innerHTML=h.slice().reverse().map(function(x){var up=x.dir==='long',coin=x.s.replace(/USDT$/,''),
+      d=new Date(x.t).toLocaleString('sl-SI',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit',timeZone:TZ}),
+      cur=!x.res&&x.last!=null?((up?x.last-x.e:x.e-x.last)/Math.abs(x.e-x.sl)):null;
+    return '<tr><td class="mono">'+d+'</td><td class="l"><b>'+coin+'</b></td><td class="l">'+(TFN[x.tf]||x.tf)+'</td><td class="l"><span class="pill '+x.dir+'">'+(up?'LONG':'SHORT')+'</span></td>'+
+      '<td class="mono">'+fp(x.e)+'</td><td class="mono dn">'+fp(x.sl)+'</td><td class="mono up">'+fp(x.tp)+'</td>'+
+      '<td class="l">'+(x.liq?'<span class="fl liq">+liq</span>':'')+(x.time?'<span class="fl cas">+čas</span>':'')+(!x.liq&&!x.time?'<span class="mut">–</span>':'')+'</td>'+
+      '<td class="l">'+(x.res==='TP'?'<span class="st s1">TP zadet</span>':x.res==='SL'?'<span class="st s1s">SL</span>':'<span class="st s3">odprt'+(cur!=null?' · zdaj '+(cur>0?'+':'')+cur.toFixed(1)+'R':'')+'</span>')+'</td>'+
+      '<td class="mono '+(x.R>0?'up':x.R<0?'dn':'mut')+'"><b>'+(x.R==null?'–':(x.R>0?'+':'')+x.R.toFixed(2))+'</b></td></tr>'}).join('');
+}
+$('hclr').addEventListener('click',function(){if(confirm('Res izbrišem vso zgodovino signalov?')){ls('jay_hist','[]');renderHist()}});
+document.querySelectorAll('[data-view]').forEach(function(b){b.addEventListener('click',function(){var v=b.getAttribute('data-view');
+  document.querySelectorAll('[data-view]').forEach(function(x){x.classList.toggle('on',x===b)});
+  document.querySelectorAll('.view').forEach(function(x){x.classList.toggle('on',x.id==='v-'+v)});ls('jay_view',v);if(v==='hist')renderHist()})});
+renderHist();
+(function(){var v=ls('jay_view');var b=v&&document.querySelector('[data-view="'+v+'"]');if(b)b.click()})();
 
 /* ---------- Tabela ---------- */
 var stName={0:'Možen HL danes',1:'Potrjen',2:'V coni',3:'Čaka umik'};
