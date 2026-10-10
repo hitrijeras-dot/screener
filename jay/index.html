@@ -70,6 +70,7 @@ th:first-child,td:first-child,.l{text-align:left}
 .tab{border:0;background:none;padding:8px 14px;cursor:pointer;color:var(--mut);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:600}
 .tab.on{color:var(--ink);border-bottom-color:var(--acc)}
 .view{display:none}.view.on{display:block}
+body[data-view=hist] .scanonly,body[data-view=bt] .scanonly{display:none}
 .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
 .sum .tb .n.up{color:var(--long)}.sum .tb .n.dn{color:var(--short)}
 .fl.htf{background:var(--longbg);color:var(--long)}
@@ -106,7 +107,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
     </div>
   </div>
 
-  <div class="bar">
+  <div class="bar scanonly">
     <button class="btn" id="scan" type="button">Skeniraj</button>
     <button class="chip on" data-side="all" type="button">Vse</button>
     <button class="chip l" data-side="long" type="button">Long</button>
@@ -117,13 +118,13 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
     <button class="chip" id="htff" type="button" title="Long samo, če 1W kaže gor; short samo, če 1W kaže dol">Samo v smeri HTF</button>
     <span class="lbl" id="stat"></span>
   </div>
-  <div class="bar">
+  <div class="bar scanonly">
     <label class="lbl" for="auto">Samodejno:</label>
     <select id="auto" style="width:auto"><option value="0">Izklop</option><option value="5">vsakih 5 min</option><option value="15">vsakih 15 min</option><option value="30">vsakih 30 min</option></select>
     <button class="chip" id="notif" type="button">Vklopi obvestila</button>
     <span class="lbl" id="autost"></span>
   </div>
-  <div class="prog"><i id="pg"></i></div>
+  <div class="prog scanonly"><i id="pg"></i></div>
   <div class="alert" id="err"></div>
 
   <div class="view on" id="v-scan">
@@ -157,7 +158,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
       <div class="bar" style="margin:12px 0 0"><button class="btn" id="btgo" type="button">Zaženi backtest</button><span class="lbl" id="btst"></span></div>
     </div>
     <div id="btout"></div>
-    <div class="note" style="margin-top:8px">Kot <i>jay_hl_backtest_strategija.pine</i>: ista logika kot screener, samo zaprte sveče. Vstop ob zaprtju signalne sveče, SL 0.3 % pod HL (nad LH), izhod od naslednje sveče naprej (SL in TP v isti sveči = SL), provizija 0.11 % v R, najmanj 1R do cilja, en trade naenkrat na kovanec in varianto. Max DD = največji padec skupne krivulje R vseh kovancev. 23m je omejen na ~30 strani 1m sveč.</div>
+    <div class="note" style="margin-top:8px">Kot <i>jay_hl_backtest_strategija.pine</i>: ista logika kot screener, samo zaprte sveče. Vstop ob zaprtju signalne sveče, SL 0.3 % pod HL (nad LH), izhod od naslednje sveče naprej (SL in TP v isti sveči = SL), provizija 0.11 % v R, najmanj 1R do cilja, <b>+HTF</b> = smer 1W (na 1W okviru 1M) ob signalu, samo iz že zaprtih tedenskih sveč, en trade naenkrat na kovanec in varianto. Max DD = največji padec skupne krivulje R vseh kovancev. 23m je omejen na ~30 strani 1m sveč.</div>
   </div>
 
   <div class="note">
@@ -390,8 +391,15 @@ $('htff').addEventListener('click',function(){htfOn=!htfOn;ls('jay_htf',htfOn?'1
 htfBtn();
 
 /* ---------- Backtest (kot jay_hl_backtest_strategija.pine) ---------- */
-var BT_F=[['vsi','vsi'],['cas','+čas'],['liq','+liq']],BT_T=['H','2R','3R'];
-function btRun(k,tfMin,piv){
+var BT_F=[['vsi','vsi'],['cas','+čas'],['liq','+liq'],['htf','+HTF']],BT_T=['H','2R','3R'];
+/* HTF skozi zgodovino brez gledanja naprej: smer po vsaki zaprti 1W (na 1W okviru 1M) sveči, velja od njenega zaprtja */
+async function btHtf(sym,tf,piv){var M=tf==='W',k=await kl(sym,M?'M':'W',M?200:1000),now=Date.now(),out=[];
+  k.forEach(function(x){var d=new Date(x.t);x.e=M?Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1):x.t+6048e5});
+  k=k.filter(function(x){return x.e<=now});
+  for(var j=0;j<k.length;j++){var d=htfDir(k.slice(0,j+1),piv,0);out.push({e:k[j].e,d:d||0})}
+  return out}
+function htfAt(H,t){var d=0;if(!H)return 0;for(var j=0;j<H.length&&H[j].e<=t;j++)d=H[j].d;return d}
+function btRun(k,tfMin,piv,H){
   var sigs=[];jayScan(k,{piv:piv,freshD:5,tfMin:tfMin,onSig:function(g,d){sigs.push({g:g,d:d})}});
   var V=[];BT_F.forEach(function(f){BT_T.forEach(function(t){V.push({f:f[0],t:t,o:null,tr:[]})})});
   var si=0;
@@ -400,7 +408,8 @@ function btRun(k,tfMin,piv){
       if(up?c.l<=o.st:c.h>=o.st)r=-1-fr;else if(up?c.h>=o.tp:c.l<=o.tp)r=(up?o.tp-o.en:o.en-o.tp)/rk-fr;
       if(r!==null){v.tr.push({t:c.t,R:r,d:o.d});v.o=null}});
     while(si<sigs.length&&sigs[si].g.i===i){var S=sigs[si++],g=S.g,up=S.d==='long',en=g.close,st=up?g.HL*(1-0.003):g.LH*(1+0.003),rk=Math.abs(en-st),tg=up?g.H:g.lo;
-      V.forEach(function(v){if(v.o||!(rk>0)||(v.f==='cas'&&!g.time)||(v.f==='liq'&&!g.liq))return;
+      var hd=htfAt(H,k[i].e||k[i].t);
+      V.forEach(function(v){if(v.o||!(rk>0)||(v.f==='cas'&&!g.time)||(v.f==='liq'&&!g.liq)||(v.f==='htf'&&hd!==(up?1:-1)))return;
         var m=v.t==='2R'?2:3,tp=v.t==='H'?tg:up?en+m*rk:en-m*rk;if(Math.abs(tp-en)/rk<1)return;v.o={d:up?1:-1,en:en,st:st,tp:tp}})}
   }
   return {V:V,open:V.map(function(v){return v.o?1:0})};
@@ -414,7 +423,7 @@ async function btGo(){
   var syms=$('btsym').value.toUpperCase().split(/[\s,;]+/).filter(Boolean).map(function(x){return /USDT$/.test(x)?x:x+'USDT'});
   var res=[],done=0,q=syms.slice();
   async function one(sym){try{var k=await klines(sym,tf,{n:1000,pages:pages});if(k.length&&k[k.length-1].e>Date.now())k.pop();if(k.length>nb)k=k.slice(-nb);
-      if(k.length<30)throw 0;var r=btRun(k,c.min,piv);r.s=sym;r.from=k[0].t;r.bars=k.length;res.push(r)}catch(e){res.push({s:sym,err:1})}
+      if(k.length<30)throw 0;var H=null;try{H=await btHtf(sym,tf,piv)}catch(e){}var r=btRun(k,c.min,piv,H);r.noH=!H;r.s=sym;r.from=k[0].t;r.bars=k.length;res.push(r)}catch(e){res.push({s:sym,err:1})}
     done++;$('btst').textContent='Računam '+done+'/'+syms.length+' …'}
   async function worker(){while(q.length)await one(q.shift())}
   await Promise.all([worker(),worker(),worker()]);
@@ -425,19 +434,20 @@ function btRender(res,tf){
   if(!ok.length){$('btst').textContent='Ni podatkov.';return}
   var from=Math.min.apply(null,ok.map(function(r){return r.from}));
   $('btst').textContent=ok.length+' kovancev · '+(TFN[tf]||tf)+' · od '+new Date(from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+(bad.length?' · brez podatkov: '+bad.map(function(r){return r.s.replace(/USDT$/,'')}).join(', '):'');
-  var rowsV=[];BT_F.forEach(function(f,fi){BT_T.forEach(function(t,ti){var ix=fi*3+ti,tr=[];ok.forEach(function(r){tr=tr.concat(r.V[ix].tr)});var st=btStats(tr);st.name=f[1]+', cilj '+t;rowsV.push(st)})});
+  var rowsV=[];BT_F.forEach(function(f,fi){BT_T.forEach(function(t,ti){var ix=fi*BT_T.length+ti,tr=[];ok.forEach(function(r){tr=tr.concat(r.V[ix].tr)});var st=btStats(tr);st.name=f[1]+', cilj '+t;rowsV.push(st)})});
   var best=rowsV.reduce(function(a,b){return b.avg>a.avg&&b.n>=10?b:a},rowsV[0]);
   var cell=function(v,d){return '<td class="mono '+(v>0?'up':v<0?'dn':'')+'">'+(v>0?'+':'')+v.toFixed(d)+'</td>'};
   var h='<div class="card" style="margin-bottom:12px"><table style="min-width:560px"><thead><tr><th>Varianta</th><th>Tradeov</th><th>Zadetih</th><th>Skupaj R</th><th>Na trade</th><th>Max DD</th></tr></thead><tbody>'+
     rowsV.map(function(x){return '<tr'+(x===best?' style="background:var(--longbg)"':'')+'><td>'+x.name+(x===best?' <span class="fl liq">najboljša</span>':'')+'</td><td class="mono">'+x.n+'</td><td class="mono">'+x.w.toFixed(0)+' %</td>'+cell(x.R,1)+cell(x.avg,2)+'<td class="mono dn">'+(x.dd?'−':'')+x.dd.toFixed(1)+'R</td></tr>'}).join('')+'</tbody></table></div>';
-  var all=[];ok.forEach(function(r){all=all.concat(r.V[0].tr)});
-  var L=btStats(all.filter(function(x){return x.d===1})),S=btStats(all.filter(function(x){return x.d===-1}));
-  h+='<div class="sum"><div class="tb"><div class="n mono '+(L.R>0?'up':'dn')+'">'+(L.R>0?'+':'')+L.R.toFixed(1)+'R</div><div class="t"><b>Long</b> (vsi, cilj H) · '+L.n+' tradeov, '+L.w.toFixed(0)+' %</div></div>'+
-    '<div class="tb"><div class="n mono '+(S.R>0?'up':'dn')+'">'+(S.R>0?'+':'')+S.R.toFixed(1)+'R</div><div class="t"><b>Short</b> (vsi, cilj H) · '+S.n+' tradeov, '+S.w.toFixed(0)+' %</div></div>'+
-    '<div class="tb"><div class="n mono">'+ok.filter(function(r){return btStats(r.V[0].tr).R>0}).length+'/'+ok.length+'</div><div class="t">kovancev v plusu (vsi, cilj H)</div></div></div>';
-  h+='<div class="card"><table style="min-width:560px"><thead><tr><th>Kovanec</th><th>Od</th><th>Tradeov</th><th>Zadetih</th><th>R (vsi, H)</th><th>R (+čas, 2R)</th><th>Max DD</th></tr></thead><tbody>'+
-    ok.slice().sort(function(a,b){return btStats(b.V[0].tr).R-btStats(a.V[0].tr).R}).map(function(r){var a=btStats(r.V[0].tr),b=btStats(r.V[4].tr);
-      return '<tr><td><b>'+r.s.replace(/USDT$/,'')+'</b></td><td class="mono">'+new Date(r.from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+'</td><td class="mono">'+a.n+'</td><td class="mono">'+a.w.toFixed(0)+' %</td>'+cell(a.R,1)+cell(b.R,1)+'<td class="mono dn">'+(a.dd?'−':'')+a.dd.toFixed(1)+'R</td></tr>'}).join('')+'</tbody></table></div>';
+  var hx=BT_F.length*BT_T.length-BT_T.length;
+  function ls2(ix,name){var all=[];ok.forEach(function(r){all=all.concat(r.V[ix].tr)});
+    return [[1,'Long'],[-1,'Short']].map(function(z){var x=btStats(all.filter(function(t){return t.d===z[0]}));
+      return '<div class="tb"><div class="n mono '+(x.R>0?'up':x.R<0?'dn':'')+'">'+(x.R>0?'+':'')+x.R.toFixed(1)+'R</div><div class="t"><b>'+z[1]+'</b> ('+name+', cilj H) · '+x.n+' tradeov, '+x.w.toFixed(0)+' %</div></div>'}).join('')}
+  h+='<div class="sum">'+ls2(0,'vsi')+ls2(hx,'+HTF')+'</div>'+
+    '<div class="lbl" style="margin:-4px 0 12px">'+ok.filter(function(r){return btStats(r.V[0].tr).R>0}).length+'/'+ok.length+' kovancev v plusu (vsi, cilj H)'+(ok.some(function(r){return r.noH})?' · brez HTF podatkov: '+ok.filter(function(r){return r.noH}).map(function(r){return r.s.replace(/USDT$/,'')}).join(', '):'')+'</div>';
+  h+='<div class="card"><table style="min-width:560px"><thead><tr><th>Kovanec</th><th>Od</th><th>Tradeov</th><th>Zadetih</th><th>R (vsi, H)</th><th>R (+čas, 2R)</th><th>R (+HTF, H)</th><th>Max DD</th></tr></thead><tbody>'+
+    ok.slice().sort(function(a,b){return btStats(b.V[0].tr).R-btStats(a.V[0].tr).R}).map(function(r){var a=btStats(r.V[0].tr),b=btStats(r.V[BT_T.length+1].tr),hh=btStats(r.V[hx].tr);
+      return '<tr><td><b>'+r.s.replace(/USDT$/,'')+'</b></td><td class="mono">'+new Date(r.from).toLocaleDateString('sl-SI',{timeZone:'UTC'})+'</td><td class="mono">'+a.n+'</td><td class="mono">'+a.w.toFixed(0)+' %</td>'+cell(a.R,1)+cell(b.R,1)+cell(hh.R,1)+'<td class="mono dn">'+(a.dd?'−':'')+a.dd.toFixed(1)+'R</td></tr>'}).join('')+'</tbody></table></div>';
   $('btout').innerHTML=h;
 }
 $('btgo').addEventListener('click',btGo);
@@ -489,7 +499,7 @@ function renderHist(){
 $('hclr').addEventListener('click',function(){if(confirm('Res izbrišem vso zgodovino signalov?')){ls('jay_hist','[]');renderHist()}});
 document.querySelectorAll('[data-view]').forEach(function(b){b.addEventListener('click',function(){var v=b.getAttribute('data-view');
   document.querySelectorAll('[data-view]').forEach(function(x){x.classList.toggle('on',x===b)});
-  document.querySelectorAll('.view').forEach(function(x){x.classList.toggle('on',x.id==='v-'+v)});ls('jay_view',v);if(v==='hist')renderHist()})});
+  document.querySelectorAll('.view').forEach(function(x){x.classList.toggle('on',x.id==='v-'+v)});ls('jay_view',v);document.body.setAttribute('data-view',v);if(v==='hist')renderHist()})});
 renderHist();
 (function(){var v=ls('jay_view');var b=v&&document.querySelector('[data-view="'+v+'"]');if(b)b.click()})();
 
