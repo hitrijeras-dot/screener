@@ -2,7 +2,8 @@
 // Jay HL – dnevno trgovanje (day trade) backtest
 // Vstop: HL/LH na okviru grafa (5m / 23m / 90m), isti algoritem kot indikator "Jay HL · Time × Value".
 // Kontekst: struktura na višjem okviru (privzeto 6H) – smer ali cona (cena v ≥ 0.5 umiku zadnje HTF noge).
-// Izhod: SL / TP ali zaprtje ob koncu dneva (00:00 UTC = 02:00 poletni čas).
+// Izhod: SL / TP ali po času (EOD = 00:00 UTC = 02:00 poletni čas, ali 24 h / 48 h po vstopu).
+// Smer D = zadnji potrjen swing (3/3) na 1D: višje dno / višji vrh = gor (kot backtest v brskalniku).
 strategy("Jay HL Dan BT", shorttitle="Jay Dan BT", overlay=true, initial_capital=10000, commission_type=strategy.commission.percent, commission_value=0.055, margin_long=5, margin_short=5, pyramiding=0, process_orders_on_close=true)
 
 pivLen  = input.int(5, "Swing: sveče levo/desno", minval=2)
@@ -13,9 +14,10 @@ liqTol  = input.float(1.5, "Toleranca likvidnosti (%)", step=0.1) / 100
 slBuf   = input.float(0.3, "SL pod/nad HL/LH (%)", step=0.1) / 100
 minSL   = input.float(0.35, "Najmanjši SL (%)", step=0.05) / 100
 htfTf   = input.timeframe("360", "Višji okvir (kontekst)")
-ctxSel  = input.string("cona HTF", "Strategija: kontekst", options=["vsi", "smer HTF", "cona HTF"])
+exitSel = input.string("24h", "Izhod po času", options=["EOD", "24h", "48h"])
+ctxSel  = input.string("smer D", "Strategija: kontekst", options=["vsi", "smer D", "smer HTF", "cona HTF"])
 timSel  = input.bool(true, "Strategija: samo 3. 6H (12–18 UTC)")
-tpSel   = input.string("2R", "Strategija: cilj", options=["2R", "3R", "H"])
+tpSel   = input.string("3R", "Strategija: cilj", options=["2R", "3R", "H"])
 fee     = 0.0011
 
 f_jay() =>
@@ -149,11 +151,30 @@ f_jay() =>
 [bullSig, bearSig, bHL, sLH, bH, bLeg, sLo, sLeg, bA, sA, cDir, bLiq, sLiq] = f_jay()
 [x1, x2, x3, x4, hBH, hBLeg, hSLo, hSLeg, hBA, hSA, hDir, x5, x6] = request.security(syminfo.tickerid, htfTf, f_jay(), lookahead=barmerge.lookahead_off)
 
+f_bias() =>
+    pL = ta.pivotlow(low, 3, 3)
+    pH = ta.pivothigh(high, 3, 3)
+    var float lastL = na
+    var float prevL = na
+    var float lastH = na
+    var float prevH = na
+    var int kind = 0
+    if not na(pL)
+        prevL := lastL
+        lastL := pL
+        kind := 1
+    if not na(pH)
+        prevH := lastH
+        lastH := pH
+        kind := 2
+    kind == 1 and not na(prevL) ? (lastL > prevL ? 1 : -1) : kind == 2 and not na(prevH) ? (lastH > prevH ? 1 : -1) : 0
+dDir = request.security(syminfo.tickerid, "D", f_bias(), lookahead=barmerge.lookahead_off)
+
 timeOK = hour(time, "UTC") >= 12 and hour(time, "UTC") < 18
 dayEndOf(t) => math.floor(t / 86400000) * 86400000 + 86400000
 
-// ===== 18 variant: kontekst (vsi / smer / cona) × čas (ves dan / 3. 6H) × cilj (2R / 3R / H) =====
-NV = 18
+// ===== 24 variant: kontekst (vsi / smer D / smer HTF / cona HTF) × čas (ves dan / 3. 6H) × cilj (2R / 3R / H) =====
+NV = 24
 var array<int>   vOpen = array.new_int(NV, 0)
 var array<float> vEn = array.new_float(NV, na)
 var array<float> vSt = array.new_float(NV, na)
@@ -197,19 +218,19 @@ for k = 0 to NV - 1
             array.set(vPeak, k, pk)
             array.set(vDD, k, math.max(array.get(vDD, k), pk - cum))
 
-dEnd = dayEndOf(time_close)
+dEnd = exitSel == "EOD" ? dayEndOf(time_close) : time_close + (exitSel == "24h" ? 86400000 : 172800000)
 canEnter = dEnd - time_close >= 5 * 60000
 doEntry(int dir, float st, float ltfTgt, float htfTgt, bool inZone) =>
     en = close
     rk = math.abs(en - st)
     if canEnter and rk > 0 and rk / en >= minSL
-        for c = 0 to 2
-            ctxOK = c == 0 or (c == 1 and hDir == dir) or (c == 2 and inZone)
+        for c = 0 to 3
+            ctxOK = c == 0 or (c == 1 and dDir == dir) or (c == 2 and hDir == dir) or (c == 3 and inZone)
             for t = 0 to 1
                 tOK = t == 0 or timeOK
                 for p = 0 to 2
                     k = c * 6 + t * 3 + p
-                    tp = p == 0 ? en + dir * 2 * rk : p == 1 ? en + dir * 3 * rk : (c == 2 ? htfTgt : ltfTgt)
+                    tp = p == 0 ? en + dir * 2 * rk : p == 1 ? en + dir * 3 * rk : (c == 3 ? htfTgt : ltfTgt)
                     if ctxOK and tOK and array.get(vOpen, k) == 0 and dir * (tp - en) / rk >= 1
                         array.set(vOpen, k, dir)
                         array.set(vEn, k, en)
@@ -229,7 +250,7 @@ if bearSig
 var int firstT = time
 var table tb = table.new(position.bottom_right, 6, NV + 2, bgcolor=color.new(color.black, 80))
 if barstate.islastconfirmedhistory or barstate.islast
-    cN = array.from("vsi", "smer", "cona")
+    cN = array.from("vsi", "smerD", "smer" + htfTf, "cona" + htfTf)
     tN = array.from("dan", "3.6H")
     pN = array.from("2R", "3R", "H")
     table.cell(tb, 0, 0, "var", text_color=color.white)
@@ -245,28 +266,31 @@ if barstate.islastconfirmedhistory or barstate.islast
         table.cell(tb, 3, k + 1, str.tostring(array.get(vR, k), "#.##"), text_color=color.white)
         table.cell(tb, 4, k + 1, str.tostring(array.get(vDD, k), "#.##"), text_color=color.white)
         table.cell(tb, 5, k + 1, str.tostring(array.get(vEod, k)), text_color=color.white)
-    table.cell(tb, 0, NV + 1, "od " + str.format_time(firstT, "dd.MM.yy", "UTC") + " · " + str.tostring(bar_index) + " sveč", text_color=color.white)
+    table.cell(tb, 0, NV + 1, "izhod " + exitSel + " · od " + str.format_time(firstT, "dd.MM.yy", "UTC") + " · " + str.tostring(bar_index) + " sveč", text_color=color.white)
 
 // pravi strategy (izbrana varianta) – za Strategy Tester
-ctxI = ctxSel == "vsi" ? 0 : ctxSel == "smer HTF" ? 1 : 2
+ctxI = ctxSel == "vsi" ? 0 : ctxSel == "smer D" ? 1 : ctxSel == "smer HTF" ? 2 : 3
 flat = strategy.position_size == 0
 if flat and canEnter and (not timSel or timeOK)
     if bullSig
         st = bHL * (1 - slBuf)
         rk = close - st
-        tp = tpSel == "2R" ? close + 2 * rk : tpSel == "3R" ? close + 3 * rk : (ctxI == 2 ? hBH : bH)
-        if rk > 0 and rk / close >= minSL and (ctxI == 0 or (ctxI == 1 and hDir == 1) or (ctxI == 2 and zoneL)) and (tp - close) / rk >= 1
+        tp = tpSel == "2R" ? close + 2 * rk : tpSel == "3R" ? close + 3 * rk : (ctxI == 3 ? hBH : bH)
+        if rk > 0 and rk / close >= minSL and (ctxI == 0 or (ctxI == 1 and dDir == 1) or (ctxI == 2 and hDir == 1) or (ctxI == 3 and zoneL)) and (tp - close) / rk >= 1
             strategy.entry("L", strategy.long, qty=strategy.equity * 0.01 / rk)
             strategy.exit("Lx", "L", stop=st, limit=tp)
     if bearSig
         st = sLH * (1 + slBuf)
         rk = st - close
-        tp = tpSel == "2R" ? close - 2 * rk : tpSel == "3R" ? close - 3 * rk : (ctxI == 2 ? hSLo : sLo)
-        if rk > 0 and rk / close >= minSL and (ctxI == 0 or (ctxI == 1 and hDir == -1) or (ctxI == 2 and zoneS)) and (close - tp) / rk >= 1
+        tp = tpSel == "2R" ? close - 2 * rk : tpSel == "3R" ? close - 3 * rk : (ctxI == 3 ? hSLo : sLo)
+        if rk > 0 and rk / close >= minSL and (ctxI == 0 or (ctxI == 1 and dDir == -1) or (ctxI == 2 and hDir == -1) or (ctxI == 3 and zoneS)) and (close - tp) / rk >= 1
             strategy.entry("S", strategy.short, qty=strategy.equity * 0.01 / rk)
             strategy.exit("Sx", "S", stop=st, limit=tp)
-if strategy.position_size != 0 and time_close >= dayEndOf(time)
-    strategy.close_all(comment="EOD")
+var float posEnd = na
+if strategy.position_size != 0 and strategy.position_size[1] == 0
+    posEnd := exitSel == "EOD" ? dayEndOf(time_close[1]) : time_close[1] + (exitSel == "24h" ? 86400000 : 172800000)
+if strategy.position_size != 0 and not na(posEnd) and time_close >= posEnd
+    strategy.close_all(comment="čas")
 
 plotshape(bullSig, "HL", shape.triangleup, location.belowbar, color.new(#18966E, 0), size=size.tiny)
 plotshape(bearSig, "LH", shape.triangledown, location.abovebar, color.new(#CF4636, 0), size=size.tiny)
