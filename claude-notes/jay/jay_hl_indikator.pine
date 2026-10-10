@@ -11,7 +11,7 @@ grpF = "Fib / vrednost"
 gpA     = input.float(0.618, "Golden pocket od", step=0.001, group=grpF)
 gpB     = input.float(0.79, "Golden pocket do", step=0.001, group=grpF)
 liqTol  = input.float(1.5, "Toleranca stare likvidnosti (%)", step=0.1, group=grpF) / 100
-showExt = input.bool(true, "Cilji −0.27 / −0.618", group=grpF)
+showExt = input.bool(true, "Cilji −0.27 / −0.65 / −1", group=grpF)
 grpT = "Čas"
 showQ   = input.bool(true, "Začetek kvartala", group=grpT)
 showM   = input.bool(true, "Začetek meseca", group=grpT)
@@ -24,6 +24,10 @@ showPos = input.bool(true, "Cona vstop / SL / TP (kot Long/Short orodje)", group
 acct    = input.float(10000, "Račun ($)", step=100, group=grpR)
 riskP   = input.float(1.0, "Tveganje na trade (%)", step=0.1, group=grpR)
 freshN  = input.int(7, "Potrjen setup velja še (sveč)", minval=1, group=grpR)
+slMode  = input.string("pod HL", "SL za potrjen HL/LH", options=["pod HL", "pod dnom noge"], group=grpR)
+slLeg   = slMode == "pod dnom noge"
+grpH = "HTF sveče (Jay: L-LL-HL na 3D / 1W)"
+showHC  = input.bool(true, "Pokaži HTF sveče v oznakah in tabeli", group=grpH)
 
 cVal  = #2C68D2
 cWho  = #C97A00
@@ -51,6 +55,65 @@ freshTime = not na(mStart) and (time - mStart) < freshD * 86400000
 intraday = timeframe.in_seconds() < 86400
 h6 = hour(time, "UTC")
 timeOK = intraday ? (h6 >= 12 and h6 < 18) : (week3 or freshTime)
+
+// =================== HTF SVEČE (kot screener candSeq) ===================
+// 3D iz 1D, sidro epoch floor(t / 3 dni); a, b, c zaprte: b.l < a.l, c.l > b.l, c.c > b.h; velja v zadnjih 3 3D svečah. Short zrcalno.
+f3D() =>
+    ms3 = 3 * 86400000
+    bk = math.floor(time / ms3)
+    var float cH = na
+    var float cL = na
+    var int   cB = na
+    var array<float> hs = array.new_float()
+    var array<float> los = array.new_float()
+    var array<float> cs = array.new_float()
+    var int sinceL = 99
+    var int sinceS = 99
+    if na(cB) or bk != cB
+        cB := bk
+        cH := high
+        cL := low
+    else
+        cH := math.max(cH, high)
+        cL := math.min(cL, low)
+    if math.floor((time + 86400000) / ms3) != bk
+        array.push(hs, cH)
+        array.push(los, cL)
+        array.push(cs, close)
+        if array.size(hs) > 3
+            array.shift(hs)
+            array.shift(los)
+            array.shift(cs)
+        sinceL += 1
+        sinceS += 1
+        if array.size(hs) == 3
+            aH = array.get(hs, 0)
+            aL = array.get(los, 0)
+            bH2 = array.get(hs, 1)
+            bL2 = array.get(los, 1)
+            cH2 = array.get(hs, 2)
+            cL2 = array.get(los, 2)
+            cC2 = array.get(cs, 2)
+            if bL2 < aL and cL2 > bL2 and cC2 > bH2
+                sinceL := 0
+            if bH2 > aH and cH2 < bH2 and cC2 < bL2
+                sinceS := 0
+    [sinceL < 3, sinceS < 3]
+// 1W: b.l < a.l, c.l > b.l (brez pogoja zaprtja), v zadnjih 4 zaprtih tednih. Short zrcalno.
+// (zamik [1] + lookahead_on = samo zaprti tedni, brez prerisovanja)
+fW() =>
+    sqL = low[2] < low[3] and low[1] > low[2]
+    sqS = high[2] > high[3] and high[1] < high[2]
+    [sqL or sqL[1] or sqL[2] or sqL[3], sqS or sqS[1] or sqS[2] or sqS[3]]
+[c3Ld, c3Sd] = f3D()
+[c3Lh, c3Sh] = request.security(syminfo.tickerid, "D", [c3Ld[1], c3Sd[1]], lookahead=barmerge.lookahead_on)
+[wLq, wSq] = request.security(syminfo.tickerid, "W", fW(), lookahead=barmerge.lookahead_on)
+c3L = timeframe.isdaily and timeframe.multiplier == 1 ? c3Ld : c3Lh
+c3S = timeframe.isdaily and timeframe.multiplier == 1 ? c3Sd : c3Sh
+hcTxt(bool isL) =>
+    a3 = isL ? c3L : c3S
+    aw = isL ? wLq : wSq
+    (a3 ? " +3D" : "") + (aw ? " +1W" : "")
 
 vline(col, sty, w) =>
     line.new(bar_index, low, bar_index, high, extend=extend.both, color=col, style=sty, width=w)
@@ -277,7 +340,8 @@ if bNew
     lvl(bLines, bLegX, b79, color.new(cVal, 20), line.style_solid, 1)
     if showExt
         lvl(bLines, bHx, bH + bR * 0.27, color.new(cUp, 30), line.style_dashed, 1)
-        lvl(bLines, bHx, bH + bR * 0.618, color.new(cUp, 30), line.style_dashed, 1)
+        lvl(bLines, bHx, bH + bR * 0.65, color.new(cUp, 30), line.style_dashed, 1)
+        lvl(bLines, bHx, bH + bR * 1.0, color.new(cUp, 30), line.style_dashed, 1)
 
 if sNew
     clearLines(sLines)
@@ -295,13 +359,14 @@ if sNew
     lvl(sLines, sLegX, s79, color.new(cDn, 20), line.style_solid, 1)
     if showExt
         lvl(sLines, sLox, sLo - sR * 0.27, color.new(cDn, 30), line.style_dashed, 1)
-        lvl(sLines, sLox, sLo - sR * 0.618, color.new(cDn, 30), line.style_dashed, 1)
+        lvl(sLines, sLox, sLo - sR * 0.65, color.new(cDn, 30), line.style_dashed, 1)
+        lvl(sLines, sLox, sLo - sR * 1.0, color.new(cDn, 30), line.style_dashed, 1)
 
 if bullSig
-    flags = "HL" + (bLiq ? " +liq" : "") + (timeOK ? " +čas" : "")
+    flags = "HL" + (bLiq ? " +liq" : "") + (timeOK ? " +čas" : "") + (showHC ? hcTxt(true) : "")
     label.new(bHLx, bHL, flags, style=label.style_label_up, color=cUp, textcolor=color.white, size=size.normal)
 if bearSig
-    flags = "LH" + (sLiq ? " +liq" : "") + (timeOK ? " +čas" : "")
+    flags = "LH" + (sLiq ? " +liq" : "") + (timeOK ? " +čas" : "") + (showHC ? hcTxt(false) : "")
     label.new(sLHx, sLH, flags, style=label.style_label_down, color=cDn, textcolor=color.white, size=size.normal)
 
 plotshape(bullSig, "HL long", shape.triangleup, location.belowbar, cUp, size=size.tiny)
@@ -328,7 +393,7 @@ st = isLong ? lSt : sSt
 hlv = isLong ? (lSt == 4 ? bSigHL : bHL) : (sSt == 4 ? sSigLH : sLH)
 nowEntry = st >= 3
 entry = isLong ? (nowEntry ? close : b618) : (nowEntry ? close : s618)
-sl = isLong ? (nowEntry ? nz(hlv, bLeg) * 0.997 : bLeg * 0.997) : (nowEntry ? nz(hlv, sLeg) * 1.003 : sLeg * 1.003)
+sl = isLong ? (nowEntry and not slLeg ? nz(hlv, bLeg) * 0.997 : bLeg * 0.997) : (nowEntry and not slLeg ? nz(hlv, sLeg) * 1.003 : sLeg * 1.003)
 tgtH = isLong ? bH : sLo
 risk = math.abs(entry - sl)
 tp = isLong ? math.max(tgtH, entry + 2 * risk) : math.min(tgtH, entry - 2 * risk)
@@ -363,7 +428,7 @@ if barstate.islast
     if st == 3
         lM := label.new(bar_index, isLong ? low : high, isLong ? "možen HL?" : "možen LH?", style=isLong ? label.style_label_up : label.style_label_down, color=color.new(cWho, 0), textcolor=color.white, size=size.small)
 
-var table tb = table.new(position.top_right, 2, 12, bgcolor=color.new(color.black, 80), border_width=1)
+var table tb = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 80), border_width=1)
 if showTbl and barstate.islast
     c1 = color.new(color.gray, 0)
     table.cell(tb, 0, 0, "Jay HL", text_color=cInk, text_size=size.small)
@@ -380,7 +445,7 @@ if showTbl and barstate.islast
         table.cell(tb, 0, 5, "Vstop", text_color=cInk, text_size=size.small)
         table.cell(tb, 1, 5, f(entry) + (nowEntry ? " (zdaj)" : " (ob zaprtju nad 0.618)"), text_color=c1, text_size=size.small)
         table.cell(tb, 0, 6, "SL", text_color=cDn, text_size=size.small)
-        table.cell(tb, 1, 6, f(sl) + " (" + str.tostring(risk / entry * 100, "#.#") + " %)", text_color=c1, text_size=size.small)
+        table.cell(tb, 1, 6, f(sl) + " (" + str.tostring(risk / entry * 100, "#.#") + " %" + (slLeg or not nowEntry ? ", pod nogo" : ", pod HL") + ")", text_color=c1, text_size=size.small)
         table.cell(tb, 0, 7, "TP", text_color=cUp, text_size=size.small)
         table.cell(tb, 1, 7, f(tp) + " · " + str.tostring(rr, "#.#") + "R", text_color=c1, text_size=size.small)
         table.cell(tb, 0, 8, isLong ? "TP do H" : "TP do L", text_color=cUp, text_size=size.small)
@@ -389,6 +454,12 @@ if showTbl and barstate.islast
         table.cell(tb, 1, 9, str.tostring(posUsd, "#") + " $ · tveganje " + str.tostring(riskUsd, "#") + " $", text_color=c1, text_size=size.small)
         table.cell(tb, 0, 10, "Konfluenca", text_color=cVal, text_size=size.small)
         table.cell(tb, 1, 10, (liqNow ? "+liq " : "") + (timeOK ? "+čas" : "") + (not liqNow and not timeOK ? "–" : ""), text_color=c1, text_size=size.small)
+        hcNow = hcTxt(isLong)
+        table.cell(tb, 0, 12, "HTF sveče", text_color=cWho, text_size=size.small)
+        table.cell(tb, 1, 12, hcNow == "" ? "– (3D / 1W brez L-LL-HL)" : str.replace_all(hcNow, "+", "") + " ✓", text_color=hcNow == "" ? cInk : cUp, text_size=size.small)
+        legR = isLong ? bR : sR
+        table.cell(tb, 0, 13, "Ekstenzije", text_color=cUp, text_size=size.small)
+        table.cell(tb, 1, 13, isLong ? f(bH + bR * 0.27) + " / " + f(bH + bR * 0.65) + " / " + f(bH + bR) : f(sLo - sR * 0.27) + " / " + f(sLo - sR * 0.65) + " / " + f(sLo - sR), text_color=c1, text_size=size.small)
     otherSt = isLong ? sSt : lSt
     table.cell(tb, 0, 11, "Druga smer", text_color=cInk, text_size=size.small)
     table.cell(tb, 1, 11, (isLong ? "SHORT: " : "LONG: ") + (otherSt == 4 ? "potrjen" : otherSt == 3 ? "možen ob zaprtju" : otherSt == 2 ? "v coni" : otherSt == 1 ? "čaka umik" : "ni setupa"), text_color=c1, text_size=size.small)
@@ -398,3 +469,5 @@ alertcondition(bullTouch, "Jay HL: cena v long GP", "Jay HL: cena je prišla v g
 alertcondition(bullSig, "Jay HL: HL potrjen (long)", "Jay HL: HL potrjen v golden pocketu – preveri čas in nižji okvir")
 alertcondition(bearTouch, "Jay LH: cena v short GP", "Jay LH: cena je prišla v golden pocket (short setup)")
 alertcondition(bearSig, "Jay LH: LH potrjen (short)", "Jay LH: LH potrjen v golden pocketu – preveri čas in nižji okvir")
+alertcondition(bullSig and (c3L or wLq), "Jay HL + HTF sveče (long)", "Jay HL: HL potrjen in 3D/1W L-LL-HL – najboljša varianta v testu")
+alertcondition(bearSig and (c3S or wSq), "Jay LH + HTF sveče (short)", "Jay LH: LH potrjen in 3D/1W H-HH-LH")
