@@ -209,7 +209,7 @@ var c1=k1.map(function(x){return x.c}),c4=k4.map(function(x){return x.c});
 var R1=rsi(c1),R4=rsi(c4);
 r.r1=Math.round(R1[R1.length-1]);r.r4=Math.round(R4[R4.length-1]);
 r.d1=diverge(k1,R1);r.d4=diverge(k4,R4);r.tr=trend(k1);
-var c=cisd(k5);r.ct=c.ct;r.cl=c.cl;r.ca=c.ca;r.sl=c.sl;r.t=c.t||0;r.h4=cisd(k4,240);r.hd=cisd(kD,1440);r.c1=cisd(k1,60);r.k5f=k5;var pd=kD[kD.length-2],bs=0,bw=[];if(pd){bs+=pd.c<pd.o?-1:1;bw.push('včerajšnja D sveča '+(pd.c<pd.o?'rdeča':'zelena'))}
+var c=cisd(k5);r.ct=c.ct;r.cl=c.cl;r.ca=c.ca;r.sl=c.sl;r.sp=c.sp;r.t=c.t||0;r.h4=cisd(k4,240);r.hd=cisd(kD,1440);r.c1=cisd(k1,60);r.k5f=k5;var pd=kD[kD.length-2],bs=0,bw=[];if(pd){bs+=pd.c<pd.o?-1:1;bw.push('včerajšnja D sveča '+(pd.c<pd.o?'rdeča':'zelena'))}
 if(r.hd.ct==='bull'){bs+=2;bw.push('D CISD bull')}else if(r.hd.ct==='bear'){bs-=2;bw.push('D CISD bear')}
 if(r.h4.ct==='bull'){bs+=1.5;bw.push('4H CISD bull')}else if(r.h4.ct==='bear'){bs-=1.5;bw.push('4H CISD bear')}
 if(r.tr==='up'){bs+=0.5;bw.push('1H trend gor')}else if(r.tr==='down'){bs-=0.5;bw.push('1H trend dol')}
@@ -276,7 +276,7 @@ var rows=[['Ocena','<span class="gh '+(sc>=5?'up':sc===4?'':'mut')+'">'+g+' ('+s
 ['Dnevni / HTF bias','<span class="'+(L?'up':'dn')+'">'+r.bias.toUpperCase()+'</span>'],
 ['1H trend',(trOk?ok:no)+(r.tr==='up'?'gor':r.tr==='down'?'dol':'bočno')],
 ['RSI 1H / 4H',r.r1+' / '+r.r4+(r.r1>=70||r.r4>=70?' <span class="dn">prekupljeno</span>':r.r1<=30||r.r4<=30?' <span class="up">preprodano</span>':'')],
-['Sweep (5m, potrjen)',swOk?ok+(r.sp?fp(r.sp):'')+' · '+ago(r.ca):r.ct?'<span class="mut">sweep proti biasu</span>':no+'ni'],
+['Sweep (5m, potrjen)',swOk?ok+'wick '+fp(r.sl)+(r.ct==='bull'||r.ct==='sweep-lo'?' pod low ':' nad high ')+(r.sp?fp(r.sp):'')+' · '+ago(r.ca):r.ct?'<span class="mut">sweep proti biasu</span>':no+'ni'],
 ['CISD po sweepu',cisdOk?ok+fp(r.cl)+' · '+ago(r.ca):cb?'<span class="mut">'+r.ct+' CISD proti biasu</span>':no+'ne'],
 ['Retest CISD (limit)',cb?(ret?'<span class="up">dotaknjen</span>':'čaka'):'<span class="mut">—</span>'],
 ['FVG po CISD',cb?(fvg?ok+'displacement':no+'počasno'):'<span class="mut">—</span>'],
