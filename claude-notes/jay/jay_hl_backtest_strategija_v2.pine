@@ -1,0 +1,346 @@
+//@version=5
+strategy("Jay HL Backtest v2", shorttitle="Jay HL BT2", overlay=true, initial_capital=10000, commission_type=strategy.commission.percent, commission_value=0.055, margin_long=5, margin_short=5, pyramiding=0, process_orders_on_close=true)
+
+pivLen   = input.int(5, "Swing: sveče levo/desno", minval=2)
+lookPiv  = input.int(6, "Stari swingi za L / H", minval=2, maxval=20)
+gpA      = input.float(0.618, "GP od", step=0.001)
+gpB      = input.float(0.79, "GP do", step=0.001)
+liqTol   = input.float(1.5, "Toleranca likvidnosti (%)", step=0.1) / 100
+slBuf    = input.float(0.3, "SL pod/nad HL/LH (%)", step=0.1) / 100
+minRR    = input.float(1.0, "Najmanj RR", step=0.1)
+freshD   = input.int(5, "Nov mesec velja (dni)")
+startY   = input.int(2020, "Začetek testa (leto)")
+slMode   = input.string("pod HL", "SL", options=["pod HL", "pod dnom noge"])
+slLeg    = slMode == "pod dnom noge"
+fee      = 0.0011   // 2 x 0.055 % taker
+
+inTest = year >= startY
+newMonth = ta.change(month) != 0
+week3    = dayofmonth >= 15 and dayofmonth <= 21
+var int mStart = na
+if newMonth
+    mStart := time
+timeOK = week3 or (not na(mStart) and (time - mStart) < freshD * 86400000)
+
+// ===== HTF sveče 3D (kot screener: 3D iz 1D, sidro epoch floor(t / 3 dni)) =====
+// a, b, c zaporedne zaprte 3D sveče: b.l < a.l (LL), c.l > b.l (HL), c.c > b.h; velja v zadnjih 3 zaprtih 3D svečah. Short zrcalno.
+f3D() =>
+    ms3 = 3 * 86400000
+    bk = math.floor(time / ms3)
+    var float cH = na
+    var float cL = na
+    var int   cB = na
+    var array<float> hs = array.new_float()
+    var array<float> los = array.new_float()
+    var array<float> cs = array.new_float()
+    var int sinceL = 99
+    var int sinceS = 99
+    if na(cB) or bk != cB
+        cB := bk
+        cH := high
+        cL := low
+    else
+        cH := math.max(cH, high)
+        cL := math.min(cL, low)
+    // zadnji dan 3D sveče: zapri jo ob zaprtju tega dne
+    if math.floor((time + 86400000) / ms3) != bk
+        array.push(hs, cH)
+        array.push(los, cL)
+        array.push(cs, close)
+        if array.size(hs) > 3
+            array.shift(hs)
+            array.shift(los)
+            array.shift(cs)
+        sinceL += 1
+        sinceS += 1
+        if array.size(hs) == 3
+            aH = array.get(hs, 0)
+            aL = array.get(los, 0)
+            bH2 = array.get(hs, 1)
+            bL2 = array.get(los, 1)
+            cH2 = array.get(hs, 2)
+            cL2 = array.get(los, 2)
+            cC2 = array.get(cs, 2)
+            if bL2 < aL and cL2 > bL2 and cC2 > bH2
+                sinceL := 0
+            if bH2 > aH and cH2 < bH2 and cC2 < bL2
+                sinceS := 0
+    [sinceL < 3, sinceS < 3]
+[c3Ld, c3Sd] = f3D()
+[c3Lh, c3Sh] = request.security(syminfo.tickerid, "D", [c3Ld[1], c3Sd[1]], lookahead=barmerge.lookahead_on)
+c3L = timeframe.isdaily ? c3Ld : c3Lh
+c3S = timeframe.isdaily ? c3Sd : c3Sh
+
+pl = ta.pivotlow(low, pivLen, pivLen)
+ph = ta.pivothigh(high, pivLen, pivLen)
+lowRecent  = ta.lowest(low, pivLen + 1)
+highRecent = ta.highest(high, pivLen + 1)
+
+var array<float> pls = array.new_float()
+var array<int>   plb = array.new_int()
+var array<float> phs = array.new_float()
+var array<int>   phb = array.new_int()
+
+var float bL = na
+var float bLL = na
+var int   bLLx = na
+var bool  bArmed = false
+var float bLeg = na
+var float bH = na
+var bool  bTouched = false
+var bool  bDone = false
+var int   bCnt = 0
+var float bHL = na
+bool bNew = false
+
+var float sH = na
+var float sHH = na
+var int   sHHx = na
+var bool  sArmed = false
+var float sLeg = na
+var float sLo = na
+var bool  sTouched = false
+var bool  sDone = false
+var int   sCnt = 0
+var float sLH = na
+bool sNew = false
+
+if not na(pl)
+    px = bar_index - pivLen
+    n = array.size(pls)
+    prevPL = n > 0 ? array.get(pls, n - 1) : na
+    if n > 0 and pl < prevPL
+        float swept = na
+        for i = math.max(0, n - lookPiv) to n - 1
+            v = array.get(pls, i)
+            if v > pl and (na(swept) or v < swept)
+                swept := v
+        bL := swept
+        bLL := pl
+        bLLx := px
+        bArmed := false
+        bCnt := 0
+    m = array.size(phs)
+    lastPH  = m > 0 ? array.get(phs, m - 1) : na
+    lastPHx = m > 0 ? array.get(phb, m - 1) : na
+    if not na(sHH) and px > sHHx and n > 0 and pl < prevPL and not na(lastPH) and lastPHx >= sHHx and lastPH <= sHH
+        sArmed := true
+        sLeg := lastPH
+        sLo := pl
+        sTouched := highRecent >= sLo + (sLeg - sLo) * gpA
+        sDone := false
+        sLH := sTouched ? highRecent : na
+        sNew := true
+    array.push(pls, pl)
+    array.push(plb, px)
+    if array.size(pls) > 40
+        array.shift(pls)
+        array.shift(plb)
+
+if not na(ph)
+    hx = bar_index - pivLen
+    m = array.size(phs)
+    prevPH = m > 0 ? array.get(phs, m - 1) : na
+    if m > 0 and ph > prevPH
+        float sw = na
+        for i = math.max(0, m - lookPiv) to m - 1
+            v = array.get(phs, i)
+            if v < ph and (na(sw) or v > sw)
+                sw := v
+        sH := sw
+        sHH := ph
+        sHHx := hx
+        sArmed := false
+        sCnt := 0
+    n = array.size(pls)
+    lastPL  = n > 0 ? array.get(pls, n - 1) : na
+    lastPLx = n > 0 ? array.get(plb, n - 1) : na
+    if not na(bLL) and hx > bLLx and m > 0 and ph > prevPH and not na(lastPL) and lastPLx >= bLLx and lastPL >= bLL
+        bArmed := true
+        bLeg := lastPL
+        bH := ph
+        bTouched := lowRecent <= bH - (bH - bLeg) * gpA
+        bDone := false
+        bHL := bTouched ? lowRecent : na
+        bNew := true
+    array.push(phs, ph)
+    array.push(phb, hx)
+    if array.size(phs) > 40
+        array.shift(phs)
+        array.shift(phb)
+
+bR   = bH - bLeg
+b618 = bH - bR * gpA
+b79  = bH - bR * gpB
+bullSig = false
+bFirst = false
+if bArmed and not bNew
+    if close < bLeg
+        bArmed := false
+    else
+        if low <= b618
+            bTouched := true
+            if na(bHL) or low < bHL
+                bHL := low
+        if bTouched and not bDone and close > open and close > b618 and bHL >= bLeg
+            bullSig := true
+            bDone := true
+            bFirst := bCnt == 0
+            bCnt += 1
+bLiq = not na(bL) and bL <= b618 * (1 + liqTol) and bL >= b79 * (1 - liqTol)
+
+sR   = sLeg - sLo
+s618 = sLo + sR * gpA
+s79  = sLo + sR * gpB
+bearSig = false
+sFirst = false
+if sArmed and not sNew
+    if close > sLeg
+        sArmed := false
+    else
+        if high >= s618
+            sTouched := true
+            if na(sLH) or high > sLH
+                sLH := high
+        if sTouched and not sDone and close < open and close < s618 and sLH <= sLeg
+            bearSig := true
+            sDone := true
+            sFirst := sCnt == 0
+            sCnt += 1
+sLiq = not na(sH) and sH >= s618 * (1 - liqTol) and sH <= s79 * (1 + liqTol)
+
+// ===== simulacija variant: 5 ciljev x 4 filtri =====
+// cilji: 0 = H, 1 = -0.27, 2 = -0.618, 3 = 2R, 4 = 3R
+// filtri: 0 = vsi, 1 = +liq, 2 = +čas, 3 = +3D sveče (HTF zaporedje L-LL-HL)
+NV = 20
+var array<int>   vOpen = array.new_int(NV, 0)
+var array<float> vEn = array.new_float(NV, na)
+var array<float> vSt = array.new_float(NV, na)
+var array<float> vTp = array.new_float(NV, na)
+var array<int>   vN = array.new_int(NV, 0)
+var array<int>   vW = array.new_int(NV, 0)
+var array<float> vR = array.new_float(NV, 0.0)
+var array<float> vPeak = array.new_float(NV, 0.0)
+var array<float> vDD = array.new_float(NV, 0.0)
+var int nL = 0
+var int nS = 0
+var float rL = 0.0
+var float rS = 0.0
+
+closeTrade(int k, float r) =>
+    array.set(vOpen, k, 0)
+    array.set(vN, k, array.get(vN, k) + 1)
+    if r > 0
+        array.set(vW, k, array.get(vW, k) + 1)
+    cum = array.get(vR, k) + r
+    array.set(vR, k, cum)
+    pk = math.max(array.get(vPeak, k), cum)
+    array.set(vPeak, k, pk)
+    array.set(vDD, k, math.max(array.get(vDD, k), pk - cum))
+    r
+
+// izhodi (od naslednje sveče po vstopu)
+for k = 0 to NV - 1
+    d = array.get(vOpen, k)
+    if d != 0
+        en = array.get(vEn, k)
+        st = array.get(vSt, k)
+        tp = array.get(vTp, k)
+        rk = math.abs(en - st)
+        fr = fee * en / rk
+        if d == 1
+            if low <= st
+                rr = closeTrade(k, -1 - fr)
+                if k == 0
+                    nL += 1
+                    rL += rr
+            else if high >= tp
+                rr = closeTrade(k, (tp - en) / rk - fr)
+                if k == 0
+                    nL += 1
+                    rL += rr
+        else
+            if high >= st
+                rr = closeTrade(k, -1 - fr)
+                if k == 0
+                    nS += 1
+                    rS += rr
+            else if low <= tp
+                rr = closeTrade(k, (en - tp) / rk - fr)
+                if k == 0
+                    nS += 1
+                    rS += rr
+
+openSlot(int k, int dir, float en, float st, float tp) =>
+    rk = math.abs(en - st)
+    ok = array.get(vOpen, k) == 0 and rk > 0 and math.abs(tp - en) / rk >= minRR
+    if ok
+        array.set(vOpen, k, dir)
+        array.set(vEn, k, en)
+        array.set(vSt, k, st)
+        array.set(vTp, k, tp)
+    ok
+
+if inTest and bullSig
+    en = close
+    st = (slLeg ? bLeg : bHL) * (1 - slBuf)
+    rk = en - st
+    for f = 0 to 3
+        pass = f == 0 or (f == 1 and bLiq) or (f == 2 and timeOK) or (f == 3 and c3L)
+        if pass
+            for t = 0 to 4
+                tp = t == 0 ? bH : t == 1 ? bH + bR * 0.27 : t == 2 ? bH + bR * 0.618 : t == 3 ? en + 2 * rk : en + 3 * rk
+                openSlot(f * 5 + t, 1, en, st, tp)
+if inTest and bearSig
+    en = close
+    st = (slLeg ? sLeg : sLH) * (1 + slBuf)
+    rk = st - en
+    for f = 0 to 3
+        pass = f == 0 or (f == 1 and sLiq) or (f == 2 and timeOK) or (f == 3 and c3S)
+        if pass
+            for t = 0 to 4
+                tp = t == 0 ? sLo : t == 1 ? sLo - sR * 0.27 : t == 2 ? sLo - sR * 0.618 : t == 3 ? en - 2 * rk : en - 3 * rk
+                openSlot(f * 5 + t, -1, en, st, tp)
+
+// tabela: N / W / sumR / maxDD(R) za vseh 20 variant + long/short razdelitev
+var table tb = table.new(position.bottom_right, 6, 23, bgcolor=color.new(color.black, 80))
+if barstate.islastconfirmedhistory or barstate.islast
+    fN = array.from("vsi", "liq", "cas", "3D")
+    tN = array.from("H", "e27", "e618", "2R", "3R")
+    table.cell(tb, 0, 0, "var")
+    table.cell(tb, 1, 0, "N")
+    table.cell(tb, 2, 0, "W")
+    table.cell(tb, 3, 0, "R")
+    table.cell(tb, 4, 0, "DD")
+    table.cell(tb, 5, 0, "open")
+    for k = 0 to NV - 1
+        table.cell(tb, 0, k + 1, array.get(fN, int(k / 5)) + "_" + array.get(tN, k % 5))
+        table.cell(tb, 1, k + 1, str.tostring(array.get(vN, k)))
+        table.cell(tb, 2, k + 1, str.tostring(array.get(vW, k)))
+        table.cell(tb, 3, k + 1, str.tostring(array.get(vR, k), "#.##"))
+        table.cell(tb, 4, k + 1, str.tostring(array.get(vDD, k), "#.##"))
+        table.cell(tb, 5, k + 1, str.tostring(array.get(vOpen, k)))
+    table.cell(tb, 0, 21, "long_vsi_H")
+    table.cell(tb, 1, 21, str.tostring(nL))
+    table.cell(tb, 3, 21, str.tostring(rL, "#.##"))
+    table.cell(tb, 0, 22, "short_vsi_H")
+    table.cell(tb, 1, 22, str.tostring(nS))
+    table.cell(tb, 3, 22, str.tostring(rS, "#.##"))
+
+// pravi strategy (varianta vsi_H) kot kontrola
+flat = strategy.position_size == 0
+if inTest and flat and bullSig
+    st = (slLeg ? bLeg : bHL) * (1 - slBuf)
+    rk = close - st
+    if rk > 0 and (bH - close) / rk >= minRR
+        strategy.entry("L", strategy.long, qty=strategy.equity * 0.01 / rk)
+        strategy.exit("Lx", "L", stop=st, limit=bH)
+if inTest and flat and bearSig
+    st = (slLeg ? sLeg : sLH) * (1 + slBuf)
+    rk = st - close
+    if rk > 0 and (close - sLo) / rk >= minRR
+        strategy.entry("S", strategy.short, qty=strategy.equity * 0.01 / rk)
+        strategy.exit("Sx", "S", stop=st, limit=sLo)
+
+plotshape(bullSig, "HL", shape.triangleup, location.belowbar, color.new(#18966E, 0), size=size.tiny)
+plotshape(bearSig, "LH", shape.triangledown, location.abovebar, color.new(#CF4636, 0), size=size.tiny)
