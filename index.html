@@ -54,6 +54,7 @@ th:first-child,td:first-child,.l{text-align:left}
 .lk{font-size:10px;font-weight:600;color:var(--acc);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:4px;text-decoration:none}
 .rw{cursor:pointer}
 .dt td{white-space:normal;background:var(--card)}
+.xt{border-collapse:collapse;margin:0 0 12px;font-size:13px;min-width:280px}.xt td{padding:3px 10px 3px 0;border-bottom:1px solid var(--line,rgba(127,127,127,.18));text-align:left}.xt td:first-child{color:var(--mut);white-space:nowrap}.xt .gh{font-weight:700}.xwrap{overflow-x:auto}
 .gr{display:flex;gap:12px;flex-wrap:wrap}.gr svg{flex:1 1 300px;max-width:520px}
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .note{color:var(--mut);font-size:12px;margin-top:16px}
@@ -262,8 +263,31 @@ return eqw+'<div style="margin-top:10px;font-size:13px"><b>1H CISD retrace · '+
 +'Vstop 1 (CISD level) '+fp(s.e1)+' · RR '+s.rr1.toFixed(1)+' | Vstop 2 (50 % OB, DCA) '+fp(s.e2)+' · RR '+s.rr2.toFixed(1)+' | povprečje '+fp(s.avg)+' · RR '+s.rra.toFixed(1)+'<br>'
 +'SL '+fp(s.sl)+' (za najvišjim/najnižjim wickom, '+pc.toFixed(2)+' % od povprečja'+(pc<0.5?' <span class="dn">pod 0,5 %</span>':'')+') · TP '+fp(s.tp)+' ('+(s.liq?'naslednja nepometena 1H likvidnost':'2R')+')<br>'
 +'Velikost: 2 × '+(h>=100?h.toFixed(0):h.toPrecision(3))+' enot ('+(h*s.avg).toFixed(0)+' USDT vsaka) pri tveganju '+rk+' $, če se napolnita oba vstopa</div>'}
+function eaxT(r){var k=r.k5f||[],n=k.length,L=r.bias==='long',ok='<span class="up">✓</span> ',no='<span class="dn">✗</span> ';
+var ci=r.ct?Math.max(0,n-1-Math.round(r.ca/5)):-1,cb=r.ct==='bull'||r.ct==='bear',cdir=r.ct==='bull'||r.ct==='sweep-lo'?'long':'short';
+var swOk=!!r.ct&&cdir===r.bias,cisdOk=cb&&r.al,fvg=false,ret=false,i;
+if(cb&&ci>1){for(i=ci;i<=Math.min(n-1,ci+2);i++){if(i>=2&&(r.ct==='bull'?k[i].l>k[i-2].h:k[i].h<k[i-2].l)){fvg=true;break}}for(i=ci+1;i<n;i++){if(r.ct==='bull'?k[i].l<=r.cl:k[i].h>=r.cl){ret=true;break}}}
+var divOk=L?(r.d1==='bull'||r.d4==='bull'):(r.d1==='bear'||r.d4==='bear'),trOk=L?r.tr==='up':r.tr==='down',kz=!!(sess&&sess.kz);
+var sc=(swOk?1:0)+(cisdOk?1:0)+(fvg&&cisdOk?1:0)+(divOk?1:0)+(trOk?1:0)+(kz?1:0),g=sc>=6?'A+':sc===5?'A':sc===4?'B':sc===3?'C':'—';r.xg=g;r.xs=sc;
+var at=0,m=Math.min(14,n);for(i=n-m;i<n;i++)at+=(k[i].h-k[i].l);at=m?at/m/r.p*100:0;
+var eh=n?eq5(k,false,r.p):0,el=n?eq5(k,true,r.p):0;
+var dv=(r.d1?'1H '+r.d1:'')+(r.d1&&r.d4?' · ':'')+(r.d4?'4H '+r.d4:'');
+var rows=[['Ocena','<span class="gh '+(sc>=5?'up':sc===4?'':'mut')+'">'+g+' ('+sc+'/6)</span>'],
+['Dnevni / HTF bias','<span class="'+(L?'up':'dn')+'">'+r.bias.toUpperCase()+'</span>'],
+['1H trend',(trOk?ok:no)+(r.tr==='up'?'gor':r.tr==='down'?'dol':'bočno')],
+['RSI 1H / 4H',r.r1+' / '+r.r4+(r.r1>=70||r.r4>=70?' <span class="dn">prekupljeno</span>':r.r1<=30||r.r4<=30?' <span class="up">preprodano</span>':'')],
+['Sweep (5m, potrjen)',swOk?ok+(r.sp?fp(r.sp):'')+' · '+ago(r.ca):r.ct?'<span class="mut">sweep proti biasu</span>':no+'ni'],
+['CISD po sweepu',cisdOk?ok+fp(r.cl)+' · '+ago(r.ca):cb?'<span class="mut">'+r.ct+' CISD proti biasu</span>':no+'ne'],
+['Retest CISD (limit)',cb?(ret?'<span class="up">dotaknjen</span>':'čaka'):'<span class="mut">—</span>'],
+['FVG po CISD',cb?(fvg?ok+'displacement':no+'počasno'):'<span class="mut">—</span>'],
+['RSI divergenca',dv?(divOk?ok:'<span class="mut">⚠</span> ')+dv:'<span class="mut">—</span>'],
+['EQH nad',eh?fp(eh)+' (+'+((eh/r.p-1)*100).toFixed(2)+' %)':'<span class="mut">—</span>'],
+['EQL pod',el?fp(el)+' ('+((el/r.p-1)*100).toFixed(2)+' %)':'<span class="mut">—</span>'],
+['Seja',kz?ok+sess.kz:'<span class="mut">izven killzone</span>'],
+['ATR 5m',at.toFixed(2)+' %']];
+return '<div class="xwrap"><table class="xt"><tbody>'+rows.map(function(x){return '<tr><td>'+x[0]+'</td><td>'+x[1]+'</td></tr>'}).join('')+'</tbody></table></div>'}
 function detail(r){var lv=[];if(r.ct==='bear'||r.ct==='bull'){if(r.sl)lv.push({p:r.sl,c:'var(--warn)',t:'sweep '+fp(r.sl)});lv.push({p:r.cl,c:'var(--acc)',t:'CISD '+fp(r.cl)})}
-return '<div class="mut" style="margin-bottom:8px">Bias '+r.bias.toUpperCase()+' (HTF): '+r.bw+'</div><div class="gr">'+candles(r.k1,'1H · zadnjih 48')+candles(r.k5,'5m · zadnjih 72',lv)+'</div>'+setupHtml(r)+calc(r)}
+return '<div class="mut" style="margin-bottom:8px">Bias '+r.bias.toUpperCase()+' (HTF): '+r.bw+'</div>'+eaxT(r)+'<div class="gr">'+candles(r.k1,'1H · zadnjih 48')+candles(r.k5,'5m · zadnjih 72',lv)+'</div>'+setupHtml(r)+calc(r)}
 function render(){
 var out=$('out');
 if(!rows.length){out.className='empty';out.textContent='Pritisni Osveži.';return}
@@ -273,10 +297,10 @@ if(!list.length){out.className='empty';out.textContent='Noben simbol ne ustreza 
 out.className='';
 var h='<table><thead><tr><th data-k="s">Simbol</th><th class="l" data-k="sd">Bias / smer</th><th data-k="sc">Ocena</th><th data-k="p">Cena</th><th data-k="ch">24h %</th><th data-k="v5">Vol 5m</th><th data-k="v15">Vol 15m</th><th data-k="v1h">Vol 1h</th><th data-k="r1">RSI 1H</th><th data-k="r4">RSI 4H</th><th class="l" data-k="d1">Div</th><th class="l" data-k="tr">Trend 1H</th><th class="l" data-k="ct">5m CISD</th><th class="l">4H / D CISD</th></tr></thead><tbody>';
 list.forEach(function(r){
-var isNew=r.sc>=3&&!seen[key(r)];
+var isNew=r.sc>=3&&!seen[key(r)];try{eaxT(r)}catch(e){r.xg=''}
 var dv=(r.d1?'1H '+(r.d1==='bear'?'<span class="dn">bear</span>':'<span class="up">bull</span>'):'')+(r.d1&&r.d4?' · ':'')+(r.d4?'4H '+(r.d4==='bear'?'<span class="dn">bear</span>':'<span class="up">bull</span>'):'')||'<span class="mut">-</span>';
 var tr=r.tr==='up'?'<span class="up">gor</span>':r.tr==='down'?'<span class="dn">dol</span>':'<span class="mut">-</span>';
-h+='<tr class="rw" data-s="'+r.s+'"><td><span class="star'+(favs[r.s]?' on':'')+'" data-f="'+r.s+'">'+(favs[r.s]?'★':'☆')+'</span><b>'+r.s+'</b>'+(r.s1&&r.eq?'<span class="new" style="background:var(--shortbg);color:var(--short)">POČAKAJ</span>':'')+(isNew?'<span class="new">NOVO</span>':'')+(r.s1?'<span class="new" style="background:var(--longbg);color:var(--long)">1H CISD</span>':'')+' <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'USDT.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'USDT">BB</a></td><td class="l"><span title="'+r.bw+'" class="pill '+(r.sd==='-'?'none':r.sd)+'">'+(r.sd==='long'?'LONG':r.sd==='short'?'SHORT':'-')+'</span></td><td class="mono"><b>'+r.sc.toFixed(1)+'</b></td><td class="mono pc">'+fp(r.p)+'</td><td class="mono cc '+(r.ch>=0?'up':'dn')+'">'+(r.ch>=0?'+':'')+r.ch.toFixed(1)+'</td><td class="mono">'+(r.v5||0).toFixed(2)+'%</td><td class="mono">'+(r.v15||0).toFixed(2)+'%</td><td class="mono">'+(r.v1h||0).toFixed(2)+'%</td><td class="mono '+rsiC(r.r1)+'">'+r.r1+'</td><td class="mono '+rsiC(r.r4)+'">'+r.r4+'</td><td class="l">'+dv+'</td><td class="l">'+tr+'</td><td class="l">'+ctText(r)+'</td><td class="l">'+hText(r)+'</td></tr>';
+h+='<tr class="rw" data-s="'+r.s+'"><td><span class="star'+(favs[r.s]?' on':'')+'" data-f="'+r.s+'">'+(favs[r.s]?'★':'☆')+'</span><b>'+r.s+'</b>'+(r.s1&&r.eq?'<span class="new" style="background:var(--shortbg);color:var(--short)">POČAKAJ</span>':'')+(isNew?'<span class="new">NOVO</span>':'')+(r.xg==='A'||r.xg==='A+'?'<span class="new" style="background:var(--longbg);color:var(--long)">EAX '+r.xg+'</span>':'')+(r.s1?'<span class="new" style="background:var(--longbg);color:var(--long)">1H CISD</span>':'')+' <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'USDT.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'USDT">BB</a></td><td class="l"><span title="'+r.bw+'" class="pill '+(r.sd==='-'?'none':r.sd)+'">'+(r.sd==='long'?'LONG':r.sd==='short'?'SHORT':'-')+'</span></td><td class="mono"><b>'+r.sc.toFixed(1)+'</b></td><td class="mono pc">'+fp(r.p)+'</td><td class="mono cc '+(r.ch>=0?'up':'dn')+'">'+(r.ch>=0?'+':'')+r.ch.toFixed(1)+'</td><td class="mono">'+(r.v5||0).toFixed(2)+'%</td><td class="mono">'+(r.v15||0).toFixed(2)+'%</td><td class="mono">'+(r.v1h||0).toFixed(2)+'%</td><td class="mono '+rsiC(r.r1)+'">'+r.r1+'</td><td class="mono '+rsiC(r.r4)+'">'+r.r4+'</td><td class="l">'+dv+'</td><td class="l">'+tr+'</td><td class="l">'+ctText(r)+'</td><td class="l">'+hText(r)+'</td></tr>';
 if(open[r.s])h+='<tr class="dt"><td colspan="14" class="l">'+detail(r)+'</td></tr>'});
 out.innerHTML=h+'</tbody></table>';
 out.querySelectorAll('th').forEach(function(th){th.onclick=function(){var k=th.dataset.k;if(sortK===k)sortD=-sortD;else{sortK=k;sortD=-1}render()}});
