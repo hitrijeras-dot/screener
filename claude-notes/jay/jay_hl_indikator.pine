@@ -456,7 +456,7 @@ if showTbl and barstate.islast
         table.cell(tb, 1, 10, (liqNow ? "+liq " : "") + (timeOK ? "+čas" : "") + (not liqNow and not timeOK ? "–" : ""), text_color=c1, text_size=size.small)
         hcNow = hcTxt(isLong)
         table.cell(tb, 0, 12, "HTF sveče", text_color=cWho, text_size=size.small)
-        table.cell(tb, 1, 12, hcNow == "" ? "– (3D / 1W brez L-LL-HL)" : str.replace_all(hcNow, "+", "") + " ✓", text_color=hcNow == "" ? cInk : cUp, text_size=size.small)
+        table.cell(tb, 1, 12, hcNow == "" ? "– (3D / 1W brez L-LL-HL)" : str.trim(((isLong ? c3L : c3S) ? "3D ✓  " : "") + ((isLong ? wLq : wSq) ? "1W ✓" : "")), text_color=hcNow == "" ? cInk : cUp, text_size=size.small)
         legR = isLong ? bR : sR
         table.cell(tb, 0, 13, "Ekstenzije", text_color=cUp, text_size=size.small)
         table.cell(tb, 1, 13, isLong ? f(bH + bR * 0.27) + " / " + f(bH + bR * 0.65) + " / " + f(bH + bR) : f(sLo - sR * 0.27) + " / " + f(sLo - sR * 0.65) + " / " + f(sLo - sR), text_color=c1, text_size=size.small)
