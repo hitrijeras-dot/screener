@@ -52,6 +52,7 @@ th:first-child,td:first-child,.l{text-align:left}
 .st{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
 .st.s1{background:var(--longbg);color:var(--long)}.st.s1s{background:var(--shortbg);color:var(--short)}
 .st.s2{background:var(--valbg);color:var(--val)}.st.s3{color:var(--mut);border:1px solid var(--line)}
+.st.s4{background:var(--timebg);color:var(--time)}
 .st.s0{background:var(--warnbg);color:var(--warn)}
 .fl{display:inline-block;border-radius:4px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:4px}
 .fl.liq{background:var(--valbg);color:var(--val)}.fl.cas{background:var(--timebg);color:var(--time)}
@@ -119,6 +120,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
     <span class="lbl" style="margin-left:4px">Stanje:</span>
     <button class="chip on" data-st="act" type="button">Za trejd</button>
     <button class="chip" data-st="all" type="button">Vse</button>
+    <button class="chip" data-st="sw" type="button" title="Kovanci, ki so pravkar pobrali staro dno (long) ali vrh (short) in čakajo na sunek – korak 1 od 1-2">Sweep</button>
     <button class="chip" id="htff" type="button" title="Long samo, če 1W kaže gor; short samo, če 1W kaže dol">Samo v smeri HTF</button>
     <button class="chip" id="hcf" type="button" title="Samo kovanci z zaporedjem sveč L-LL-HL na 3D (HL sveča zapre nad vrhom LL sveče) ali 1W">Samo s HTF svečami</button>
     <span class="lbl" id="stat"></span>
@@ -290,10 +292,11 @@ function j12Long(k,o,onSig){
       if(!cand&&!(a&&!a.done)){var sp=null;pl.forEach(function(q){if(!q.br&&q.x<i&&K.l<q.v&&(!sp||q.v<sp.v))sp=q});
         if(sp){var bos=null;for(var j=ph.length-1;j>=0;j--)if(ph[j].x<i&&ph[j].v>sp.v){bos=ph[j].v;break}
           if(bos===null){bos=-Infinity;for(j=Math.max(0,i-10);j<i;j++)bos=Math.max(bos,k[j].h)}
-          cand={sw:sp.v,swX:sp.x,s:i,lo:K.l,loX:i,rec:K.c>sp.v,bos:bos}}}}
+          var bx=null;for(j=ph.length-1;j>=0;j--)if(ph[j].v===bos&&ph[j].x<i){bx=ph[j].x;break}
+          cand={sw:sp.v,swX:sp.x,s:i,lo:K.l,loX:i,rec:K.c>sp.v,bos:bos,bosX:bx}}}}
     pl.forEach(function(q){if(K.l<q.v)q.br=true});
   }
-  return {a:a,n:k.length};
+  return {a:a,cand:cand,n:k.length};
 }
 function j12Neg(k){return k.map(function(x){return {t:x.t,e:x.e,o:-x.o,h:-x.l,l:-x.h,c:-x.c}})}
 function jay12Scan(k,o){var on=o.onSig;
@@ -317,6 +320,17 @@ function jay12Setups(k,live,st,o){
   build(st.S.a,st.kn,live?{t:live.t,o:-live.o,h:-live.l,l:-live.h,c:-live.c}:null,'short');
   return out;
 }
+/* Sweep, ki še čaka sunek (korak 1 od 1-2): vrstica s stanjem 4. Prikaže se ne glede na izbrani model. */
+function jaySweeps(k,live,st){var out=[];
+  function one(cd,a,kk,lv,dir){if(!cd||(a&&!a.done))return;var n=kk.length,price=lv?lv.c:kk[n-1].c;
+    if(price<cd.lo||(!cd.rec&&price<=cd.sw))return;
+    var
+      x={dir:dir,state:4,L:cd.sw,Lx:cd.swX,LL:cd.lo,LLx:cd.loX,H:cd.bos,Hx:cd.bosX,leg:cd.lo,legX:cd.loX,sl:cd.lo-Math.abs(cd.lo)*0.003,price:price,rec:cd.rec,age:n-1-cd.s,sigX:cd.s,rr:0,rrH:0};
+    if(dir==='short')['L','LL','H','leg','sl','price'].forEach(function(f){if(x[f]!=null)x[f]=-x[f]});
+    x.dist=dir==='long'?(x.H-x.price)/x.price:(x.price-x.H)/x.price;out.push(x)}
+  one(st.L.cand,st.L.a,k,live,'long');
+  one(st.S.cand,st.S.a,st.kn,live?{t:live.t,o:-live.o,h:-live.l,l:-live.h,c:-live.c}:null,'short');
+  return out}
 /*MODEL12-END*/
 
 (function(){
@@ -380,6 +394,7 @@ async function scan(){
         var m12=$('model').value==='12',st=m12?jay12Scan(k,{freshD:5,tfMin:tfMin}):jayScan(k,{piv:piv,freshD:5,tfMin:tfMin});
         var hd=await htfOf(t.symbol,tf,piv);
         var su=(m12?jay12Setups:jaySetups)(k,live,st,{fresh:fresh});su.forEach(applySL);
+        su=su.concat(jaySweeps(k,live,m12?st:jay12Scan(k,{freshD:5,tfMin:tfMin})));
         cache[t.symbol]={k:k,live:live};
         su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;x.tH=k[x.Hx]?k[x.Hx].t:x.Hx;x.key=(m12?'12|':'')+x.s+'|'+tf+'|'+x.dir+'|'+x.tH;x.htf=hd.w;x.htfM=hd.m;var up=x.dir==='long';x.hc3=!!(hd.c3&&(up?hd.c3.L:hd.c3.S));x.hw1=!!(hd.w1&&(up?hd.w1.L:hd.w1.S));res.push(x)});
       }catch(e){fails++}
@@ -662,21 +677,25 @@ renderHist();
 
 /* ---------- Tabela ---------- */
 var stName={0:'Možen HL danes',1:'Potrjen',2:'V coni',3:'Čaka umik'};
-function stCell(r){var cls=r.state===1?(r.dir==='long'?'s1':'s1s'):r.state===0?'s0':r.state===2?'s2':'s3';
-  var t=r.state===1?(r.dir==='long'?'Potrjen HL':'Potrjen LH')+' · '+(r.age===0?'zadnja sveča':r.age+' sveč nazaj'):r.state===0?(r.dir==='long'?'Možen HL ob zaprtju':'Možen LH ob zaprtju'):stName[r.state];
+function stCell(r){if(r.state===4)return '<span class="st s4">'+(r.rec?'Sweep ✓ · čaka sunek':'Možen sweep ob zaprtju')+' · '+svNazaj(r.age)+'</span>';
+  var cls=r.state===1?(r.dir==='long'?'s1':'s1s'):r.state===0?'s0':r.state===2?'s2':'s3';
+  var t=r.state===1?(r.dir==='long'?'Potrjen HL':'Potrjen LH')+' · '+svNazaj(r.age):r.state===0?(r.dir==='long'?'Možen HL ob zaprtju':'Možen LH ob zaprtju'):stName[r.state];
   return '<span class="st '+cls+'">'+t+'</span>'+(r.liq?'<span class="fl liq">+liq</span>':'')+(r.state===1&&r.time?'<span class="fl cas">+čas</span>':'')+(newKeys[r.key]?'<span class="fl new">NOVO</span>':'')}
+function svNazaj(a){var m=a%100;return a===0?'zadnja sveča':a+(m===1?' svečo':m===2?' sveči':m===3||m===4?' sveče':' sveč')+' nazaj'}
+function rid(r){return r.s+'|'+r.dir+(r.state===4?'|sw':'')}
 function size(r){var a=+$('acct').value,p=+$('rpct').value;if(!(a>0&&p>0))return '–';var risk=a*p/100,q=risk/Math.abs(r.entry-r.sl);
   return '<span title="tveganje '+risk.toFixed(0)+' $">'+(q*r.entry>=1000?(q*r.entry/1000).toFixed(1)+'k $':(q*r.entry).toFixed(0)+' $')+'</span>'}
 function render(){
-  var list=rows.filter(function(r){return (side==='all'||r.dir===side)&&(stf==='all'||r.state<=2)&&passF(r)});
-  list.sort(function(a,b){return a.state-b.state||(a.state===1?a.age-b.age:0)||(a.state===3?Math.abs(a.dist)-Math.abs(b.dist):0)||b.rr-a.rr});
+  var list=rows.filter(function(r){return (side==='all'||r.dir===side)&&(stf==='sw'?r.state===4:stf==='all'||r.state<=2)&&passF(r)});
+  list.sort(function(a,b){return a.state-b.state||(a.state===1||a.state===4?a.age-b.age:0)||(a.state===3?Math.abs(a.dist)-Math.abs(b.dist):0)||b.rr-a.rr});
   if(!list.length){$('out').innerHTML='<tr><td colspan="12" class="empty">'+(rows.length?'Ni setupov s temi filtri. Poskusi "Stanje: Vse"'+(htfOn||hcOn?' ali izklopi filtra HTF':'')+'.':'Klikni "Skeniraj".')+'</td></tr>';return}
-  var h='';list.forEach(function(r,ix){var id=r.s+'|'+r.dir;var coin=r.s.replace(/USDT$/,'');
+  var h='';list.forEach(function(r,ix){var id=rid(r);var coin=r.s.replace(/USDT$/,'');
     h+='<tr class="rw" tabindex="0" data-id="'+id+'"><td><b>'+coin+'</b> <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'">BB</a></td>'+
       '<td class="l"><span class="pill '+r.dir+'">'+(r.dir==='long'?'LONG':'SHORT')+'</span></td><td class="l">'+htfCell(r)+' '+hcCell(r)+'</td><td class="l">'+stCell(r)+'</td>'+
+      (r.state===4?'<td class="mono">'+fp(r.price)+'</td><td class="mono mut">–</td><td class="mono" title="Koliko mora cena še narediti do zloma (sunka)">do zloma '+(Math.max(0,r.dist)*100).toFixed(1)+' %</td><td class="mono mut">–</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono mut">–</td><td class="mono mut">–</td><td class="mono mut">–</td></tr>':
       '<td class="mono">'+fp(r.price)+'</td><td class="mono">'+fp(Math.min(r.g1,r.g2))+'–'+fp(Math.max(r.g1,r.g2))+'</td>'+
       '<td class="mono '+(r.state===3?'':'mut')+'">'+(r.state===3?(Math.abs(r.dist)*100).toFixed(1)+' %':r.state===1?'–':'v coni')+'</td>'+
-      '<td class="mono">'+fp(r.entry)+'</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono up">'+fp(r.tp)+'</td><td class="mono"><b>'+r.rr.toFixed(1)+'</b></td><td class="mono">'+size(r)+'</td></tr>';
+      '<td class="mono">'+fp(r.entry)+'</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono up">'+fp(r.tp)+'</td><td class="mono"><b>'+r.rr.toFixed(1)+'</b></td><td class="mono">'+size(r)+'</td></tr>');
     if(open===id)h+='<tr class="dt"><td colspan="12"><div class="dtw">'+detail(r)+'</div></td></tr>';
   });
   $('out').innerHTML=h;
@@ -684,7 +703,7 @@ function render(){
 $('out').addEventListener('click',function(e){if(e.target.closest('a'))return;
   var tb=e.target.closest('[data-dtf]');if(tb){dtf=tb.getAttribute('data-dtf');render();return}
   var tr=e.target.closest('.rw');if(!tr)return;var id=tr.getAttribute('data-id');open=open===id?null:id;dtf=null;render();openLoad()});
-function openLoad(){var id=open,r=id&&rows.filter(function(x){return x.s+'|'+x.dir===id})[0];if(r)mtfLoad(r).then(function(){if(open===id)render()})}
+function openLoad(){var id=open,r=id&&rows.filter(function(x){return rid(x)===id})[0];if(r)mtfLoad(r).then(function(){if(open===id)render()})}
 $('out').addEventListener('keydown',function(e){if(e.key==='Enter'){var tr=e.target.closest('.rw');if(tr)tr.click()}});
 
 /* ---------- Risba setupa (kot na TV) ---------- */
@@ -732,10 +751,12 @@ function chart(r,c,tf){
   var k=c.k.slice();if(c.live)k.push(c.live);
   var n=k.length,from=Math.max(0,Math.min(r.Lx!=null?r.Lx-6:n-90,n-90)),bars=k.slice(from),W=760,H=360,pl=8,pr=72,pt=16,pb=24,ext=14;
   var lo=Infinity,hi=-Infinity;bars.forEach(function(x){lo=Math.min(lo,x.l);hi=Math.max(hi,x.h)});
-  [r.tp,r.sl,r.g1,r.g2,extP(r,0.27),extP(r,0.65)].forEach(function(v){lo=Math.min(lo,v);hi=Math.max(hi,v)});var pad=(hi-lo)*0.06;lo-=pad;hi+=pad;
+  (r.state===4?[r.sl,r.H,r.L]:[r.tp,r.sl,r.g1,r.g2,extP(r,0.27),extP(r,0.65)]).forEach(function(v){lo=Math.min(lo,v);hi=Math.max(hi,v)});var pad=(hi-lo)*0.06;lo-=pad;hi+=pad;
   var N=bars.length+ext,cw=(W-pl-pr)/N,X=function(i){return pl+(i-from+0.5)*cw},Y=function(p){return pt+(hi-p)/(hi-lo)*(H-pt-pb)};
   var up=r.dir==='long',s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Setup '+r.s+'">';
   var xe=X(n-1+ext);
+  var px=X(n-1);
+  if(r.state!==4){
   // GP
   s+='<rect x="'+X(Math.max(from,r.legX))+'" y="'+Y(Math.max(r.g1,r.g2))+'" width="'+(xe-X(Math.max(from,r.legX)))+'" height="'+Math.abs(Y(r.g1)-Y(r.g2))+'" fill="var(--gp)"/>';
   // pozicija (kot Long/Short orodje)
@@ -748,11 +769,15 @@ function chart(r,c,tf){
   // fib črte
   [[0.5,r.g50],[0.618,r.g1],[0.79,r.g2]].forEach(function(f){s+='<line x1="'+X(Math.max(from,r.legX))+'" x2="'+xe+'" y1="'+Y(f[1])+'" y2="'+Y(f[1])+'" stroke="var(--val)" stroke-width="1" opacity=".7"/>'+
     '<text x="'+(xe+4)+'" y="'+(Y(f[1])+4)+'" font-size="11" fill="var(--val)" font-family="ui-monospace,Menlo,monospace">'+f[0]+'</text>'});
+  }
   // staro L (likvidnost)
   if(r.L!=null&&r.Lx!=null&&r.Lx>=from)s+='<line x1="'+X(r.Lx)+'" x2="'+xe+'" y1="'+Y(r.L)+'" y2="'+Y(r.L)+'" stroke="var(--val)" stroke-width="1.6" stroke-dasharray="2 4"/>';
   // sveče
   bars.forEach(function(x,j){var i=from+j,u=x.c>=x.o,col=u?'var(--long)':'var(--short)',yt=Y(Math.max(x.o,x.c)),yb=Y(Math.min(x.o,x.c));
     s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'" stroke-width="1"/><rect x="'+(X(i)-cw*0.32)+'" y="'+yt+'" width="'+(cw*0.64)+'" height="'+Math.max(1,yb-yt)+'" fill="'+col+'"'+(i===n-1&&c.live?' opacity=".55"':'')+'/>'});
+  if(r.state===4){[[r.H,'var(--ink)','zlom: zaprtje '+(up?'nad ':'pod ')+fp(r.H)],[r.sl,'var(--short)','SL '+fp(r.sl)]].forEach(function(z){if(z[0]==null||isNaN(z[0]))return;
+    s+='<line x1="'+X(Math.max(from,r.LLx))+'" x2="'+xe+'" y1="'+Y(z[0])+'" y2="'+Y(z[0])+'" stroke="'+z[1]+'" stroke-width="1" stroke-dasharray="5 3"/><text x="'+(X(Math.max(from,r.LLx))+4)+'" y="'+(Y(z[0])-4)+'" font-size="11" font-weight="600" fill="'+z[1]+'" font-family="ui-monospace,Menlo,monospace">'+z[2]+'</text>'})}
+  else
   // vstop/SL/TP
   [[r.entry,'var(--ink)',(up?'LONG ':'SHORT ')+fp(r.entry)],[r.sl,'var(--short)','SL '+fp(r.sl)],[r.tp,'var(--long)','TP '+fp(r.tp)]].forEach(function(z){
     s+='<line x1="'+px+'" x2="'+xe+'" y1="'+Y(z[0])+'" y2="'+Y(z[0])+'" stroke="'+z[1]+'" stroke-width="1"/><text x="'+(px+4)+'" y="'+(Y(z[0])-4)+'" font-size="11" font-weight="600" fill="'+z[1]+'" font-family="ui-monospace,Menlo,monospace">'+z[2]+'</text>'});
@@ -790,6 +815,16 @@ function chart(r,c,tf){
   for(var g=0;g<=4;g++){var p=lo+(hi-lo)*g/4;s+='<text x="'+(W-4)+'" y="'+(Y(p)+4)+'" text-anchor="end" font-size="10" fill="var(--mut)" font-family="ui-monospace,Menlo,monospace">'+fp(p)+'</text>'}
   s+='</svg>';
   var a=+$('acct').value,pc=+$('rpct').value,risk=a*pc/100,qty=risk/Math.abs(r.entry-r.sl);
+  if(r.state===4){var kv4='<div class="kv">'+
+    '<span>Korak 1</span><b>Sweep '+(up?'starega dna ':'starega vrha ')+fp(r.L)+' → '+(up?'dno ':'vrh ')+fp(r.LL)+(r.rec?' (zaprtje nazaj ✓)':' (če sveča zapre nad '+fp(r.L)+')')+'</b>'+
+    '<span>Korak 2</span><b>Sunek: zaprtje '+(up?'nad ':'pod ')+fp(r.H)+' ('+(Math.max(0,r.dist)*100).toFixed(1)+' % od cene)</b>'+
+    '<span>Potem</span><b style="font-family:inherit;font-weight:500">Fib od '+(up?'dna':'vrha')+' sweepa do '+(up?'vrha':'dna')+' sunka, čakaj umik v 0.618–0.786 in '+(up?'HL':'LH')+' (Model 1-2)</b>'+
+    '<span>Neveljavno</span><b>zaprtje '+(up?'pod ':'nad ')+fp(r.LL)+'</b>'+
+    '<span>Sweep</span><b>'+svNazaj(r.age)+'</b>'+
+    '<span>HTF</span><b>'+($('tf').value==='W'?'1M ':'1W ')+arrow(r.htf)+'</b>'+
+    '<span>HTF sveče</span><b>3D '+(r.hc3?'<span class="up">✓</span>':'<span class="mut">✗</span>')+' · 1W '+(r.hw1?'<span class="up">✓</span>':'<span class="mut">✗</span>')+'</b></div>';
+    var so4=s.indexOf('>')+1;s=s.slice(0,so4)+bg+s.slice(so4);
+    return '<div class="det"><div>'+s+(leg?'<div class="lbl" style="margin-top:6px">'+leg+'</div>':'')+'</div>'+kv4+'</div>'}
   var kv='<div class="kv">'+
     '<span>Struktura</span><b>'+(up?'L '+fp(r.L)+' → LL '+fp(r.LL)+' → H '+fp(r.H):'H '+fp(r.L)+' → HH '+fp(r.LL)+' → L '+fp(r.H))+'</b>'+
     '<span>Golden pocket</span><b>'+fp(r.g1)+' – '+fp(r.g2)+'</b>'+
