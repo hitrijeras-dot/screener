@@ -293,7 +293,7 @@ function mk(e,lab){var d=Math.abs(e-sl),tp=L?e+2*d:e-2*d,note='2R',lr=liq!==null
 function bl(p){return p.lr!==null&&p.lr<2}
 var a=mk(e1,'CISD'),b=(ob&&Math.abs(e2-e1)/e1>0.0005&&(L?(e2<e1&&e2>sl):(e2>e1&&e2<sl)))?mk(e2,'sredina OB'):null,best=a;
 if(b&&bl(a)&&!bl(b))best=b;best.alt=b&&best!==b?b:(best===b?a:null);best.liq=liq;
-best.skip=bl(best)||best.pc<0.5;best.why=bl(best)?'likvidnost '+fp(liq)+' pred 1:2 ('+best.lr.toFixed(1)+'R)':best.pc<0.5?'SL pod 0,5 % (provizije)':'';return best}
+var inv=L?r.p<=sl:r.p>=sl,late=L?r.p>=best.tp:r.p<=best.tp;best.dead=inv||late;best.skip=inv||late||bl(best)||best.pc<0.5;best.why=inv?'NEVELJAVNO: cena že čez SL':late?'ZAMUJENO: cena že čez TP':bl(best)?'likvidnost '+fp(liq)+' pred 1:2 ('+best.lr.toFixed(1)+'R)':best.pc<0.5?'SL pod 0,5 % (provizije)':'';return best}
 function planTxt(p,short){if(!p)return '';var q=p.q>=100?p.q.toFixed(0):p.q.toPrecision(3);
 return (short?'':'<b>')+'Vstop ('+p.lab+') '+fp(p.e)+' · SL '+fp(p.sl)+' ('+p.pc.toFixed(2)+' %) · TP '+fp(p.tp)+' ('+p.note+') · RR '+p.rr.toFixed(1)+(short?'':'</b>')+' · '+q+' enot ('+(p.q*p.e).toFixed(0)+' USDT) pri '+($('risk').value||50)+' $'+(p.skip?(short?' · ⚠ ':' · <span class="dn">⚠ ')+p.why+(short?'':'</span>'):(short?' · OK':' · <span class="up">OK</span>'))}
 var CLM=/[?&]claude=1/.test(location.search);
@@ -306,7 +306,7 @@ if(!el){el=document.createElement('pre');el.id='claude';el.style.cssText='white-
 var notif={};try{notif=JSON.parse(localStorage.getItem('notif')||'{}')}catch(e){}
 function nOn(){try{return localStorage.getItem('nOn')==='1'}catch(e){return false}}
 function beep(){try{var A=window.__ac||(window.__ac=new (window.AudioContext||window.webkitAudioContext)());[0,0.18].forEach(function(d){var o=A.createOscillator(),g=A.createGain();o.frequency.value=d?1320:880;g.gain.setValueAtTime(0.25,A.currentTime+d);g.gain.exponentialRampToValueAtTime(0.001,A.currentTime+d+0.15);o.connect(g).connect(A.destination);o.start(A.currentTime+d);o.stop(A.currentTime+d+0.16)})}catch(e){}}
-function notifyNew(){var ev=[];rows.forEach(function(r){var k1=r.al&&r.cl?r.s+'|c|'+r.cl:null,k2=(r.xg==='A'||r.xg==='A+')?r.s+'|a|'+r.cl:null;
+function notifyNew(){var ev=[];rows.forEach(function(r){var k1=r.al&&r.cl&&!(r.p5&&r.p5.dead)?r.s+'|c|'+r.cl:null,k2=(r.xg==='A'||r.xg==='A+')?r.s+'|a|'+r.cl:null;
 if(k1&&!notif[k1]){notif[k1]=Date.now();ev.push(r.s+' '+r.bias.toUpperCase()+': CISD po sweepu '+fp(r.cl)+(r.p5?' · RR '+r.p5.rr.toFixed(1)+(r.p5.skip?' ⚠':''):''))}
 else if(k2&&!notif[k2]){notif[k2]=Date.now();ev.push(r.s+' '+r.bias.toUpperCase()+': EAX ocena '+r.xg)}});
 var ks=Object.keys(notif);if(ks.length>300)ks.sort(function(a,b){return notif[a]-notif[b]}).slice(0,ks.length-300).forEach(function(k){delete notif[k]});
