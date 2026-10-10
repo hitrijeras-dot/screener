@@ -12,9 +12,9 @@
 <title>Jay HL Screener</title>
 <style>
 /* Isti sistem barv kot Moj Screener; dodane vloge Time / Value / Who */
-:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#667085;--line:#e3e6eb;--long:#0b8a74;--longbg:#dff5ef;--short:#c4452f;--shortbg:#fbe6e1;--acc:#1f4fd8;--warn:#b7791f;--warnbg:#fdf3dc;--time:#c0185a;--timebg:#fbe3ec;--val:#2c68d2;--valbg:#e3ecfb;--gp:rgba(44,104,210,.13)}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--mut:#8a93a3;--line:#262c36;--long:#3fd1b3;--longbg:#12342d;--short:#ff7b63;--shortbg:#3a1d18;--acc:#7a9bff;--warn:#e8b04a;--warnbg:#33290f;--time:#ff5c95;--timebg:#3a1424;--val:#6f9bff;--valbg:#18233a;--gp:rgba(111,155,255,.16)}}
-:root[data-theme=dark]{--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--mut:#8a93a3;--line:#262c36;--long:#3fd1b3;--longbg:#12342d;--short:#ff7b63;--shortbg:#3a1d18;--acc:#7a9bff;--warn:#e8b04a;--warnbg:#33290f;--time:#ff5c95;--timebg:#3a1424;--val:#6f9bff;--valbg:#18233a;--gp:rgba(111,155,255,.16)}
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#667085;--line:#e3e6eb;--long:#0b8a74;--longbg:#dff5ef;--short:#c4452f;--shortbg:#fbe6e1;--acc:#1f4fd8;--warn:#b7791f;--warnbg:#fdf3dc;--time:#c0185a;--timebg:#fbe3ec;--val:#2c68d2;--valbg:#e3ecfb;--gp:rgba(44,104,210,.13);--gold:#b8860b}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--mut:#8a93a3;--line:#262c36;--long:#3fd1b3;--longbg:#12342d;--short:#ff7b63;--shortbg:#3a1d18;--acc:#7a9bff;--warn:#e8b04a;--warnbg:#33290f;--time:#ff5c95;--timebg:#3a1424;--val:#6f9bff;--valbg:#18233a;--gp:rgba(111,155,255,.16);--gold:#e5b84a}}
+:root[data-theme=dark]{--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--mut:#8a93a3;--line:#262c36;--long:#3fd1b3;--longbg:#12342d;--short:#ff7b63;--shortbg:#3a1d18;--acc:#7a9bff;--warn:#e8b04a;--warnbg:#33290f;--time:#ff5c95;--timebg:#3a1424;--val:#6f9bff;--valbg:#18233a;--gp:rgba(111,155,255,.16);--gold:#e5b84a}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
 .w{max-width:1100px;margin:0 auto;padding:16px}
@@ -513,10 +513,32 @@ function chart(r,c,tf){
   function lab(i,p,t,col,below){if(i==null||i<from)return '';return '<text x="'+X(i)+'" y="'+(below?Y(p)+15:Y(p)-6)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+col+'">'+t+'</text>'}
   s+=lab(r.Lx,r.L,up?'L':'H','var(--val)',up)+lab(r.LLx,r.LL,up?'LL':'HH','var(--warn)',up)+lab(r.Hx,r.H,up?'H':'L','var(--mut)',!up);
   if(r.HL!=null&&r.HLx!=null)s+=lab(Math.min(r.HLx,n-1),r.HL,up?'HL':'LH','var(--val)',up);
-  // čas: začetki mesecev + 3. teden
-  bars.forEach(function(x,j){var d=new Date(x.t),dd=d.getUTCDate(),i=from+j,prev=j?new Date(bars[j-1].t).getUTCDate():dd;
-    if(j&&dd<prev){var qs=d.getUTCMonth()%3===0;s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+pt+'" y2="'+(H-pb)+'" stroke="var(--time)" stroke-width="'+(qs?1.6:1)+'" stroke-dasharray="'+(qs?'':'3 4')+'" opacity=".7"/>'+(qs?'<text x="'+(X(i)+4)+'" y="'+(pt+10)+'" font-size="11" font-weight="700" fill="var(--time)">Q'+(Math.floor(d.getUTCMonth()/3)+1)+'</text>':'')}
-    if(dd>=15&&dd<=21&&tf!=='W')s+='<rect x="'+(X(i)-cw/2)+'" y="'+pt+'" width="'+cw+'" height="'+(H-pt-pb)+'" fill="var(--time)" opacity=".05"/>'});
+  // čas: časovni fraktali (senčenje gre v ozadje, črte čez)
+  var tmin=(TFS[tf]||TFS.D).min,tms=tmin*6e4,bg='',leg='',hh=H-pt-pb;
+  function span(pred,fill,op){var st=-1;for(var j=0;j<=bars.length;j++){var on=j<bars.length&&pred(bars[j].t+tms/2);if(on&&st<0)st=j;
+    if(!on&&st>=0){bg+='<rect x="'+(X(from+st)-cw/2)+'" y="'+pt+'" width="'+(cw*(j-st))+'" height="'+hh+'" fill="'+fill+'" opacity="'+op+'"/>';st=-1}}}
+  function vl(i,col,w,dash,op){return '<line x1="'+(X(i)-cw/2)+'" x2="'+(X(i)-cw/2)+'" y1="'+pt+'" y2="'+(H-pb)+'" stroke="'+col+'" stroke-width="'+w+'"'+(dash?' stroke-dasharray="'+dash+'"':'')+' opacity="'+op+'"/>'}
+  var labX=[-1e9,-1e9];
+  function tx(i,t,col){var x=X(i)-cw/2+3,row=x-labX[0]>=t.length*6+6?0:x-labX[1]>=t.length*6+6?1:-1;if(row<0)return '';labX[row]=x;
+    return '<text x="'+x+'" y="'+(pt+10+row*11)+'" font-size="10" font-weight="700" fill="'+col+'">'+t+'</text>'}
+  function md(t){return Math.floor((t%864e5)/6e4)}
+  function p23(t){var y=new Date(t).getUTCFullYear(),doy=Math.floor((t-Date.UTC(y,0,1))/864e5),bk=Math.min(3,Math.floor(doy/90));return y*16+bk*4+Math.min(3,Math.floor((doy-bk*90)/23))}
+  if(tmin<1440){
+    span(function(t){var m=md(t);return m>=720&&m<1080},'var(--time)',.07);
+    leg+='<span style="color:var(--time)">▮</span> 3. 6H (14–20 poletni čas) · polna črta = nov dan'+(tmin<360?' · črtkano = meje 6H':'');
+    if(tmin<=90){span(function(t){var m=md(t)%360;return m>=180&&m<270},'var(--time)',.07);leg+=' · temneje = 3. 90m'}
+    if(tmin<=23){span(function(t){var m=md(t)%360;return m>=226&&m<249},'var(--gold)',.4);leg+=' · <span style="color:var(--gold)">▮</span> 3. 23m v 3. 90m'}
+    if(tmin<90)leg+=' · pikice = 90m kvadranti';
+    for(var j=1;j<bars.length;j++){var m0=md(bars[j-1].t),m1=md(bars[j].t),i=from+j,newDay=m1<m0;
+      if(newDay||(tmin<360&&Math.floor(m1/360)!==Math.floor(m0/360)))s+=vl(i,'var(--time)',newDay?1.3:.8,newDay?'':'4 3',newDay?.6:.35)+(newDay?tx(i,dfmt(bars[j].t),'var(--time)'):'');
+      else if(tmin<90&&Math.floor(m1/90)!==Math.floor(m0/90))s+=vl(i,'var(--mut)',.8,'1 3',.45)}
+  }else{
+    if(tf==='D'){span(function(t){var d=new Date(t).getUTCDate();return d>=15&&d<=21},'var(--time)',.06);leg='<span style="color:var(--time)">▮</span> 3. teden (15.–21.) · polna črta = kvartal · črtkano = mesec · <span style="color:var(--val)">pikice</span> = 23D blok (90 dni od 1. 1. ÷ 4)'}
+    else leg='Polna črta = kvartal · črtkano = mesec';
+    for(var j=1;j<bars.length;j++){var d0=new Date(bars[j-1].t),d1=new Date(bars[j].t),i=from+j;
+      if(d1.getUTCMonth()!==d0.getUTCMonth()){var qs=d1.getUTCMonth()%3===0;s+=vl(i,'var(--time)',qs?1.6:1,qs?'':'3 4',.7)+(qs?tx(i,'Q'+(Math.floor(d1.getUTCMonth()/3)+1),'var(--time)'):'')}
+      else if(tf==='D'&&p23(bars[j].t)!==p23(bars[j-1].t))s+=vl(i,'var(--val)',1,'1 3',.8)+tx(i,'23D·'+(p23(bars[j].t)%4+1),'var(--val)')}
+  }
   // os
   for(var g=0;g<=4;g++){var p=lo+(hi-lo)*g/4;s+='<text x="'+(W-4)+'" y="'+(Y(p)+4)+'" text-anchor="end" font-size="10" fill="var(--mut)" font-family="ui-monospace,Menlo,monospace">'+fp(p)+'</text>'}
   s+='</svg>';
@@ -533,7 +555,8 @@ function chart(r,c,tf){
     '<span>HTF</span><b>'+($('tf').value==='W'?'1M ':'1W ')+arrow(r.htf)+($('tf').value==='W'?'':' · 1M '+arrow(r.htfM))+'</b>'+
     '<span>Konfluenca</span><b>'+(r.liq?'+liq ':'')+(r.time?'+čas':'')+(!r.liq&&!r.time?'–':'')+'</b>'+
     '</div>';
-  return '<div class="det"><div>'+s+'</div>'+kv+'</div>';
+  var so=s.indexOf('>')+1;s=s.slice(0,so)+bg+s.slice(so);
+  return '<div class="det"><div>'+s+(leg?'<div class="lbl" style="margin-top:6px">'+leg+'</div>':'')+'</div>'+kv+'</div>';
 }
 
 /* ---------- Kontrole ---------- */
