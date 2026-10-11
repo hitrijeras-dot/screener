@@ -746,6 +746,51 @@ function detail(r){
   r2.htf=r.htf;r2.htfM=r.htfM;
   return head+'<div class="lbl" style="margin-bottom:6px">'+(TFN[sel]||sel)+': <span class="pill '+r2.dir+'">'+(r2.dir==='long'?'LONG':'SHORT')+'</span> '+stCell(r2)+'</div>'+chart(r2,m,sel);
 }
+/* Oznake na grafu. FVG: bull k[i].l > k[i-2].h (bear zrcalno), riše se do zapolnitve, manjši od 0.25 povprečnega razpona se ne riše.
+   Sweep: sveča gre pod nepobran swing low (3 levo / 2 desno) in zapre nad njim (bear zrcalno).
+   Div: RSI 14 na pivotih 3/3, razmik ≤ 30 sveč; bull: nižje dno cene, RSI višji za > 2 in prvi RSI < 40; bear zrcalno (> 60) – kot Moj Screener. */
+function rsi14(c){var n=14,out=new Array(c.length).fill(NaN);if(c.length<=n)return out;var g=0,l=0,d;
+  for(var i=1;i<=n;i++){d=c[i]-c[i-1];if(d>=0)g+=d;else l-=d}g/=n;l/=n;out[n]=100-100/(1+g/(l||1e-12));
+  for(i=n+1;i<c.length;i++){d=c[i]-c[i-1];g=(g*(n-1)+Math.max(d,0))/n;l=(l*(n-1)+Math.max(-d,0))/n;out[i]=100-100/(1+g/(l||1e-12))}return out}
+function marks(k,from,n,X,Y,cw,xe){var s='',i,j,avg=0,cnt=0;
+  for(i=from;i<n;i++){avg+=k[i].h-k[i].l;cnt++}avg=cnt?avg/cnt*0.25:0;
+  // FVG: samo nezapolnjeni, zadnji 3 v vsako smer
+  var fv={u:[],e:[]};
+  for(i=Math.max(2,from);i<n;i++){var bu=k[i].l>k[i-2].h,be=k[i].h<k[i-2].l;if(!bu&&!be)continue;
+    var top=bu?k[i].l:k[i-2].l,bot=bu?k[i-2].h:k[i].h;if(top-bot<avg)continue;var fill=false;
+    for(j=i+1;j<n;j++)if(bu?k[j].l<=bot:k[j].h>=top){fill=true;break}
+    if(!fill)fv[bu?'u':'e'].push({i:i,top:top,bot:bot,bu:bu})}
+  fv.u.slice(-3).concat(fv.e.slice(-3)).forEach(function(g){var x1=X(g.i-1);
+    s+='<rect x="'+x1+'" y="'+Y(g.top)+'" width="'+Math.max(1,xe-x1)+'" height="'+Math.max(1,Y(g.bot)-Y(g.top))+'" fill="'+(g.bu?'var(--long)':'var(--short)')+'" opacity=".16"/>'+
+      '<text x="'+(xe-2)+'" y="'+(Y((g.top+g.bot)/2)+3)+'" text-anchor="end" font-size="9" font-weight="700" fill="'+(g.bu?'var(--long)':'var(--short)')+'">FVG</text>'});
+  // sweep
+  function pv(c,hi){if(c<3||c+2>=k.length)return false;var v=hi?k[c].h:k[c].l;for(var q=1;q<=3;q++){var x=hi?k[c-q].h:k[c-q].l;if(hi?x>=v:x<=v)return false}
+    for(q=1;q<=2;q++){x=hi?k[c+q].h:k[c+q].l;if(hi?x>v:x<v)return false}return true}
+  var pl=[],ph=[];
+  for(i=0;i<n;i++){var c=i-2;if(c>=3){if(pv(c,false))pl.push({v:k[c].l,x:c,br:false});if(pv(c,true))ph.push({v:k[c].h,x:c,br:false})}
+    var K=k[i],sl=null,sh=null;
+    pl.forEach(function(q){if(!q.br&&q.x<i&&K.l<q.v&&K.c>q.v&&(!sl||q.v<sl.v))sl=q});
+    ph.forEach(function(q){if(!q.br&&q.x<i&&K.h>q.v&&K.c<q.v&&(!sh||q.v>sh.v))sh=q});
+    if(i>=from){
+      if(sl){s+='<line x1="'+X(Math.max(from,sl.x))+'" x2="'+X(i)+'" y1="'+Y(sl.v)+'" y2="'+Y(sl.v)+'" stroke="var(--long)" stroke-width="1" stroke-dasharray="2 2" opacity=".8"/>'+
+        '<path d="M'+X(i)+' '+(Y(K.l)+4)+' l-4 7 h8 z" fill="var(--long)"/>'}
+      if(sh){s+='<line x1="'+X(Math.max(from,sh.x))+'" x2="'+X(i)+'" y1="'+Y(sh.v)+'" y2="'+Y(sh.v)+'" stroke="var(--short)" stroke-width="1" stroke-dasharray="2 2" opacity=".8"/>'+
+        '<path d="M'+X(i)+' '+(Y(K.h)-4)+' l-4 -7 h8 z" fill="var(--short)"/>'}}
+    pl.forEach(function(q){if(K.l<q.v)q.br=true});ph.forEach(function(q){if(K.h>q.v)q.br=true});
+    if(pl.length>60)pl.shift();if(ph.length>60)ph.shift()}
+  // RSI divergenca
+  var r=rsi14(k.map(function(x){return x.c})),P=[],Q=[];
+  for(i=3;i<n-3;i++){var okL=true,okH=true;for(j=1;j<=3;j++){if(k[i-j].l<=k[i].l||k[i+j].l<k[i].l)okL=false;if(k[i-j].h>=k[i].h||k[i+j].h>k[i].h)okH=false}
+    if(okL)P.push(i);if(okH)Q.push(i)}
+  function dv(a,b,bull){if(b<from||b-a>30||isNaN(r[a])||isNaN(r[b]))return;
+    var ok=bull?(k[b].l<k[a].l&&r[b]>r[a]+2&&r[a]<40):(k[b].h>k[a].h&&r[b]<r[a]-2&&r[a]>60);if(!ok)return;
+    var ya=bull?Y(k[a].l)+9:Y(k[a].h)-9,yb=bull?Y(k[b].l)+9:Y(k[b].h)-9,col=bull?'var(--long)':'var(--short)';
+    s+='<line x1="'+X(Math.max(a,from))+'" x2="'+X(b)+'" y1="'+(a<from?yb:ya)+'" y2="'+yb+'" stroke="'+col+'" stroke-width="1.6"/>'+
+      '<text x="'+X(b)+'" y="'+(bull?yb+12:yb-4)+'" text-anchor="middle" font-size="10" font-weight="700" fill="'+col+'">div</text>'}
+  for(i=1;i<P.length;i++)dv(P[i-1],P[i],true);
+  for(i=1;i<Q.length;i++)dv(Q[i-1],Q[i],false);
+  return s}
+var mleg='<br><span style="color:var(--long)">▲</span>/<span style="color:var(--short)">▼</span> sweep (pobrano staro dno/vrh in zaprtje nazaj) · <span style="color:var(--long)">▮</span>/<span style="color:var(--short)">▮</span> nezapolnjen FVG (zadnji 3 v vsako smer) · <b>div</b> = RSI divergenca';
 function chart(r,c,tf){
   if(!c)return '';
   var k=c.k.slice();if(c.live)k.push(c.live);
@@ -772,6 +817,8 @@ function chart(r,c,tf){
   }
   // staro L (likvidnost)
   if(r.L!=null&&r.Lx!=null&&r.Lx>=from)s+='<line x1="'+X(r.Lx)+'" x2="'+xe+'" y1="'+Y(r.L)+'" y2="'+Y(r.L)+'" stroke="var(--val)" stroke-width="1.6" stroke-dasharray="2 4"/>';
+  // oznake: FVG, sweep, RSI divergenca (samo prikaz)
+  s+=marks(k,from,n,X,Y,cw,xe);
   // sveče
   bars.forEach(function(x,j){var i=from+j,u=x.c>=x.o,col=u?'var(--long)':'var(--short)',yt=Y(Math.max(x.o,x.c)),yb=Y(Math.min(x.o,x.c));
     s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'" stroke-width="1"/><rect x="'+(X(i)-cw*0.32)+'" y="'+yt+'" width="'+(cw*0.64)+'" height="'+Math.max(1,yb-yt)+'" fill="'+col+'"'+(i===n-1&&c.live?' opacity=".55"':'')+'/>'});
@@ -823,7 +870,7 @@ function chart(r,c,tf){
     '<span>Sweep</span><b>'+svNazaj(r.age)+'</b>'+
     '<span>HTF</span><b>'+($('tf').value==='W'?'1M ':'1W ')+arrow(r.htf)+'</b>'+
     '<span>HTF sveče</span><b>3D '+(r.hc3?'<span class="up">✓</span>':'<span class="mut">✗</span>')+' · 1W '+(r.hw1?'<span class="up">✓</span>':'<span class="mut">✗</span>')+'</b></div>';
-    var so4=s.indexOf('>')+1;s=s.slice(0,so4)+bg+s.slice(so4);
+    var so4=s.indexOf('>')+1;s=s.slice(0,so4)+bg+s.slice(so4);leg+=mleg;
     return '<div class="det"><div>'+s+(leg?'<div class="lbl" style="margin-top:6px">'+leg+'</div>':'')+'</div>'+kv4+'</div>'}
   var kv='<div class="kv">'+
     '<span>Struktura</span><b>'+(up?'L '+fp(r.L)+' → LL '+fp(r.LL)+' → H '+fp(r.H):'H '+fp(r.L)+' → HH '+fp(r.LL)+' → L '+fp(r.H))+'</b>'+
@@ -840,7 +887,7 @@ function chart(r,c,tf){
     '<span>HTF sveče</span><b>3D '+(r.hc3?'<span class="up">✓</span>':'<span class="mut">✗</span>')+' · 1W '+(r.hw1?'<span class="up">✓</span>':'<span class="mut">✗</span>')+'</b>'+
     '<span>Konfluenca</span><b>'+(r.liq?'+liq ':'')+(r.time?'+čas':'')+(!r.liq&&!r.time?'–':'')+'</b>'+
     '</div>';
-  var so=s.indexOf('>')+1;s=s.slice(0,so)+bg+s.slice(so);
+  var so=s.indexOf('>')+1;s=s.slice(0,so)+bg+s.slice(so);leg+=mleg;
   return '<div class="det"><div>'+s+(leg?'<div class="lbl" style="margin-top:6px">'+leg+'</div>':'')+'</div>'+kv+'</div>';
 }
 
