@@ -70,6 +70,8 @@ th:first-child,td:first-child,.l{text-align:left}
 @media (max-width:700px){.det{grid-template-columns:1fr}}
 .chw svg{touch-action:pan-y;cursor:grab;user-select:none}.chw.drag svg{cursor:grabbing}
 .det svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.ana{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.45;margin-bottom:8px}.ana-h{font-weight:700;margin-bottom:4px}.ana ul{margin:0;padding-left:18px}.ana li{margin:2px 0}.ana-f{color:var(--mut);font-size:11px;margin-top:4px}
+.legd{margin-top:6px;font-size:12px}.legd summary{cursor:pointer;color:var(--mut);font-weight:600}.legd .kv{margin-top:6px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;align-content:start}
 .kv span:nth-child(odd){color:var(--mut)}
 .kv b{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600}
@@ -1186,7 +1188,7 @@ function chartBox(r,c,tf){LC={r:r,c:c,tf:tf};
 function cvRedraw(){var el=$('chw');if(!el||!LC)return;el.innerHTML=chart(LC.r,LC.c,LC.tf);var st=$('cvst');if(st)st.textContent=(CV.off?'premaknjeno '+CV.off+' sveč nazaj':'zadnja sveča')+' · povleci graf ali zavrti kolesce'}
 function cvZoom(f){CV.cnt=Math.max(25,Math.min(600,Math.round(CV.cnt*f)));if(CV.max)CV.cnt=Math.min(CV.cnt,CV.max);cvRedraw()}
 (function(){var drag=null,raf=0;
-  document.addEventListener('pointerdown',function(e){var el=e.target.closest&&e.target.closest('#chw');if(!el||e.button>0)return;var svg=el.querySelector('svg');if(!svg)return;
+  document.addEventListener('pointerdown',function(e){var el=e.target.closest&&e.target.closest('#chw');if(!el||e.button>0||e.target.closest('details,button,a,[data-cvz],[data-mk]'))return;var svg=el.querySelector('svg');if(!svg)return;
     drag={x:e.clientX,off:CV.off,w:svg.getBoundingClientRect().width,id:e.pointerId};el.classList.add('drag');try{el.setPointerCapture(e.pointerId)}catch(_){}});
   document.addEventListener('pointermove',function(e){if(!drag||e.pointerId!==drag.id)return;var per=drag.w/Math.max(10,CV.vis),d=Math.round((e.clientX-drag.x)/per),no=Math.max(0,Math.min(CV.max-20,drag.off+d));
     if(no!==CV.off){CV.off=no;if(!raf)raf=requestAnimationFrame(function(){raf=0;cvRedraw()})}});
@@ -1195,6 +1197,43 @@ function cvZoom(f){CV.cnt=Math.max(25,Math.min(600,Math.round(CV.cnt*f)));if(CV.
   document.addEventListener('wheel',function(e){var el=e.target.closest&&e.target.closest('#chw');if(!el)return;e.preventDefault();cvZoom(e.deltaY>0?1.15:1/1.15)},{passive:false});
   document.addEventListener('dblclick',function(e){if(e.target.closest&&e.target.closest('#chw')){cvReset();cvRedraw()}});
 })();
+/* Kratka analiza grafa v navadnem jeziku (iz istih podatkov kot oznake). Ni signal, samo povzetek. */
+var DOPEN=window.DOPEN={leg:0,kv:0};
+function LT(s,e){return LANG==='en'?e:s}
+function anaSv(a){return LANG==='en'?(a===0?'on the last candle':a+(a===1?' candle':' candles')+' ago'):svNazaj(a)}
+function kratka(r,an,p,tf){var o=[],b=0,pc=function(v){return (v>p?'+':'')+((v-p)/p*100).toFixed(1)+' %'},U='<span class="up">',D='<span class="dn">',E='</span>';
+  // 1) višji okvir
+  var hW=tf==='W'?null:r.htfM,h1=r.htf,hl=tf==='W'?'1M':'1W';
+  var hs=h1===1&&(hW==null||hW===1)?1:h1===-1&&(hW==null||hW===-1)?-1:0;b+=hs;
+  o.push(LT('Višji okvir','Higher timeframe')+' ('+hl+(hW==null?'':' + 1M')+'): '+(hs>0?U+LT('trend gor','uptrend')+E:hs<0?D+LT('trend dol','downtrend')+E:LT('mešano, brez jasne smeri','mixed, no clear direction'))+'.');
+  // 2) noga + GP
+  if(an.fib){var g=an.gp,gt=Math.max(an.fib.g1,an.fib.g2),gb=Math.min(an.fib.g1,an.fib.g2),up=an.fib.up;b+=up?1:-1;
+    o.push(LT('Zadnja noga gre ','Last leg is ')+(up?U+LT('gor','up')+E:D+LT('dol','down')+E)+' ('+(up?fp(an.fib.lo)+' → '+fp(an.fib.hi):fp(an.fib.hi)+' → '+fp(an.fib.lo))+'). '+
+      (g.inn?LT('Cena je <b>v GP</b> – tu se išče ','Price is <b>in the GP</b> – the area to look for a ')+(up?'HL':'LH')+'.':
+       g.d>0?LT('Do GP ','GP ')+fp(gb)+'–'+fp(gt)+LT(' je še ',' is ')+(g.d*100).toFixed(1)+' %'+LT('.',' away.'):
+       LT('Cena je že globlje od GP – noga je oslabljena.','Price is already beyond the GP – the leg is weakened.')))}
+  // 3) volume profile
+  if(an.vp)o.push(an.vp.pos>0?LT('Nad VAH (nad območjem vrednosti) – cena je "draga", POC ','Above VAH (above value area) – price is "expensive", POC ')+fp(an.vp.poc)+' ('+pc(an.vp.poc)+').':
+    an.vp.pos<0?LT('Pod VAL (pod območjem vrednosti) – cena je "poceni", POC ','Below VAL (below value area) – price is "cheap", POC ')+fp(an.vp.poc)+' ('+pc(an.vp.poc)+').':
+    LT('V območju vrednosti (VAL–VAH), POC ','Inside the value area (VAL–VAH), POC ')+fp(an.vp.poc)+' ('+pc(an.vp.poc)+').');
+  // 4) sveži dogodki
+  var ev=[];
+  if(an.sw&&an.sw.age<=12){ev.push((an.sw.bu?U+LT('sweep dna','low swept')+E:D+LT('sweep vrha','high swept')+E)+' '+anaSv(an.sw.age));b+=an.sw.bu?1:-1}
+  if(an.dv&&an.dv.age<=15){ev.push((an.dv.bu?U+'bull div'+E:D+'bear div'+E)+' '+anaSv(an.dv.age));b+=an.dv.bu?1:-1}
+  if(ev.length)o.push(LT('Sveže: ','Recent: ')+ev.join(', ')+'.');
+  // 5) najbližji nivoji nad / pod
+  var zs=[];if(an.poi)zs.push(['POI',an.poi]);if(an.fv)zs.push(['FVG',an.fv]);
+  if(r.hf){var hz=nearZ(r.hf.fv,p);if(hz)zs.push([r.hf.lb+' FVG',hz])}
+  var inZ=zs.filter(function(z){return z[1].d===0}),ab=null,be=null;
+  zs.forEach(function(z){var t=z[1];if(t.bot>p&&(!ab||t.bot<ab[1].bot))ab=z;if(t.top<p&&(!be||t.top>be[1].top))be=z});
+  var nm=function(z){return (z[1].bu?U+'bull'+E:D+'bear'+E)+' '+z[0]};
+  if(inZ.length)o.push(LT('Cena je v: ','Price is in: ')+inZ.map(nm).join(', ')+'.');
+  if(ab||be)o.push((ab?LT('Nad: ','Above: ')+nm(ab)+' '+fp(ab[1].bot)+' ('+pc(ab[1].bot)+')':'')+(ab&&be?' · ':'')+(be?LT('Pod: ','Below: ')+nm(be)+' '+fp(be[1].top)+' ('+pc(be[1].top)+')':'')+'.');
+  // povzetek
+  var vt=b>=2?U+LT('večinoma bull','mostly bullish')+E:b<=-2?D+LT('večinoma bear','mostly bearish')+E:LT('mešano','mixed');
+  return '<div class="ana"><div class="ana-h">'+LT('Kratka analiza','Quick read')+' · '+vt+'</div><ul>'+o.map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul>'+
+    '<div class="ana-f">'+LT('Povzetek oznak, ni signal za vstop.','Summary of the marks, not an entry signal.')+'</div></div>'}
+function legH(leg){return leg?'<details class="legd"'+(DOPEN.leg?' open':'')+' ontoggle="DOPEN.leg=this.open"><summary>'+LT('Legenda','Legend')+'</summary><div class="lbl">'+leg+'</div></details>':''}
 function chart(r,c,tf){
   if(!c)return '';
   var k=c.k.slice();if(c.live)k.push(c.live);
@@ -1285,7 +1324,7 @@ function chart(r,c,tf){
     '<span>HTF</span><b>'+($('tf').value==='W'?'1M ':'1W ')+arrow(r.htf)+($('tf').value==='W'?'':' · 1M '+arrow(r.htfM))+'</b>'+
     '<span>HTF sveče</span><b>3D '+(r.hc3?'<span class="up">✓</span>':'<span class="mut">✗</span>')+' · 1W '+(r.hw1?'<span class="up">✓</span>':'<span class="mut">✗</span>')+'</b></div>';
     var so0=s.indexOf('>')+1;s=s.slice(0,so0)+bg+s.slice(so0);leg+=mleg;
-    return '<div class="det"><div>'+s+(leg?'<div class="lbl" style="margin-top:6px">'+leg+'</div>':'')+'</div>'+kv0+'</div>'}
+    return '<div class="det"><div>'+s+legH(leg)+'</div><div>'+kratka(r,an,k[n-1].c,$('tf').value)+'<details class="legd"'+(DOPEN.kv?' open':'')+' ontoggle="DOPEN.kv=this.open"><summary>'+LT('Vse številke','All numbers')+'</summary>'+kv0+'</details></div></div>'}
   if(r.state===4){var kv4='<div class="kv">'+
     '<span>Korak 1</span><b>Sweep '+(up?'starega dna ':'starega vrha ')+fp(r.L)+' → '+(up?'dno ':'vrh ')+fp(r.LL)+(r.rec?' (zaprtje nazaj ✓)':' (če sveča zapre nad '+fp(r.L)+')')+'</b>'+
     '<span>Korak 2</span><b>Sunek: zaprtje '+(up?'nad ':'pod ')+fp(r.H)+' ('+(Math.max(0,r.dist)*100).toFixed(1)+' % od cene)</b>'+
@@ -1295,7 +1334,7 @@ function chart(r,c,tf){
     '<span>HTF</span><b>'+($('tf').value==='W'?'1M ':'1W ')+arrow(r.htf)+'</b>'+
     '<span>HTF sveče</span><b>3D '+(r.hc3?'<span class="up">✓</span>':'<span class="mut">✗</span>')+' · 1W '+(r.hw1?'<span class="up">✓</span>':'<span class="mut">✗</span>')+'</b></div>';
     var so4=s.indexOf('>')+1;s=s.slice(0,so4)+bg+s.slice(so4);leg+=mleg;
-    return '<div class="det"><div>'+s+(leg?'<div class="lbl" style="margin-top:6px">'+leg+'</div>':'')+'</div>'+kv4+'</div>'}
+    return '<div class="det"><div>'+s+legH(leg)+'</div>'+kv4+'</div>'}
   var kv='<div class="kv">'+
     '<span>Struktura</span><b>'+(up?'L '+fp(r.L)+' → LL '+fp(r.LL)+' → H '+fp(r.H):'H '+fp(r.L)+' → HH '+fp(r.LL)+' → L '+fp(r.H))+'</b>'+
     (su?'<span>Golden pocket</span><b>'+fp(r.g1)+' – '+fp(r.g2)+'</b>'+
@@ -1312,7 +1351,7 @@ function chart(r,c,tf){
     '<span>Konfluenca</span><b>'+(r.liq?'+liq ':'')+(r.time?'+čas':'')+(!r.liq&&!r.time?'–':'')+'</b>'+
     '</div>';
   var so=s.indexOf('>')+1;s=s.slice(0,so)+bg+s.slice(so);leg+=mleg;
-  return '<div class="det"><div>'+s+(leg?'<div class="lbl" style="margin-top:6px">'+leg+'</div>':'')+'</div>'+kv+'</div>';
+  return '<div class="det"><div>'+s+legH(leg)+'</div>'+kv+'</div>';
 }
 
 /* ---------- Kontrole ---------- */
