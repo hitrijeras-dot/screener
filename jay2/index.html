@@ -99,6 +99,7 @@ th[data-sort]{cursor:pointer;user-select:none}th[data-sort]:hover{color:var(--in
 .rsi-m{color:var(--mut);font-size:12px;display:flex;gap:10px;flex-wrap:wrap}
 .gauge{grid-column:1/-1;position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--long) 0 30%,var(--line) 30% 70%,var(--short) 70%);opacity:.9}
 .gauge i{position:absolute;top:-3px;width:4px;height:12px;border-radius:2px;background:var(--ink);transform:translateX(-2px)}
+.rsi-x{margin-top:2px;font-size:11px}.rsi-x b{font-weight:700}
 .rsi-e{padding:28px 14px;text-align:center;color:var(--mut)}
 .empty{padding:48px 20px;text-align:center;color:var(--mut);white-space:normal!important}
 /* telefon: vrstice kot kartice */
@@ -502,6 +503,7 @@ var I18N_EX={'RSI ekstremi':'RSI extremes','Okvir:':'Timeframe:','Kovanci:':'Coi
  'S HTF svečami':'With HTF candles','Vol.':'Vol.','Od ':'From ','Naprej':'Forward','Nazaj v čas':'Back in time','nalagam …':'loading …','Sweep':'Sweep',
  'Obvestila vklopljena':'Notifications on','Vklopi obvestila':'Enable notifications','Obvestila blokirana v brskalniku':'Notifications blocked in browser','Obvestila niso podprta':'Notifications not supported'};
 var I18N_PH=[
+ ['HTF se ne ujema','HTF does not agree'],['ujema z','agrees with'],['Višji okvirji','Higher timeframes'],['▲ pod dnom','▲ below low'],['▼ nad vrhom','▼ above high'],['in zaprla nazaj noter','and closed back inside'],['obsega zadnjih 30 sveč','of the last 30 candles range'],['Cena je šla','Price went'],
  ['RSI(14) z zadnjo (tudi odprto) svečo, kot na TradingView. Nad 70 = preveč kupljeno, pod 30 = preveč prodano. Ni signal za vstop.','RSI(14) including the last (open) candle, like TradingView. Above 70 = overbought, below 30 = oversold. Not an entry signal.'],
  ['Nad 70 · preveč kupljeno','Above 70 · overbought'],['Pod 30 · preveč prodano','Below 30 · oversold'],['Noben kovanec ni nad 70.','No coin above 70.'],['Noben kovanec ni pod 30.','No coin below 30.'],
  ['pravkar prešel','just crossed'],['zelo visok','very high'],['zelo nizek','very low'],['Pritisni "Preveri".','Press "Check".'],['Preverjam','Checking'],['Preverjenih','Checked'],[' prej ',' prev '],['že ',''],
@@ -1022,6 +1024,12 @@ var ACT={0:1,1:1,2:1,5:1};
 function ready(r){return (r.state===1||r.state===2)&&!!(r.m5&&r.m5.ok)}
 function m5Cell(r){if(!r.m5)return '<td class="l mut">5m –</td>';return r.m5.ok?'<td class="l up" title="5m CISD v smeri trejda">5m ✓ pred '+r.m5.ago+' min</td>':'<td class="l mut" title="'+(r.m5.ct?'zadnji 5m CISD: '+r.m5.ct+' pred '+r.m5.ago+' min':'ni 5m CISD')+'">5m –</td>'}
 /* ---------- RSI ekstremi: lasten pregled (top N po prometu + kovanci z zvezdico), RSI14 z odprto svečo ---------- */
+var RSI_MIN={'15':15,'60':60,'240':240,'360':360,D:1440,W:10080},RSI_HTF={'15':['60','240'],'60':['240','D'],'240':['D','W'],'360':['D','W'],D:['W','M'],W:['M']},RSI_N={'60':'1H','240':'4H',D:'1D',W:'1W',M:'1M'};
+/* Deviation = v zadnjih 3 zaprtih svečah je cena šla čez vrh/dno obsega prejšnjih 30 sveč, zadnja sveča pa je zaprla nazaj v obseg (lažni preboj). */
+function devOf(k){var n=k.length;if(n<36)return null;var hi=-Infinity,lo=Infinity,i;for(i=n-33;i<n-3;i++){hi=Math.max(hi,k[i].h);lo=Math.min(lo,k[i].l)}
+  var c=k[n-1].c,up=-1,dn=-1;for(i=n-3;i<n;i++){if(k[i].h>hi)up=i;if(k[i].l<lo)dn=i}
+  if(up>=0&&c<hi&&c>lo&&(dn<0||up>=dn))return {bu:false,lvl:hi,age:n-1-up};
+  if(dn>=0&&c>lo&&c<hi)return {bu:true,lvl:lo,age:n-1-dn};return null}
 var RSI_TF=[['15','15m'],['60','1H'],['240','4H'],['360','6H'],['D','1D'],['W','1W']],RSIS={tf:ls('jay_rsitf')||'240',n:+(ls('jay_rsin')||100),res:null,at:0,rtf:null,busy:false};
 function rsiChips(){$('rsitf').innerHTML=RSI_TF.map(function(o){return '<button class="chip'+(RSIS.tf===o[0]?' on':'')+'" data-rsitf="'+o[0]+'" type="button">'+o[1]+'</button>'}).join(' ');
   $('rsin').innerHTML=[50,100,200].map(function(n){return '<button class="chip'+(RSIS.n===n?' on':'')+'" data-rsin="'+n+'" type="button">'+n+'</button>'}).join(' ')}
@@ -1033,10 +1041,18 @@ async function rsiRun(){if(RSIS.busy)return;RSIS.busy=true;$('rsigo').disabled=t
     var out=[],done=0,q=list.slice();
     async function one(t){try{var k=await kl(t.symbol,tf,200);if(k.length<30)return;var r=rsi14(k.map(function(x){return x.c})),n=r.length,v=r[n-1];if(!(v===v))return;
         var up=v>=70,dn=v<=30,cnt=0;if(up||dn)for(var i=n-1;i>=0&&(up?r[i]>=70:r[i]<=30);i--)cnt++;
-        out.push({s:t.symbol,v:v,pv:r[n-2],cnt:cnt,price:k[n-1].c,ch:+t.price24hPcnt*100})}catch(e){}
+        var kc=k[n-1].t+RSI_MIN[tf]*6e4>Date.now()?k.slice(0,-1):k,a=anz(kc),ld=a.dv[a.dv.length-1];
+        out.push({s:t.symbol,v:v,pv:r[n-2],cnt:cnt,price:k[n-1].c,ch:+t.price24hPcnt*100,dv:ld&&kc.length-1-ld.b<=10?{bu:ld.bu,age:kc.length-1-ld.b}:null,dev:devOf(kc)})}catch(e){}
       done++;$('rsipg').style.width=(100*done/list.length)+'%';$('rsist').textContent='Preverjam '+done+'/'+list.length+' …'}
     async function w(){while(q.length){await one(q.shift());await new Promise(function(r){setTimeout(r,40)})}}
     await Promise.all([w(),w(),w(),w(),w()]);
+    /* RSI višjih okvirjev samo za kovance v seznamih (nad 70 / pod 30) */
+    var ex=out.filter(function(x){return x.v>=70||x.v<=30}),hq=[];ex.forEach(function(x){x.h=[];(RSI_HTF[tf]||[]).forEach(function(h){hq.push([x,h])})});
+    var hd=0,hn=hq.length;async function hone(j){try{var k=await kl(j[0].s,j[1],200),r=rsi14(k.map(function(x){return x.c})),v=r[r.length-1];if(v===v)j[0].h.push({tf:j[1],v:v})}catch(e){}
+      hd++;$('rsist').textContent='Višji okvirji '+hd+'/'+hn+' …'}
+    async function hw(){while(hq.length){await hone(hq.shift());await new Promise(function(r){setTimeout(r,40)})}}
+    await Promise.all([hw(),hw(),hw(),hw(),hw()]);
+    ex.forEach(function(x){x.h.sort(function(a,b){return RSI_HTF[tf].indexOf(a.tf)-RSI_HTF[tf].indexOf(b.tf)})});
     RSIS.res=out;RSIS.at=Date.now();RSIS.rtf=tf+'|'+N;
     $('rsist').textContent='Preverjenih '+out.length+' kovancev ('+(TFN[tf]||tf)+') ob '+new Date().toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit',timeZone:TZ});
   }catch(e){$('rsist').textContent='Napaka pri branju Bybita: '+e.message}
@@ -1044,9 +1060,15 @@ async function rsiRun(){if(RSIS.busy)return;RSIS.busy=true;$('rsigo').disabled=t
 function rsiRow(x){var col=x.v>=70?'dn':'up',ex=x.v>=80||x.v<=20,inC=coins.some(function(c){return c.s===x.s});
   return '<div class="rsi-r'+(inC?' go':'')+'"'+(inC?' data-rsiopen="'+x.s+'"':'')+'><div>'+coinCell(x.s).replace(/^<td>|<\/td>$/g,'')+
     '<div class="rsi-m"><span class="mono">'+fp(x.price)+'</span><span class="mono '+(x.ch>=0?'up':'dn')+'">'+(x.ch>=0?'+':'')+x.ch.toFixed(1)+' %</span><span>'+(x.cnt<=1?'pravkar prešel':'že '+x.cnt+' sveč')+'</span>'+
-    (x.pv===x.pv?'<span>'+(x.v>x.pv?'↑':'↓')+' prej '+x.pv.toFixed(1)+'</span>':'')+'</div></div>'+
+    (x.pv===x.pv?'<span>'+(x.v>x.pv?'↑':'↓')+' prej '+x.pv.toFixed(1)+'</span>':'')+'</div>'+rsiExtra(x)+'</div>'+
     '<div class="rsi-v '+col+'">'+x.v.toFixed(1)+'<small>'+(ex?(x.v>=80?'zelo visok':'zelo nizek'):'RSI')+'</small></div>'+
     '<div class="gauge"><i style="left:'+Math.max(0,Math.min(100,x.v))+'%"></i></div></div>'}
+function rsiExtra(x){var ob=x.v>=70,t=[],h=x.h||[],m=h.filter(function(z){return ob?z.v>=70:z.v<=30});
+  if(h.length)t.push('<span>HTF: '+h.map(function(z){var ok=ob?z.v>=70:z.v<=30,near=!ok&&(ob?z.v>=60:z.v<=40);return '<b class="'+(ok?(ob?'dn':'up'):near?'':'mut')+'">'+RSI_N[z.tf]+' '+z.v.toFixed(0)+(ok?' ✓':'')+'</b>'}).join(' · ')+'</span>'+
+    '<span class="'+(m.length?(ob?'dn':'up'):'mut')+'">'+(m.length?'ujema z '+m.map(function(z){return RSI_N[z.tf]}).join(' + '):'HTF se ne ujema')+'</span>');
+  if(x.dv)t.push('<span class="'+(x.dv.bu?'up':'dn')+'">'+(x.dv.bu?'bull':'bear')+' div · '+ago(x.dv.age)+'</span>');
+  if(x.dev)t.push('<span class="'+(x.dev.bu?'up':'dn')+'" title="Cena je šla '+(x.dev.bu?'pod dno':'nad vrh')+' obsega zadnjih 30 sveč ('+fp(x.dev.lvl)+') in zaprla nazaj noter">deviation '+(x.dev.bu?'▲ pod dnom':'▼ nad vrhom')+' · '+ago(x.dev.age)+'</span>');
+  return t.length?'<div class="rsi-m rsi-x">'+t.join('')+'</div>':''}
 function rsiRender(){var o=$('rsiout');if(!o)return;if(!RSIS.res){o.innerHTML=RSIS.busy?'':'<div class="rsi-col" style="grid-column:1/-1"><div class="rsi-e">Pritisni "Preveri".</div></div>';return}
   var ob=RSIS.res.filter(function(x){return x.v>=70}).sort(function(a,b){return b.v-a.v}),os=RSIS.res.filter(function(x){return x.v<=30}).sort(function(a,b){return a.v-b.v});
   if(favOn){ob=ob.filter(function(x){return FAV[x.s]});os=os.filter(function(x){return FAV[x.s]})}
