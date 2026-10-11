@@ -152,7 +152,7 @@ input,select{border:1px solid var(--line);background:var(--card2);color:var(--in
 .note{color:var(--mut);font-size:12px;margin-top:8px;max-width:90ch}
 .view{display:none}.view.on{display:block;animation:fade .2s}
 body.cv .suonly,body:not(.cv) .cvonly{display:none!important}
-body[data-view=rsi] #timeband,body[data-view=sig] #timeband,body[data-view=sig] .scanonly,body[data-view=hist] .scanonly,body[data-view=bt] .scanonly,body[data-view=rsi] .scanonly{display:none!important}
+body[data-view=rsi] #timeband,body[data-view=rdy] #timeband,body[data-view=cisd] #timeband,body[data-view=gl] #timeband,body[data-view=rdy] .scanonly,body[data-view=cisd] .scanonly,body[data-view=gl] .scanonly,body[data-view=hist] .scanonly,body[data-view=bt] .scanonly,body[data-view=rsi] .scanonly{display:none!important}
 .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:14px 0 12px}
 .sum .tb .n.up{color:var(--long)}.sum .tb .n.dn{color:var(--short)}
 #v-hist table,#v-bt table{min-width:760px}
@@ -162,7 +162,8 @@ body[data-view=rsi] #timeband,body[data-view=sig] #timeband,body[data-view=sig] 
 .ib{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:8px 12px;cursor:pointer;font:inherit;font-size:13px}
 /* spodnja navigacija */
 .bnav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:40;display:flex;gap:4px;background:var(--glass);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border:1px solid var(--line);border-radius:22px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
-.bnav button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 12px;border-radius:16px;cursor:pointer;color:var(--mut);font-size:11px;font-weight:700;min-width:64px}
+.bnav button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 9px;border-radius:16px;cursor:pointer;color:var(--mut);font-size:10.5px;font-weight:700;min-width:60px;flex:none;white-space:nowrap}
+.bnav{max-width:calc(100vw - 16px);overflow-x:auto;scrollbar-width:none}.bnav::-webkit-scrollbar{display:none}
 .bnav button.on{background:var(--accbg);color:var(--acc)}
 a.ib:focus-visible,button:focus-visible,.rw:focus-visible,.icb:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 </style>
@@ -213,7 +214,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible,.icb:focus-visible{out
   </div>
 
   <div class="view" id="v-rsi">
-    <div class="rsi-top"><div class="chips lovm" id="lovm"></div><h2 id="lovh" style="margin-top:12px">RSI ekstremi</h2><div class="lbl" id="lovd"></div>
+    <div class="rsi-top"><div class="chips lovm" id="lovm"></div><h2 id="lovh" style="margin-top:12px" class="lovh">RSI ekstremi</h2><div class="lbl" id="lovd"></div>
       <div class="chips" id="rsitfw"><span class="lbl">Okvir:</span><span id="rsitf"></span></div>
       <div class="chips"><span class="lbl">Kovanci:</span><span id="rsin"></span><button class="btn" id="rsigo" type="button" style="margin-left:auto;padding:8px 14px">Preveri</button></div>
       <div class="statl"><span class="lbl" id="rsist"></span></div><div class="prog"><i id="rsipg"></i></div></div>
@@ -240,9 +241,11 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible,.icb:focus-visible{out
 
 <nav class="bnav tabs" role="tablist">
   <button class="tab on" data-view="scan" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/></svg><span>Screener</span></button>
-  <button class="tab" data-view="hist" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Zgodovina</span></button>
   <button class="tab" data-view="rsi" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/><path d="M4 18h2M18 18h2"/></svg><span>RSI</span></button>
-  <button class="tab" data-view="sig" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span>Signali</span></button>
+  <button class="tab" data-view="rdy" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg><span>Pripravljeni</span></button>
+  <button class="tab" data-view="cisd" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/></svg><span>CISD</span></button>
+  <button class="tab" data-view="gl" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17V7M4 10l3-3 3 3"/><path d="M17 7v10M14 14l3 3 3-3"/></svg><span>Gain/Lose</span></button>
+  <button class="tab" data-view="hist" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Zgodovina</span></button>
   <button class="tab" data-view="bt" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/><path d="M7 15h10"/></svg><span>Backtest</span></button>
 </nav>
 
@@ -485,6 +488,7 @@ return res}
 
 (function(){
 var API='https://api.bybit.com/v5/market/';
+var LOVG={rsi:['rsi','fund','sw','dev','zone','vol'],rdy:['rdy'],cisd:['cisd'],gl:['gl']};
 var $=function(i){return document.getElementById(i)};
 var rows=[],coins=[],side='all',stf='act',open=null,cache={},busy=false,newKeys={},cview=ls('jay_cview')!=='setup',lview=ls('jay_cview')==='lov';
 var TZ='Europe/Ljubljana';
@@ -493,7 +497,7 @@ function ls(k,v){k=String(k).replace(/^jay_/,'jay2_');try{if(v===undefined)retur
 try{if(!localStorage.getItem('jay2_mig')){for(var mi=0;mi<localStorage.length;mi++){var mk0=localStorage.key(mi);if(/^jay_/.test(mk0)&&localStorage.getItem('jay2_'+mk0.slice(4))==null)localStorage.setItem('jay2_'+mk0.slice(4),localStorage.getItem(mk0))}localStorage.setItem('jay2_mig','1')}}catch(e){}
 /* ---------- Jezik (SL / EN): prevod prikazanega besedila ---------- */
 /* EX = celotno besedilo vozlišča, PH = fraze znotraj besedila (najdaljše najprej), RX = pravila s številkami. */
-var I18N_EX={'Signali':'Signals','Pripravljeni':'Ready','CISD zdaj':'CISD now','Gainers / Losers 24h':'Gainers / Losers 24h','Gainers 24h':'Gainers 24h','Losers 24h':'Losers 24h','točk':'points','Oznake':'Marks','5m CISD':'5m CISD','CISD v smeri':'CISD in direction','CISD':'CISD','FVG okvir':'FVG timeframe','HTF FVG okvir':'HTF FVG timeframe','okvir skeniranja':'scan timeframe','samodejno':'automatic','Do GP največ (%)':'Max to GP (%)','TV layout id':'TV layout id','HTF RSI':'HTF RSI','Lov':'Hunt','Funding/OI':'Funding/OI','Sweep zdaj':'Sweep now','Deviation (lažni preboj)':'Deviation (false breakout)','Ob HTF coni':'At HTF zone','Skok volumna':'Volume spike','Funding in Open Interest':'Funding and Open Interest','HTF cona':'HTF zone','Volumen':'Volume','RSI ekstremi':'RSI extremes','Okvir:':'Timeframe:','Kovanci:':'Coins:','Preveri':'Check','RSI':'RSI','Razvrsti:':'Sort:','VP histogram':'VP histogram','NOVO':'NEW','Stolpci':'Columns','Višji okvir':'Higher timeframe','Filtri':'Filters','Pogled':'View','Oznake':'Marks','Samodejno':'Auto','Samodejno skeniranje':'Auto scan','Za Clauda':'For Claude','Povezave':'Links','Pravila':'Rules','Svetla / temna tema':'Light / dark theme','Zapri':'Close','pod':'below','nad':'above','vsi':'all','Vse':'All','vse':'all','Kot':'As','Od':'From','pikice':'dots','najboljša':'best','Zdaj':'Now','Izklop':'Off',
+var I18N_EX={'Gain/Lose':'Gain/Lose','Pripravljeni':'Ready','CISD zdaj':'CISD now','Gainers / Losers 24h':'Gainers / Losers 24h','Gainers 24h':'Gainers 24h','Losers 24h':'Losers 24h','točk':'points','Oznake':'Marks','5m CISD':'5m CISD','CISD v smeri':'CISD in direction','CISD':'CISD','FVG okvir':'FVG timeframe','HTF FVG okvir':'HTF FVG timeframe','okvir skeniranja':'scan timeframe','samodejno':'automatic','Do GP največ (%)':'Max to GP (%)','TV layout id':'TV layout id','HTF RSI':'HTF RSI','Lov':'Hunt','Funding/OI':'Funding/OI','Sweep zdaj':'Sweep now','Deviation (lažni preboj)':'Deviation (false breakout)','Ob HTF coni':'At HTF zone','Skok volumna':'Volume spike','Funding in Open Interest':'Funding and Open Interest','HTF cona':'HTF zone','Volumen':'Volume','RSI ekstremi':'RSI extremes','Okvir:':'Timeframe:','Kovanci:':'Coins:','Preveri':'Check','RSI':'RSI','Razvrsti:':'Sort:','VP histogram':'VP histogram','NOVO':'NEW','Stolpci':'Columns','Višji okvir':'Higher timeframe','Filtri':'Filters','Pogled':'View','Oznake':'Marks','Samodejno':'Auto','Samodejno skeniranje':'Auto scan','Za Clauda':'For Claude','Povezave':'Links','Pravila':'Rules','Svetla / temna tema':'Light / dark theme','Zapri':'Close','pod':'below','nad':'above','vsi':'all','Vse':'All','vse':'all','Kot':'As','Od':'From','pikice':'dots','najboljša':'best','Zdaj':'Now','Izklop':'Off',
  'Cena':'Price','Smer':'Side','Stanje':'Status','Stanje:':'Status:','Vstop':'Entry','Velikost':'Size','Kovanec':'Coin','Kovanci':'Coins','Setupi':'Setups','Okvir':'Timeframe',
  'Izid':'Result','Zgodovina':'History','Promet':'Turnover','Volatilnost':'Volatility','Struktura':'Structure','Konfluenca':'Confluence','Upravljanje':'Management',
  'Ekstenzije':'Extensions','Divergenca':'Divergence','Tradeov':'Trades','Zadetih':'Win rate','Skupaj R':'Total R','Na trade':'Per trade','Varianta':'Variant',
@@ -1040,7 +1044,7 @@ function renderHist(){
 $('hclr').addEventListener('click',function(){if(confirm(tr('Res izbrišem vso zgodovino signalov?'))){ls('jay_hist','[]');renderHist()}});
 document.querySelectorAll('[data-view]').forEach(function(b){b.addEventListener('click',function(){var v=b.getAttribute('data-view');
   document.querySelectorAll('[data-view]').forEach(function(x){x.classList.toggle('on',x===b)});
-  document.querySelectorAll('.view').forEach(function(x){x.classList.toggle('on',x.id==='v-'+(v==='sig'?'rsi':v))});ls('jay_view',v);document.body.setAttribute('data-view',v);if(v==='hist')renderHist();if(v==='rsi'||v==='sig')setTimeout(function(){LS.g=v;LS.m=LS.mm[v];rsiOpen()},0)})});
+  document.querySelectorAll('.view').forEach(function(x){x.classList.toggle('on',x.id==='v-'+(LOVG[v]?'rsi':v))});ls('jay_view',v);document.body.setAttribute('data-view',v);if(v==='hist')renderHist();if(LOVG[v])setTimeout(function(){LS.g=v;LS.m=LS.mm[v];rsiOpen()},0)})});
 renderHist();
 (function(){var v=ls('jay_view');var b=v&&document.querySelector('[data-view="'+v+'"]');if(b)b.click()})();
 
@@ -1152,11 +1156,11 @@ var LOV={
   meta:function(x){return '<span class="'+(x.bu?'up':'dn')+'">sveča '+pct(x.cp)+'</span><span>'+ago(x.age)+'</span><span>RSI '+(x.v===x.v?x.v.toFixed(0):'–')+'</span>'},
   hk:function(x,k,h){var v=lastRsi(k),ok=x.bu?v>50:v<50;return {tf:h,ok:ok,t:RSI_N[h]+' RSI '+(v===v?v.toFixed(0):'–')}}}
 };
-var LOVG={rsi:['rsi','fund','sw','dev','zone','vol'],sig:['rdy','cisd','gl']},LS={g:'rsi',mm:{rsi:LOVG.rsi.indexOf(ls('jay_lovm'))>=0?ls('jay_lovm'):'rsi',sig:LOVG.sig.indexOf(ls('jay_sigm'))>=0?ls('jay_sigm'):'rdy'},m:'rsi',n:+(ls('jay_rsin')||100),tf:{},res:{},busy:false};
+LS={g:'rsi',mm:{rsi:LOVG.rsi.indexOf(ls('jay_lovm'))>=0?ls('jay_lovm'):'rsi',rdy:'rdy',cisd:'cisd',gl:'gl'},m:'rsi',n:+(ls('jay_rsin')||100),tf:{},res:{},busy:false};
 try{LS.tf=JSON.parse(ls('jay_lovtf')||'{}')||{}}catch(e){}if(!LS.tf.rsi&&ls('jay_rsitf'))LS.tf.rsi=ls('jay_rsitf');
 function lovTf(){var M=LOV[LS.m];return M.tfs?(M.tfs.indexOf(LS.tf[LS.m])>=0?LS.tf[LS.m]:M.tf):null}
 function rsiChips(){var M=LOV[LS.m],tf=lovTf();
-  $('lovm').innerHTML=LOVG[LS.g].map(function(k){return '<button class="chip'+(LS.m===k?' on':'')+'" data-lovm="'+k+'" type="button">'+LOV[k].name+'</button>'}).join('');
+  $('lovm').style.display=LOVG[LS.g].length>1?'':'none';$('lovh').style.marginTop=LOVG[LS.g].length>1?'12px':'0';$('lovm').innerHTML=LOVG[LS.g].map(function(k){return '<button class="chip'+(LS.m===k?' on':'')+'" data-lovm="'+k+'" type="button">'+LOV[k].name+'</button>'}).join('');
   $('lovh').textContent=M.title;$('lovd').textContent=M.desc+' Ni signal za vstop.';
   $('rsitfw').style.display=M.tfs?'':'none';
   $('rsitf').innerHTML=(M.tfs||[]).map(function(o){return '<button class="chip'+(tf===o?' on':'')+'" data-rsitf="'+o+'" type="button">'+RSI_N[o]+'</button>'}).join(' ');
@@ -1196,7 +1200,7 @@ document.addEventListener('click',function(e){var fv=e.target.closest('#rsiout [
   var b=e.target.closest('[data-rsitf],[data-rsin],#rsigo,[data-rsiopen],[data-lovm]');if(!b||e.target.closest('a'))return;
   if(b.id==='rsigo')return rsiRun();
   if(b.hasAttribute('data-rsiopen')){open='c|'+b.getAttribute('data-rsiopen');dtf=null;cvReset();render();openLoad();return}
-  if(b.hasAttribute('data-lovm')){LS.m=b.getAttribute('data-lovm');LS.mm[LS.g]=LS.m;ls(LS.g==='sig'?'jay_sigm':'jay_lovm',LS.m);return rsiOpen()}
+  if(b.hasAttribute('data-lovm')){LS.m=b.getAttribute('data-lovm');LS.mm[LS.g]=LS.m;if(LS.g==='rsi')ls('jay_lovm',LS.m);return rsiOpen()}
   if(b.hasAttribute('data-rsitf')){LS.tf[LS.m]=b.getAttribute('data-rsitf');ls('jay_lovtf',JSON.stringify(LS.tf))}else{LS.n=+b.getAttribute('data-rsin');ls('jay_rsin',String(LS.n))}
   rsiChips();rsiRender();if(!LS.busy)rsiRun()});
 function rid(r){return r.s+'|'+r.dir+(r.state===4?'|sw':'')}
