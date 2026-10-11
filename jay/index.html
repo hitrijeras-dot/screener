@@ -53,6 +53,8 @@ th:first-child,td:first-child,.l{text-align:left}
 .st.s1{background:var(--longbg);color:var(--long)}.st.s1s{background:var(--shortbg);color:var(--short)}
 .st.s2{background:var(--valbg);color:var(--val)}.st.s3{color:var(--mut);border:1px solid var(--line)}
 .st.s4{background:var(--timebg);color:var(--time)}
+.st.s6{color:var(--short);border:1px solid var(--line);text-decoration:line-through}
+.fl.rdy{background:var(--long);color:var(--bg)}
 .st.s0{background:var(--warnbg);color:var(--warn)}
 .fl{display:inline-block;border-radius:4px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:4px}
 .fl.liq{background:var(--valbg);color:var(--val)}.fl.cas{background:var(--timebg);color:var(--time)}
@@ -75,7 +77,7 @@ th:first-child,td:first-child,.l{text-align:left}
 .tab.on{color:var(--ink);border-bottom-color:var(--acc)}
 .view{display:none}.view.on{display:block}
 body.cv .suonly,body:not(.cv) .cvonly{display:none}
-body.cv #out td,body.cv #thd th{padding:9px 5px}
+#out td,#thd th{padding:9px 5px}
 body[data-view=hist] .scanonly,body[data-view=bt] .scanonly{display:none}
 .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
 .sum .tb .n.up{color:var(--long)}.sum .tb .n.dn{color:var(--short)}
@@ -156,7 +158,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
   <div class="view on" id="v-scan">
   <div class="card">
     <table>
-      <thead id="thd"><tr><th>Kovanec</th><th class="l">Smer</th><th class="l" title="Struktura na 1W (in 1M) · zaporedje sveč L-LL-HL na 3D / 1W">HTF</th><th class="l">Stanje</th><th>Cena</th><th>Golden pocket</th><th>Do GP</th><th>Vstop</th><th>SL</th><th>TP</th><th>RR</th><th>Velikost</th></tr></thead>
+      <thead id="thd"><tr><th>Kovanec</th><th class="l">Smer</th><th class="l" title="Struktura na 1W (in 1M) · zaporedje sveč L-LL-HL na 3D / 1W">HTF</th><th class="l">Stanje</th><th>Cena</th><th>Golden pocket</th><th>Do GP</th><th class="l" title="5m CISD v smeri trejda v zadnjih 30 min (za setupe, ki so potrjeni, v coni, nad cono ali možni ob zaprtju)">5m</th><th>Vstop</th><th>SL</th><th>TP</th><th>RR</th><th>Velikost</th></tr></thead>
       <tbody id="out"><tr><td colspan="12" class="empty">Klikni "Skeniraj". Pregled 80 kovancev traja približno pol minute.</td></tr></tbody>
     </table>
   </div>
@@ -352,6 +354,36 @@ function jaySweeps(k,live,st){var out=[];
   return out}
 /*MODEL12-END*/
 
+/* 5m CISD – prenešeno iz Moj Screener (index.html, cisd), nespremenjeno. k = 5m sveče z odprto na koncu; ct = bull/bear (potrjen) ali sweep-lo/sweep-hi, ca = minut od potrditve. */
+function cisd5(k,mins){
+mins=mins||5;var n=k.length,res={ct:'',cl:0,ca:0,sl:0};if(n<60)return res;
+var last=n-2;
+function pivH(i){for(var j=1;j<=3;j++){if(k[i-j].h>=k[i].h)return false}for(j=1;j<=2;j++){if(k[i+j].h>k[i].h)return false}return true}
+function pivL(i){for(var j=1;j<=3;j++){if(k[i-j].l<=k[i].l)return false}for(j=1;j<=2;j++){if(k[i+j].l<k[i].l)return false}return true}
+for(var s=last;s>=last-14&&s>10;s--){
+var b=k[s];
+for(var side=0;side<2;side++){
+var hi=side===0;
+var p=-1;
+for(var i=s-3;i>=Math.max(3,s-70);i--){
+if(hi?pivH(i):pivL(i)){
+var ok=true;for(var m=i+1;m<s;m++){if(hi?k[m].h>k[i].h:k[m].l<k[i].l){ok=false;break}}
+if(ok){p=i;break}
+}}
+if(p<0)continue;
+var lvlp=hi?k[p].h:k[p].l;
+if(!(hi?(b.h>lvlp&&b.c<lvlp):(b.l<lvlp&&b.c>lvlp)))continue;
+var e=p;while(e>0&&((k[e].c>=k[e].o)!==hi))e--;
+var st=e;while(st>0&&((k[st-1].c>=k[st-1].o)===hi))st--;
+var lvl=k[st].o,conf=false,ci=-1;
+for(var q=s+1;q<=last;q++){if(hi?k[q].c<lvl:k[q].c>lvl){conf=true;ci=q;break}}
+if(!conf&&(hi?b.c<lvl:b.c>lvl)){conf=true;ci=s}
+var bl=1e99,bh=-1e99,wx=hi?-1e99:1e99,zz;for(zz=st;zz<=Math.max(e,s);zz++){bl=Math.min(bl,k[zz].o,k[zz].c);bh=Math.max(bh,k[zz].o,k[zz].c)}
+for(zz=st;zz<=s;zz++){wx=hi?Math.max(wx,k[zz].h):Math.min(wx,k[zz].l)}
+return {ct:conf?(hi?'bear':'bull'):(hi?'sweep-hi':'sweep-lo'),cl:lvl,ca:Math.max(0,(n-1-(conf?ci:s))*mins),sl:hi?b.h:b.l,sp:lvlp,t:k[st].t/1000,ob:{lo:bl,hi:bh,wx:wx}}
+}}
+return res}
+
 (function(){
 var API='https://api.bybit.com/v5/market/';
 var $=function(i){return document.getElementById(i)};
@@ -414,7 +446,7 @@ async function scan(){
         if(last&&last.e>now){live=k.pop()}
         var m12=$('model').value==='12',st=m12?jay12Scan(k,{freshD:5,tfMin:tfMin}):jayScan(k,{piv:piv,freshD:5,tfMin:tfMin});
         var hd=await htfOf(t.symbol,tf,piv);
-        var su=(m12?jay12Setups:jaySetups)(k,live,st,{fresh:fresh});su.forEach(applySL);
+        var su=(m12?jay12Setups:jaySetups)(k,live,st,{fresh:fresh});su.forEach(applySL);su.forEach(zoneState);
         su=su.concat(jaySweeps(k,live,m12?st:jay12Scan(k,{freshD:5,tfMin:tfMin})));
         cache[t.symbol]={k:k,live:live};
         var pr=live?live.c:k[k.length-1].c,sm=summ(k,pr,piv,live);
@@ -429,6 +461,13 @@ async function scan(){
     var q=list.slice();
     async function worker(){while(q.length){await one(q.shift());await new Promise(function(r){setTimeout(r,60)})}}
     await Promise.all([worker(),worker(),worker(),worker(),worker()]);
+    /* 5m CISD (ista definicija kot Moj Screener) za setupe, ki so za trejd */
+    var need={};res.forEach(function(x){if(ACT[x.state])need[x.s]=1});var syms=Object.keys(need),d5=0;
+    async function m5one(sym){try{var k5=await kl(sym,'5',100);var c5=cisd5(k5,5);
+        res.forEach(function(x){if(x.s!==sym||!ACT[x.state])return;var want=x.dir==='long'?'bull':'bear';x.m5={ok:c5.ct===want&&c5.ca<=30,ago:c5.ca,ct:c5.ct}})}catch(e){}
+      d5++;$('stat').textContent='5m CISD '+d5+'/'+syms.length+' …'}
+    var q5=syms.slice();async function w5(){while(q5.length)await m5one(q5.shift())}
+    await Promise.all([w5(),w5(),w5(),w5()]);
     rows=res;coins=cres;
     checkNew(res,tf);
     await histUpdate(res,tf);
@@ -702,12 +741,15 @@ renderHist();
 (function(){var v=ls('jay_view');var b=v&&document.querySelector('[data-view="'+v+'"]');if(b)b.click()})();
 
 /* ---------- Tabela ---------- */
-var stName={0:'Možen HL danes',1:'Potrjen',2:'V coni',3:'Čaka umik'};
+var stName={0:'Možen HL danes',1:'Potrjen',2:'V coni',3:'Čaka umik',5:'Dotaknil GP, zdaj nad cono',6:'Pod cono (neveljavno)'};
 function stCell(r){if(r.state===4)return '<span class="st s4">'+(r.rec?'Sweep ✓ · čaka sunek':'Možen sweep ob zaprtju')+' · '+svNazaj(r.age)+'</span>';
-  var cls=r.state===1?(r.dir==='long'?'s1':'s1s'):r.state===0?'s0':r.state===2?'s2':'s3';
-  var t=r.state===1?(r.dir==='long'?'Potrjen HL':'Potrjen LH')+' · '+svNazaj(r.age):r.state===0?(r.dir==='long'?'Možen HL ob zaprtju':'Možen LH ob zaprtju'):stName[r.state];
-  return '<span class="st '+cls+'">'+t+'</span>'+(r.liq?'<span class="fl liq">+liq</span>':'')+(r.state===1&&r.time?'<span class="fl cas">+čas</span>':'')+(newKeys[r.key]?'<span class="fl new">NOVO</span>':'')}
+  var cls=r.state===1?(r.dir==='long'?'s1':'s1s'):r.state===0?'s0':r.state===2?'s2':r.state===6?'s6':'s3';
+  var t=r.state===5?(r.dir==='long'?'Dotaknil GP, zdaj nad cono (+':'Dotaknil GP, zdaj pod cono (−')+(Math.abs(r.dist)*100).toFixed(1)+' %)':r.state===6?(r.dir==='long'?'Pod cono (neveljavno)':'Nad cono (neveljavno)'):r.state===1?(r.dir==='long'?'Potrjen HL':'Potrjen LH')+' · '+svNazaj(r.age):r.state===0?(r.dir==='long'?'Možen HL ob zaprtju':'Možen LH ob zaprtju'):stName[r.state];
+  return '<span class="st '+cls+'">'+t+'</span>'+(r.liq?'<span class="fl liq">+liq</span>':'')+(r.state===1&&r.time?'<span class="fl cas">+čas</span>':'')+(newKeys[r.key]?'<span class="fl new">NOVO</span>':'')+(ready(r)?'<span class="fl rdy">Pripravljen</span>':'')}
 function svNazaj(a){var m=a%100;return a===0?'zadnja sveča':a+(m===1?' svečo':m===2?' sveči':m===3||m===4?' sveče':' sveč')+' nazaj'}
+var ACT={0:1,1:1,2:1,5:1};
+function ready(r){return (r.state===1||r.state===2)&&!!(r.m5&&r.m5.ok)}
+function m5Cell(r){if(!r.m5)return '<td class="l mut">5m –</td>';return r.m5.ok?'<td class="l up" title="5m CISD v smeri trejda">5m ✓ pred '+r.m5.ago+' min</td>':'<td class="l mut" title="'+(r.m5.ct?'zadnji 5m CISD: '+r.m5.ct+' pred '+r.m5.ago+' min':'ni 5m CISD')+'">5m –</td>'}
 function rid(r){return r.s+'|'+r.dir+(r.state===4?'|sw':'')}
 function size(r){var a=+$('acct').value,p=+$('rpct').value;if(!(a>0&&p>0))return '–';var risk=a*p/100,q=risk/Math.abs(r.entry-r.sl);
   return '<span title="tveganje '+risk.toFixed(0)+' $">'+(q*r.entry>=1000?(q*r.entry/1000).toFixed(1)+'k $':(q*r.entry).toFixed(0)+' $')+'</span>'}
@@ -770,18 +812,19 @@ function render(){
   cvBtns();
   if(cview)return renderCoins();
   if(THS)$('thd').innerHTML=THS;
-  var list=rows.filter(function(r){return (side==='all'||r.dir===side)&&(stf==='sw'?r.state===4:stf==='all'||r.state<=2)&&passF(r)});
+  var list=rows.filter(function(r){return (side==='all'||r.dir===side)&&(stf==='sw'?r.state===4:stf==='all'||ACT[r.state])&&passF(r)});
   list.sort(function(a,b){return a.state-b.state||(a.state===1||a.state===4?a.age-b.age:0)||(a.state===3?Math.abs(a.dist)-Math.abs(b.dist):0)||b.rr-a.rr});
-  if(!list.length){$('out').innerHTML='<tr><td colspan="12" class="empty">'+(rows.length?'Ni setupov s temi filtri. Poskusi "Stanje: Vse"'+(htfOn||hcOn?' ali izklopi filtra HTF':'')+'.':'Klikni "Skeniraj".')+'</td></tr>';return}
+  if(!list.length){$('out').innerHTML='<tr><td colspan="13" class="empty">'+(rows.length?'Ni setupov s temi filtri. Poskusi "Stanje: Vse"'+(htfOn||hcOn?' ali izklopi filtra HTF':'')+'.':'Klikni "Skeniraj".')+'</td></tr>';return}
   var h='';list.forEach(function(r,ix){var id=rid(r);var coin=r.s.replace(/USDT$/,'');
     h+='<tr class="rw" tabindex="0" data-id="'+id+'"><td><b>'+coin+'</b> <a class="lk" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=BYBIT%3A'+r.s+'.P">TV</a><a class="lk" target="_blank" rel="noopener" href="https://www.bybit.com/trade/usdt/'+r.s+'">BB</a></td>'+
       '<td class="l"><span class="pill '+r.dir+'">'+(r.dir==='long'?'LONG':'SHORT')+'</span></td><td class="l">'+htfCell(r)+' '+hcCell(r)+'</td><td class="l">'+stCell(r)+'</td>'+
-      (r.state===4?'<td class="mono">'+fp(r.price)+'</td><td class="mono mut">–</td><td class="mono" title="Koliko mora cena še narediti do zloma (sunka)">do zloma '+(Math.max(0,r.dist)*100).toFixed(1)+' %</td><td class="mono mut">–</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono mut">–</td><td class="mono mut">–</td><td class="mono mut">–</td></tr>':
+      (r.state===4?'<td class="mono">'+fp(r.price)+'</td><td class="mono mut">–</td><td class="mono" title="Koliko mora cena še narediti do zloma (sunka)">do zloma '+(Math.max(0,r.dist)*100).toFixed(1)+' %</td><td class="l mut">–</td><td class="mono mut">–</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono mut">–</td><td class="mono mut">–</td><td class="mono mut">–</td></tr>':
       '<td class="mono">'+fp(r.price)+'</td><td class="mono">'+fp(Math.min(r.g1,r.g2))+'–'+fp(Math.max(r.g1,r.g2))+'</td>'+
-      '<td class="mono '+(r.state===3?'':'mut')+'">'+(r.state===3?(Math.abs(r.dist)*100).toFixed(1)+' %':r.state===1?'–':'v coni')+'</td>'+
+      '<td class="mono '+(r.state===3||r.state===5?'':'mut')+'">'+(r.state===3||r.state===5?(Math.abs(r.dist)*100).toFixed(1)+' %':r.state===6?(r.dir==='long'?'pod':'nad'):r.state===1?'–':'v coni')+'</td>'+m5Cell(r)+
       '<td class="mono">'+fp(r.entry)+'</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono up">'+fp(r.tp)+'</td><td class="mono"><b>'+r.rr.toFixed(1)+'</b></td><td class="mono">'+size(r)+'</td></tr>');
-    if(open===id)h+='<tr class="dt"><td colspan="12"><div class="dtw">'+detail(r)+'</div></td></tr>';
+    if(open===id)h+='<tr class="dt"><td colspan="13"><div class="dtw">'+detail(r)+'</div></td></tr>';
   });
+  h+='<tr><td colspan="13" class="l lbl">Pripravljenih: <b>'+list.filter(ready).length+'</b> (potrjen ali v coni + 5m CISD v smeri v zadnjih 30 min)</td></tr>';
   $('out').innerHTML=h;
 }
 THS=$('thd').innerHTML;
@@ -808,6 +851,9 @@ function applySL(x){if(x.state!==1)return;if(x.slHL==null)x.slHL=x.sl;var up=x.d
   x.sl=$('slm').value==='leg'?x.leg*(up?0.997:1.003):x.slHL;
   x.tp=up?Math.max(x.tpH,e+2*(e-x.sl)):Math.min(x.tpH,e-2*(x.sl-e));
   x.rr=Math.abs(x.tp-e)/Math.abs(e-x.sl);x.rrH=Math.abs(x.tpH-e)/Math.abs(e-x.sl)}
+/* "V coni" velja samo, če je trenutna cena v golden pocketu. Dotaknjen, a cena nad cono (long) / pod cono (short) = 5; cena skozi cono na drugo stran = 6 (neveljavno, ni za trejd). */
+function zoneState(x){if(x.state!==2)return;var lo=Math.min(x.g1,x.g2),hi=Math.max(x.g1,x.g2),p=x.price,up=x.dir==='long';
+  if(p>=lo&&p<=hi)return;x.state=(up?p>hi:p<lo)?5:6}
 function extP(r,f){return r.H+(r.H-r.leg)*f}
 $('shsu').addEventListener('change',render);
 $('slm').addEventListener('change',function(){rows.forEach(applySL);for(var key in mtf)if(mtf[key].su)mtf[key].su.forEach(applySL);render()});
@@ -821,7 +867,7 @@ async function mtfLoad(r){
     try{var k=await klines(r.s,tf),live=null;if(k.length&&k[k.length-1].e>Date.now())live=k.pop();mtf[key]=mtfMake(r.s,tf,k,live)}catch(e){mtf[key]={err:1,at:Date.now()}}}));
 }
 function mtfMake(sym,tf,k,live){var piv=+$('piv').value||5,m12=$('model').value==='12',tm=(TFS[tf]||TFS.D).min,st=m12?jay12Scan(k,{freshD:5,tfMin:tm}):jayScan(k,{piv:piv,freshD:5,tfMin:tm});
-  var su=(m12?jay12Setups:jaySetups)(k,live,st,{fresh:+$('fresh').value||7});su.forEach(function(x){x.s=sym;applySL(x)});
+  var su=(m12?jay12Setups:jaySetups)(k,live,st,{fresh:+$('fresh').value||7});su.forEach(function(x){x.s=sym;applySL(x);zoneState(x)});
   return {k:k,live:live,su:su,dir:htfDir(k,piv,0),at:Date.now()}}
 function mtfGet(r,tf){if(tf===$('tf').value){var c=cache[r.s];if(!c)return null;var key=mtfKey(r.s,tf)+'|cur';if(!mtf[key]||mtf[key].k!==c.k)mtf[key]=mtfMake(r.s,tf,c.k,c.live);return mtf[key]}
   return mtf[mtfKey(r.s,tf)]||null}
