@@ -152,7 +152,7 @@ input,select{border:1px solid var(--line);background:var(--card2);color:var(--in
 .note{color:var(--mut);font-size:12px;margin-top:8px;max-width:90ch}
 .view{display:none}.view.on{display:block;animation:fade .2s}
 body.cv .suonly,body:not(.cv) .cvonly{display:none!important}
-body[data-view=rsi] #timeband,body[data-view=hist] .scanonly,body[data-view=bt] .scanonly,body[data-view=rsi] .scanonly{display:none!important}
+body[data-view=rsi] #timeband,body[data-view=sig] #timeband,body[data-view=sig] .scanonly,body[data-view=hist] .scanonly,body[data-view=bt] .scanonly,body[data-view=rsi] .scanonly{display:none!important}
 .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:14px 0 12px}
 .sum .tb .n.up{color:var(--long)}.sum .tb .n.dn{color:var(--short)}
 #v-hist table,#v-bt table{min-width:760px}
@@ -241,7 +241,8 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible,.icb:focus-visible{out
 <nav class="bnav tabs" role="tablist">
   <button class="tab on" data-view="scan" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/></svg><span>Screener</span></button>
   <button class="tab" data-view="hist" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Zgodovina</span></button>
-  <button class="tab" data-view="rsi" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/><path d="M4 18h2M18 18h2"/></svg><span>Lov</span></button>
+  <button class="tab" data-view="rsi" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/><path d="M4 18h2M18 18h2"/></svg><span>RSI</span></button>
+  <button class="tab" data-view="sig" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span>Signali</span></button>
   <button class="tab" data-view="bt" type="button"><svg class="i" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/><path d="M7 15h10"/></svg><span>Backtest</span></button>
 </nav>
 
@@ -492,7 +493,7 @@ function ls(k,v){k=String(k).replace(/^jay_/,'jay2_');try{if(v===undefined)retur
 try{if(!localStorage.getItem('jay2_mig')){for(var mi=0;mi<localStorage.length;mi++){var mk0=localStorage.key(mi);if(/^jay_/.test(mk0)&&localStorage.getItem('jay2_'+mk0.slice(4))==null)localStorage.setItem('jay2_'+mk0.slice(4),localStorage.getItem(mk0))}localStorage.setItem('jay2_mig','1')}}catch(e){}
 /* ---------- Jezik (SL / EN): prevod prikazanega besedila ---------- */
 /* EX = celotno besedilo vozlišča, PH = fraze znotraj besedila (najdaljše najprej), RX = pravila s številkami. */
-var I18N_EX={'5m CISD':'5m CISD','CISD v smeri':'CISD in direction','CISD':'CISD','FVG okvir':'FVG timeframe','HTF FVG okvir':'HTF FVG timeframe','okvir skeniranja':'scan timeframe','samodejno':'automatic','Do GP največ (%)':'Max to GP (%)','TV layout id':'TV layout id','HTF RSI':'HTF RSI','Lov':'Hunt','Funding/OI':'Funding/OI','Sweep zdaj':'Sweep now','Deviation (lažni preboj)':'Deviation (false breakout)','Ob HTF coni':'At HTF zone','Skok volumna':'Volume spike','Funding in Open Interest':'Funding and Open Interest','HTF cona':'HTF zone','Volumen':'Volume','RSI ekstremi':'RSI extremes','Okvir:':'Timeframe:','Kovanci:':'Coins:','Preveri':'Check','RSI':'RSI','Razvrsti:':'Sort:','VP histogram':'VP histogram','NOVO':'NEW','Stolpci':'Columns','Višji okvir':'Higher timeframe','Filtri':'Filters','Pogled':'View','Oznake':'Marks','Samodejno':'Auto','Samodejno skeniranje':'Auto scan','Za Clauda':'For Claude','Povezave':'Links','Pravila':'Rules','Svetla / temna tema':'Light / dark theme','Zapri':'Close','pod':'below','nad':'above','vsi':'all','Vse':'All','vse':'all','Kot':'As','Od':'From','pikice':'dots','najboljša':'best','Zdaj':'Now','Izklop':'Off',
+var I18N_EX={'Signali':'Signals','Pripravljeni':'Ready','CISD zdaj':'CISD now','Gainers / Losers 24h':'Gainers / Losers 24h','Gainers 24h':'Gainers 24h','Losers 24h':'Losers 24h','točk':'points','Oznake':'Marks','5m CISD':'5m CISD','CISD v smeri':'CISD in direction','CISD':'CISD','FVG okvir':'FVG timeframe','HTF FVG okvir':'HTF FVG timeframe','okvir skeniranja':'scan timeframe','samodejno':'automatic','Do GP največ (%)':'Max to GP (%)','TV layout id':'TV layout id','HTF RSI':'HTF RSI','Lov':'Hunt','Funding/OI':'Funding/OI','Sweep zdaj':'Sweep now','Deviation (lažni preboj)':'Deviation (false breakout)','Ob HTF coni':'At HTF zone','Skok volumna':'Volume spike','Funding in Open Interest':'Funding and Open Interest','HTF cona':'HTF zone','Volumen':'Volume','RSI ekstremi':'RSI extremes','Okvir:':'Timeframe:','Kovanci:':'Coins:','Preveri':'Check','RSI':'RSI','Razvrsti:':'Sort:','VP histogram':'VP histogram','NOVO':'NEW','Stolpci':'Columns','Višji okvir':'Higher timeframe','Filtri':'Filters','Pogled':'View','Oznake':'Marks','Samodejno':'Auto','Samodejno skeniranje':'Auto scan','Za Clauda':'For Claude','Povezave':'Links','Pravila':'Rules','Svetla / temna tema':'Light / dark theme','Zapri':'Close','pod':'below','nad':'above','vsi':'all','Vse':'All','vse':'all','Kot':'As','Od':'From','pikice':'dots','najboljša':'best','Zdaj':'Now','Izklop':'Off',
  'Cena':'Price','Smer':'Side','Stanje':'Status','Stanje:':'Status:','Vstop':'Entry','Velikost':'Size','Kovanec':'Coin','Kovanci':'Coins','Setupi':'Setups','Okvir':'Timeframe',
  'Izid':'Result','Zgodovina':'History','Promet':'Turnover','Volatilnost':'Volatility','Struktura':'Structure','Konfluenca':'Confluence','Upravljanje':'Management',
  'Ekstenzije':'Extensions','Divergenca':'Divergence','Tradeov':'Trades','Zadetih':'Win rate','Skupaj R':'Total R','Na trade':'Per trade','Varianta':'Variant',
@@ -506,6 +507,11 @@ var I18N_EX={'5m CISD':'5m CISD','CISD v smeri':'CISD in direction','CISD':'CISD
  'S HTF svečami':'With HTF candles','Vol.':'Vol.','Od ':'From ','Naprej':'Forward','Nazaj v čas':'Back in time','nalagam …':'loading …','Sweep':'Sweep',
  'Obvestila vklopljena':'Notifications on','Vklopi obvestila':'Enable notifications','Obvestila blokirana v brskalniku':'Notifications blocked in browser','Obvestila niso podprta':'Notifications not supported'};
 var I18N_PH=[
+ ['Pripravljeni za long ▲','Ready for long ▲'],['Pripravljeni za short ▼','Ready for short ▼'],['Ni kovanca z vsaj 3 točkami za long.','No coin with at least 3 points for long.'],['Ni kovanca z vsaj 3 točkami za short.','No coin with at least 3 points for short.'],
+ ['CISD ▲ · bikovski','CISD ▲ · bullish'],['CISD ▼ · medvedji','CISD ▼ · bearish'],['Ni svežega bikovskega CISD.','No fresh bullish CISD.'],['Ni svežega medvedjega CISD.','No fresh bearish CISD.'],['nivo','level'],['Ni podatkov.','No data.'],
+ ['Kovanci, kjer se ujema več stvari v smeri zadnje noge: cena v GP ali do 3 % od njega (pogoj), sweep (≤5 sveč), deviation (≤3), divergenca (≤10), RSI (long ≤40 / short ≥60), struktura višjega okvira v smeri in 5m CISD v smeri. Vsak ✓ je ena točka; prikazani so kovanci z vsaj 3 točkami.','Coins where several things line up in the direction of the last leg: price in GP or within 3 % of it (required), sweep (≤5 candles), deviation (≤3), divergence (≤10), RSI (long ≤40 / short ≥60), higher-timeframe structure in direction and 5m CISD in direction. Each ✓ is one point; coins with at least 3 points are shown.'],
+ ['Kovanci s potrjenim CISD v zadnjih 5 zaprtih svečah izbranega okvira (ista definicija kot Moj Screener: sweep swing vrha/dna in zaprtje čez odprtje serije). Ujemanje: ✓ = zadnji CISD na 1H / 5m v isto smer.','Coins with a confirmed CISD in the last 5 closed candles of the chosen timeframe (same definition as My Screener: sweep of a swing high/low and close beyond the series open). Agreement: ✓ = latest CISD on 1H / 5m in the same direction.'],
+ ['15 kovancev z največjo rastjo in 15 z največjim padcem v 24 h (med izbranimi po prometu). Zraven RSI, sweep, deviation in divergenca na izbranem okviru.','15 coins with the biggest gain and 15 with the biggest drop in 24h (among those selected by turnover). With RSI, sweep, deviation and divergence on the chosen timeframe.'],
  ['Zadnji 5m CISD v zadnjih 12 zaprtih 5m svečah (ista definicija kot Moj Screener)','Latest 5m CISD in the last 12 closed 5m candles (same definition as My Screener)'],['Smer 5m CISD (zadnjih 12 sveč) sovpada s smerjo GP: ▲ pri nogi gor (long), ▼ pri nogi dol (short)','5m CISD direction (last 12 candles) matches the GP direction: ▲ for an up leg (long), ▼ for a down leg (short)'],
  ['= zadnji CISD na 1H in 5m v isto smer','= latest CISD on 1H and 5m in the same direction'],['živo','bright'],
  ['črtkano 1H / 5m CISD = zadnji na 1H in 5m','dashed 1H / 5m CISD = latest on 1H and 5m'],
@@ -1034,7 +1040,7 @@ function renderHist(){
 $('hclr').addEventListener('click',function(){if(confirm(tr('Res izbrišem vso zgodovino signalov?'))){ls('jay_hist','[]');renderHist()}});
 document.querySelectorAll('[data-view]').forEach(function(b){b.addEventListener('click',function(){var v=b.getAttribute('data-view');
   document.querySelectorAll('[data-view]').forEach(function(x){x.classList.toggle('on',x===b)});
-  document.querySelectorAll('.view').forEach(function(x){x.classList.toggle('on',x.id==='v-'+v)});ls('jay_view',v);document.body.setAttribute('data-view',v);if(v==='hist')renderHist();if(v==='rsi')setTimeout(rsiOpen,0)})});
+  document.querySelectorAll('.view').forEach(function(x){x.classList.toggle('on',x.id==='v-'+(v==='sig'?'rsi':v))});ls('jay_view',v);document.body.setAttribute('data-view',v);if(v==='hist')renderHist();if(v==='rsi'||v==='sig')setTimeout(function(){LS.g=v;LS.m=LS.mm[v];rsiOpen()},0)})});
 renderHist();
 (function(){var v=ls('jay_view');var b=v&&document.querySelector('[data-view="'+v+'"]');if(b)b.click()})();
 
@@ -1049,7 +1055,8 @@ var ACT={0:1,1:1,2:1,5:1};
 function ready(r){return (r.state===1||r.state===2)&&!!(r.m5&&r.m5.ok)}
 function m5Cell(r){if(!r.m5)return '<td class="l mut">5m –</td>';return r.m5.ok?'<td class="l up" title="5m CISD v smeri trejda">5m ✓ pred '+r.m5.ago+' min</td>':'<td class="l mut" title="'+(r.m5.ct?'zadnji 5m CISD: '+r.m5.ct+' pred '+r.m5.ago+' min':'ni 5m CISD')+'">5m –</td>'}
 /* ---------- Lov: lastni pregledi (top N po prometu + kovanci z zvezdico). RSI · Funding/OI · Sweep · Deviation · HTF cona · Volumen ---------- */
-var RSI_MIN={'15':15,'60':60,'240':240,'360':360,D:1440,W:10080},RSI_HTF={'15':['60','240'],'60':['240','D'],'240':['D','W'],'360':['D','W'],D:['W','M'],W:['M']},RSI_N={'15':'15m','60':'1H','240':'4H','360':'6H',D:'1D',W:'1W',M:'1M'};
+function hlist(M,tf){return M.htfs?M.htfs(tf):(RSI_HTF[tf]||[])}
+var RSI_MIN={'5':5,'15':15,'60':60,'240':240,'360':360,D:1440,W:10080},RSI_HTF={'15':['60','240'],'60':['240','D'],'240':['D','W'],'360':['D','W'],D:['W','M'],W:['M']},RSI_N={'5':'5m','15':'15m','60':'1H','240':'4H','360':'6H',D:'1D',W:'1W',M:'1M'};
 /* Deviation = v zadnjih 3 zaprtih svečah je cena šla čez vrh/dno obsega prejšnjih 30 sveč, zadnja sveča pa je zaprla nazaj v obseg (lažni preboj). */
 function devOf(k){var n=k.length;if(n<36)return null;var hi=-Infinity,lo=Infinity,i;for(i=n-33;i<n-3;i++){hi=Math.max(hi,k[i].h);lo=Math.min(lo,k[i].l)}
   var c=k[n-1].c,up=-1,dn=-1;for(i=n-3;i<n;i++){if(k[i].h>hi)up=i;if(k[i].l<lo)dn=i}
@@ -1063,7 +1070,40 @@ function hkEvent(x,k,h){var kc=closedK(k,h),a=anz(kc),w=a.sw[a.sw.length-1],d=de
   if(d&&d.age<=2&&d.bu===x.bu)return {tf:h,ok:true,t:RSI_N[h]+' deviation'};
   var v=lastRsi(k);return {tf:h,ok:false,near:x.bu?v<=40:v>=60,t:RSI_N[h]+' RSI '+(v===v?v.toFixed(0):'–')}}
 function closedK(k,tf){var m=RSI_MIN[tf]||(tf==='M'?43200:1440);return k.length&&k[k.length-1].t+m*6e4>Date.now()?k.slice(0,-1):k}
+function cisdLast(k){var l=cisdList(k,0),x=l[l.length-1];return x?{bu:x.bu,age:k.length-1-x.ci,lvl:x.lvl}:null}
 var LOV={
+ rdy:{name:'Pripravljeni',title:'Pripravljeni',desc:'Kovanci, kjer se ujema več stvari v smeri zadnje noge: cena v GP ali do 3 % od njega (pogoj), sweep (≤5 sveč), deviation (≤3), divergenca (≤10), RSI (long ≤40 / short ≥60), struktura višjega okvira v smeri in 5m CISD v smeri. Vsak ✓ je ena točka; prikazani so kovanci z vsaj 3 točkami.',tfs:['60','240','360','D'],tf:'D',
+  calc:function(t,k,kc){var lv=kc.length<k.length?k[k.length-1]:null,p=k[k.length-1].c,m=summ(kc,p,5,lv);if(!m.gp||!m.fib)return null;var g=m.gp,bu=g.bu;
+    if(!(g.inn||(g.d>0&&g.d<=0.03)))return null;var tg=[],sc=g.inn?2:1;tg.push(g.inn?'v GP':'do GP '+(g.d*100).toFixed(1)+' %');
+    if(m.sw&&m.sw.age<=5&&m.sw.bu===bu){sc++;tg.push('sweep '+ago(m.sw.age))}
+    var d=devOf(kc);if(d&&d.age<=3&&d.bu===bu){sc++;tg.push('deviation')}
+    if(m.dv&&m.dv.age<=10&&m.dv.bu===bu){sc++;tg.push('div')}
+    var v=lastRsi(k);if(v===v&&(bu?v<=40:v>=60)){sc++;tg.push('RSI '+v.toFixed(0))}
+    return {side:sc>=2?(bu?'L':'R'):null,bu:bu,sc:sc,tg:tg,v:v}},
+  htfs:function(tf){return [(RSI_HTF[tf]||['W'])[0],'5']},
+  hk:function(x,k,h){if(h==='5'){var c=cisdLast(closedK(k,'5'));var ok=!!(c&&c.age<=11&&c.bu===x.bu);return {tf:h,ok:ok,t:'5m CISD'+(c&&c.age<=11?' '+(c.bu?'▲':'▼'):' –')}}
+    var kc=closedK(k,h),dd=htfDir(kc,5,RSI_MIN[h]||43200);return {tf:h,ok:dd===(x.bu?1:-1),t:RSI_N[h]+' '+(dd===1?'↑':dd===-1?'↓':'–')}},
+  pts:function(x){return x.sc+(x.h||[]).filter(function(z){return z.ok}).length},
+  lists:[{side:'L',cls:'os',title:'Pripravljeni za long ▲',empty:'Ni kovanca z vsaj 3 točkami za long.',sort:function(a,b){return LOV.rdy.pts(b)-LOV.rdy.pts(a)},min:3},{side:'R',cls:'ob',title:'Pripravljeni za short ▼',empty:'Ni kovanca z vsaj 3 točkami za short.',sort:function(a,b){return LOV.rdy.pts(b)-LOV.rdy.pts(a)},min:3}],
+  big:function(x){return [LOV.rdy.pts(x)+'/8','točk']},
+  meta:function(x){return x.tg.map(function(t){return '<span class="'+(x.bu?'up':'dn')+'">'+t+' ✓</span>'}).join('')}},
+ cisd:{name:'CISD',title:'CISD zdaj',desc:'Kovanci s potrjenim CISD v zadnjih 5 zaprtih svečah izbranega okvira (ista definicija kot Moj Screener: sweep swing vrha/dna in zaprtje čez odprtje serije). Ujemanje: ✓ = zadnji CISD na 1H / 5m v isto smer.',tfs:['5','15','60','240'],tf:'15',
+  calc:function(t,k,kc){var c=cisdLast(kc);if(!c||c.age>4)return null;return {side:c.bu?'L':'R',bu:c.bu,age:c.age,lvl:c.lvl,v:lastRsi(k)}},
+  htfs:function(tf){return ['60','5'].filter(function(h){return h!==tf})},
+  hk:function(x,k,h){var c=cisdLast(closedK(k,h));return {tf:h,ok:!!(c&&c.bu===x.bu),t:RSI_N[h]+' CISD '+(c?(c.bu?'▲':'▼')+' '+ago(c.age):'–')}},
+  lists:[{side:'L',cls:'os',title:'CISD ▲ · bikovski',empty:'Ni svežega bikovskega CISD.',sort:function(a,b){return (b.h||[]).filter(function(z){return z.ok}).length-(a.h||[]).filter(function(z){return z.ok}).length||a.age-b.age}},{side:'R',cls:'ob',title:'CISD ▼ · medvedji',empty:'Ni svežega medvedjega CISD.',sort:function(a,b){return (b.h||[]).filter(function(z){return z.ok}).length-(a.h||[]).filter(function(z){return z.ok}).length||a.age-b.age}}],
+  big:function(x){return [x.bu?'▲':'▼',ago(x.age)]},
+  meta:function(x){return '<span>nivo '+fp(x.lvl)+'</span><span>RSI '+(x.v===x.v?x.v.toFixed(0):'–')+'</span>'}},
+ gl:{name:'Gainers/Losers',title:'Gainers / Losers 24h',desc:'15 kovancev z največjo rastjo in 15 z največjim padcem v 24 h (med izbranimi po prometu). Zraven RSI, sweep, deviation in divergenca na izbranem okviru.',tfs:['15','60','240','D'],tf:'60',postLb:'Oznake',
+  fromTk:function(list){return list.map(function(t){return {s:t.symbol,price:+t.lastPrice,ch:+t.price24hPcnt*100}})},
+  pick:function(out){var g=out.slice().sort(function(a,b){return b.ch-a.ch}).slice(0,15),l=out.slice().sort(function(a,b){return a.ch-b.ch}).slice(0,15);g.forEach(function(x){x.side='L'});l.forEach(function(x){if(!x.side)x.side='R'});return g.concat(l)},
+  post:async function(x,tf){var k=await kl(x.s,tf,200);if(k.length<40)return;var kc=closedK(k,tf),a=anz(kc),n=kc.length,w=a.sw[a.sw.length-1],d=a.dv[a.dv.length-1];x.v=lastRsi(k);
+    x.sw=w&&n-1-w.i<=5?{bu:w.bu,age:n-1-w.i}:null;x.dv=d&&n-1-d.b<=10?{bu:d.bu,age:n-1-d.b}:null;x.dev=devOf(kc)},
+  lists:[{side:'L',cls:'os',title:'Gainers 24h',empty:'Ni podatkov.',sort:function(a,b){return b.ch-a.ch}},{side:'R',cls:'ob',title:'Losers 24h',empty:'Ni podatkov.',sort:function(a,b){return a.ch-b.ch}}],
+  big:function(x){return [pct(x.ch),'24h']},
+  meta:function(x){return '<span>RSI '+rsiTd(x.v)+'</span>'},
+  extra:function(x){var t=[];if(x.sw)t.push('<span class="'+(x.sw.bu?'up':'dn')+'">sweep '+(x.sw.bu?'▲':'▼')+' '+ago(x.sw.age)+'</span>');if(x.dv)t.push('<span class="'+(x.dv.bu?'up':'dn')+'">'+(x.dv.bu?'bull':'bear')+' div</span>');
+    if(x.dev)t.push('<span class="'+(x.dev.bu?'up':'dn')+'">deviation '+(x.dev.bu?'▲':'▼')+'</span>');return t.join('')}},
  rsi:{name:'RSI',title:'RSI ekstremi',desc:'RSI(14) z zadnjo (tudi odprto) svečo, kot na TradingView. Nad 70 = preveč kupljeno, pod 30 = preveč prodano.',tfs:['15','60','240','360','D','W'],tf:'240',gauge:true,
   calc:function(t,k,kc){var r=rsi14(k.map(function(x){return x.c})),n=r.length,v=r[n-1];if(!(v===v))return null;var up=v>=70,dn=v<=30,cnt=0;
     if(up||dn)for(var i=n-1;i>=0&&(up?r[i]>=70:r[i]<=30);i--)cnt++;var a=anz(kc),ld=a.dv[a.dv.length-1];
@@ -1112,11 +1152,11 @@ var LOV={
   meta:function(x){return '<span class="'+(x.bu?'up':'dn')+'">sveča '+pct(x.cp)+'</span><span>'+ago(x.age)+'</span><span>RSI '+(x.v===x.v?x.v.toFixed(0):'–')+'</span>'},
   hk:function(x,k,h){var v=lastRsi(k),ok=x.bu?v>50:v<50;return {tf:h,ok:ok,t:RSI_N[h]+' RSI '+(v===v?v.toFixed(0):'–')}}}
 };
-var LOVK=['rsi','fund','sw','dev','zone','vol'],LS={m:LOV[ls('jay_lovm')]?ls('jay_lovm'):'rsi',n:+(ls('jay_rsin')||100),tf:{},res:{},busy:false};
+var LOVG={rsi:['rsi','fund','sw','dev','zone','vol'],sig:['rdy','cisd','gl']},LS={g:'rsi',mm:{rsi:LOVG.rsi.indexOf(ls('jay_lovm'))>=0?ls('jay_lovm'):'rsi',sig:LOVG.sig.indexOf(ls('jay_sigm'))>=0?ls('jay_sigm'):'rdy'},m:'rsi',n:+(ls('jay_rsin')||100),tf:{},res:{},busy:false};
 try{LS.tf=JSON.parse(ls('jay_lovtf')||'{}')||{}}catch(e){}if(!LS.tf.rsi&&ls('jay_rsitf'))LS.tf.rsi=ls('jay_rsitf');
 function lovTf(){var M=LOV[LS.m];return M.tfs?(M.tfs.indexOf(LS.tf[LS.m])>=0?LS.tf[LS.m]:M.tf):null}
 function rsiChips(){var M=LOV[LS.m],tf=lovTf();
-  $('lovm').innerHTML=LOVK.map(function(k){return '<button class="chip'+(LS.m===k?' on':'')+'" data-lovm="'+k+'" type="button">'+LOV[k].name+'</button>'}).join('');
+  $('lovm').innerHTML=LOVG[LS.g].map(function(k){return '<button class="chip'+(LS.m===k?' on':'')+'" data-lovm="'+k+'" type="button">'+LOV[k].name+'</button>'}).join('');
   $('lovh').textContent=M.title;$('lovd').textContent=M.desc+' Ni signal za vstop.';
   $('rsitfw').style.display=M.tfs?'':'none';
   $('rsitf').innerHTML=(M.tfs||[]).map(function(o){return '<button class="chip'+(tf===o?' on':'')+'" data-rsitf="'+o+'" type="button">'+RSI_N[o]+'</button>'}).join(' ');
@@ -1131,12 +1171,12 @@ async function rsiRun(){if(LS.busy)return;LS.busy=true;$('rsigo').disabled=true;
     var list=tk.list.filter(function(x){return /USDT$/.test(x.symbol)&&+x.turnover24h>minto}).sort(function(a,b){return +b.turnover24h-(+a.turnover24h)}).slice(0,N);
     var inL={};list.forEach(function(x){inL[x.symbol]=1});tk.list.forEach(function(x){if(FAV[x.symbol]&&!inL[x.symbol])list.push(x)});
     var out=[];
-    if(M.fromTk){out=M.fromTk(list);var sel=M.pick(out);if(M.post)await pool(sel,M.post,'Open interest')}
+    if(M.fromTk){out=M.fromTk(list);var sel=M.pick(out);if(M.post)await pool(sel,function(x){return M.post(x,tf)},M.postLb||'Open interest')}
     else await pool(list,async function(t){var k=await kl(t.symbol,tf,200);if(k.length<40)return;var kc=closedK(k,tf),x=M.calc(t,k,kc,tf);if(!x)return;
       x.s=t.symbol;x.price=k[k.length-1].c;x.ch=+t.price24hPcnt*100;out.push(x)},'Preverjam');
-    if(M.hk){var hq=[];out.forEach(function(x){if(!x.side)return;x.h=[];(RSI_HTF[tf]||[]).forEach(function(h){hq.push([x,h])})});
+    if(M.hk){var hq=[];out.forEach(function(x){if(!x.side)return;x.h=[];hlist(M,tf).forEach(function(h){hq.push([x,h])})});
       await pool(hq,async function(j){var k=await kl(j[0].s,j[1],200);if(k.length>20)j[0].h.push(M.hk(j[0],k,j[1]))},'Višji okvirji');
-      out.forEach(function(x){if(x.h)x.h.sort(function(a,b){return RSI_HTF[tf].indexOf(a.tf)-RSI_HTF[tf].indexOf(b.tf)})})}
+      out.forEach(function(x){if(x.h)x.h.sort(function(a,b){var L=hlist(M,tf);return L.indexOf(a.tf)-L.indexOf(b.tf)})})}
     LS.res[m]={res:out,at:Date.now(),key:key,n:list.length};
     $('rsist').textContent='Preverjenih '+list.length+' kovancev'+(tf?' ('+RSI_N[tf]+')':'')+' ob '+new Date().toLocaleTimeString(LOC(),{hour:'2-digit',minute:'2-digit',timeZone:TZ});
   }catch(e){$('rsist').textContent='Napaka pri branju Bybita: '+e.message}
@@ -1150,13 +1190,13 @@ function rsiRow(x,L){var M=LOV[LS.m],col=L.cls==='ob'?'dn':'up',b=M.big(x),inC=c
     '<div class="rsi-v '+col+'">'+b[0]+'<small>'+b[1]+'</small></div>'+(M.gauge?'<div class="gauge"><i style="left:'+Math.max(0,Math.min(100,x.v))+'%"></i></div>':'')+'</div>'}
 function rsiRender(){var o=$('rsiout');if(!o)return;var M=LOV[LS.m],R=LS.res[LS.m];
   if(!R||R.key!==lovKey()){o.innerHTML=LS.busy?'':'<div class="rsi-col" style="grid-column:1/-1"><div class="rsi-e">Pritisni "Preveri".</div></div>';return}
-  o.innerHTML=M.lists.map(function(L){var l=R.res.filter(function(x){return x.side===L.side&&(!favOn||FAV[x.s])}).sort(L.sort);
+  o.innerHTML=M.lists.map(function(L){var l=R.res.filter(function(x){return x.side===L.side&&(!favOn||FAV[x.s])&&(!L.min||M.pts(x)>=L.min)}).sort(L.sort);
     return '<div class="rsi-col '+L.cls+'"><h3><span>'+L.title+'</span><span class="mono" style="font-size:16px">'+l.length+'</span></h3>'+(l.length?l.map(function(x){return rsiRow(x,L)}).join(''):'<div class="rsi-e">'+L.empty+'</div>')+'</div>'}).join('')}
 document.addEventListener('click',function(e){var fv=e.target.closest('#rsiout [data-fav]');if(fv){var sy=fv.getAttribute('data-fav');if(FAV[sy])delete FAV[sy];else FAV[sy]=1;ls('jay_fav',JSON.stringify(FAV));rsiRender();render();return}
   var b=e.target.closest('[data-rsitf],[data-rsin],#rsigo,[data-rsiopen],[data-lovm]');if(!b||e.target.closest('a'))return;
   if(b.id==='rsigo')return rsiRun();
   if(b.hasAttribute('data-rsiopen')){open='c|'+b.getAttribute('data-rsiopen');dtf=null;cvReset();render();openLoad();return}
-  if(b.hasAttribute('data-lovm')){LS.m=b.getAttribute('data-lovm');ls('jay_lovm',LS.m);return rsiOpen()}
+  if(b.hasAttribute('data-lovm')){LS.m=b.getAttribute('data-lovm');LS.mm[LS.g]=LS.m;ls(LS.g==='sig'?'jay_sigm':'jay_lovm',LS.m);return rsiOpen()}
   if(b.hasAttribute('data-rsitf')){LS.tf[LS.m]=b.getAttribute('data-rsitf');ls('jay_lovtf',JSON.stringify(LS.tf))}else{LS.n=+b.getAttribute('data-rsin');ls('jay_rsin',String(LS.n))}
   rsiChips();rsiRender();if(!LS.busy)rsiRun()});
 function rid(r){return r.s+'|'+r.dir+(r.state===4?'|sw':'')}
