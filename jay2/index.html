@@ -505,6 +505,7 @@ var I18N_EX={'FVG okvir':'FVG timeframe','HTF FVG okvir':'HTF FVG timeframe','ok
  'S HTF svečami':'With HTF candles','Vol.':'Vol.','Od ':'From ','Naprej':'Forward','Nazaj v čas':'Back in time','nalagam …':'loading …','Sweep':'Sweep',
  'Obvestila vklopljena':'Notifications on','Vklopi obvestila':'Enable notifications','Obvestila blokirana v brskalniku':'Notifications blocked in browser','Obvestila niso podprta':'Notifications not supported'};
 var I18N_PH=[
+ ['= zaprtje čez odprtje serije sveč po sweepu (zadnja 2 v vsako smer)','= close beyond the open of the candle series after a sweep (last 2 per direction)'],
  ['Najbližji nezapolnjen FVG (okvir izbereš v Filtrih)','Nearest unfilled FVG (choose the timeframe in Filters)'],['Najbližji nezapolnjen FVG na višjem okviru (okvir izbereš v Filtrih)','Nearest unfilled higher-timeframe FVG (choose the timeframe in Filters)'],
  ['Cena v GP ali največ toliko % do 0.618. 0 = izklop.','Price in GP or at most this % to 0.618. 0 = off.'],['Odpri na TradingView (layout Jay Time & Value)','Open on TradingView (Jay Time & Value layout)'],
  ['Id layouta na TradingView (iz naslova chart/XXXX/). Privzeto Jay Time & Value.','TradingView layout id (from the chart/XXXX/ address). Default Jay Time & Value.'],['RSI(14) na okviru skeniranja, z odprto svečo','RSI(14) on the scan timeframe, incl. the open candle'],
@@ -1464,8 +1465,27 @@ function summ(k,price,P,lv){var a=anz(k),n=k.length,v=0,c=0,i;a.fv=fvLive(a.fv,l
   var fb=fibLeg(k,P||5),vp=vprof(lv?k.concat([lv]):k,Math.max(0,n-90)),po=nearZ(pois(k,a.fa),price);
   return {vol:c?v/c:0,sw:ls?{bu:ls.bu,age:n-1-ls.i}:null,dv:ld&&n-1-ld.b<=30?{bu:ld.bu,age:n-1-ld.b}:null,fv:nf,fib:fb,gp:gpState(fb,price),poi:po,
     vp:vp?{poc:vp.poc,vah:vp.vah,val:vp.val,pos:price>vp.vah?1:price<vp.val?-1:0}:null}}
-var MK={fvg:1,sw:1,dv:1,fib:1,poi:1,vp:1,hfv:1};try{Object.assign(MK,JSON.parse(ls('jay_mk')||'{}'))}catch(e){}
-var MKN=[['fib','Fib/GP'],['poi','POI'],['vp','Volume profile'],['hfv','HTF FVG'],['fvg','FVG'],['sw','Sweep'],['dv','Div']];
+var MK={fvg:1,sw:1,dv:1,fib:1,poi:1,vp:1,hfv:1,cisd:1};try{Object.assign(MK,JSON.parse(ls('jay_mk')||'{}'))}catch(e){}
+var MKN=[['fib','Fib/GP'],['poi','POI'],['vp','Volume profile'],['hfv','HTF FVG'],['fvg','FVG'],['sw','Sweep'],['dv','Div'],['cisd','CISD']];
+/* CISD za graf: ista definicija kot cisd() v Moj Screener (index.html, tu cisd5): sweep zadnjega neprebitega pivota (3 levo / 2 desno, do 70 sveč nazaj),
+   nivo = odprtje serije sveč pred obratom (pri sweepu vrha zadnja rastoča serija, pri sweepu dna zadnja padajoča), potrditev = zaprtje sveče čez nivo.
+   Razlika je le, da tu pregledamo vse sveče na grafu (ne samo zadnjih 15) in vrnemo vse potrjene; k = samo ZAPRTE sveče. */
+function cisdList(k,from){var n=k.length,last=n-1,out=[],seen={};if(n<20)return out;
+  function pivH(i){for(var j=1;j<=3;j++){if(k[i-j].h>=k[i].h)return false}for(j=1;j<=2;j++){if(k[i+j].h>k[i].h)return false}return true}
+  function pivL(i){for(var j=1;j<=3;j++){if(k[i-j].l<=k[i].l)return false}for(j=1;j<=2;j++){if(k[i+j].l<k[i].l)return false}return true}
+  for(var s=Math.max(11,(from||0)-70);s<=last;s++){var b=k[s];
+    for(var side=0;side<2;side++){var hi=side===0,p=-1;
+      for(var i=s-3;i>=Math.max(3,s-70);i--){if(hi?pivH(i):pivL(i)){var ok=true;for(var m=i+1;m<s;m++){if(hi?k[m].h>k[i].h:k[m].l<k[i].l){ok=false;break}}if(ok){p=i;break}}}
+      if(p<0)continue;var lvlp=hi?k[p].h:k[p].l;
+      if(!(hi?(b.h>lvlp&&b.c<lvlp):(b.l<lvlp&&b.c>lvlp)))continue;
+      var e=p;while(e>0&&((k[e].c>=k[e].o)!==hi))e--;
+      var st=e;while(st>0&&((k[st-1].c>=k[st-1].o)===hi))st--;
+      var lvl=k[st].o,ci=-1;
+      for(var q=s+1;q<=last;q++){if(hi?k[q].c<lvl:k[q].c>lvl){ci=q;break}}
+      if(ci<0&&(hi?b.c<lvl:b.c>lvl))ci=s;
+      if(ci<0)continue;var key=side+'|'+st;if(seen[key])continue;seen[key]=1;
+      out.push({bu:!hi,lvl:lvl,st:st,ci:ci})}}
+  out.sort(function(a,b){return a.ci-b.ci});return out}
 function marks(k,from,n,X,Y,cw,xe,o){o=o||{};var nc=o.live?n-1:n,kk=k.slice(0,nc),lv=o.live?k[n-1]:null,s='',a=anz(kk),lo=o.lo,hi=o.hi,x0=X(from);a.fv=fvLive(a.fv,lv);
   function inR(t,b){return t>=lo&&b<=hi}
   function zone(t,b,x1,col,txt,dash,op){t=Math.min(t,hi);b=Math.max(b,lo);return '<rect x="'+x1+'" y="'+Y(t)+'" width="'+Math.max(1,xe-x1)+'" height="'+Math.max(1,Y(b)-Y(t))+'" fill="'+col+'" opacity="'+op+'"'+(dash?' stroke="'+col+'" stroke-dasharray="4 3" stroke-opacity=".9"':'')+'/>'+
@@ -1493,8 +1513,13 @@ function marks(k,from,n,X,Y,cw,xe,o){o=o||{};var nc=o.live?n-1:n,kk=k.slice(0,nc
   if(MK.dv)a.dv.forEach(function(d){if(d.b<from)return;var ya=d.bu?Y(k[d.a].l)+9:Y(k[d.a].h)-9,yb=d.bu?Y(k[d.b].l)+9:Y(k[d.b].h)-9,col=d.bu?'var(--long)':'var(--short)';
     s+='<line x1="'+X(Math.max(d.a,from))+'" x2="'+X(d.b)+'" y1="'+(d.a<from?yb:ya)+'" y2="'+yb+'" stroke="'+col+'" stroke-width="1.6"/>'+
       '<text x="'+X(d.b)+'" y="'+(d.bu?yb+12:yb-4)+'" text-anchor="middle" font-size="10" font-weight="700" fill="'+col+'">div</text>'});
+  // CISD: zadnja 2 potrjena v vsako smer (samo zaprte sveče), črta od odprtja serije do sveče, ki je zaprla čez
+  if(MK.cisd){var cl=cisdList(kk,from);cl.filter(function(c){return c.bu}).slice(-2).concat(cl.filter(function(c){return !c.bu}).slice(-2)).forEach(function(c){if(c.ci<from||c.lvl<lo||c.lvl>hi)return;
+    var col=c.bu?'var(--long)':'var(--short)',x1=X(Math.max(from,c.st)),x2=X(c.ci),y=Y(c.lvl);
+    s+='<line x1="'+x1+'" x2="'+x2+'" y1="'+y+'" y2="'+y+'" stroke="'+col+'" stroke-width="1.4"/>'+
+      '<text x="'+x2+'" y="'+(c.bu?y-4:y+11)+'" text-anchor="end" font-size="9" font-weight="700" fill="'+col+'">'+(c.bu?'CISD ▲':'CISD ▼')+'</text>'})}
   return s}
-var mleg='<br><span style="background:var(--gp);padding:0 4px">GP</span> fib zadnje noge (0.618–0.786) · POI = order block (telo) · <span style="color:var(--warn)">POC / VAH / VAL</span> volume profile · črtkano = HTF FVG<br><span style="color:var(--long)">▲</span>/<span style="color:var(--short)">▼</span> sweep (pobrano staro dno/vrh in zaprtje nazaj) · <span style="color:var(--long)">▮</span>/<span style="color:var(--short)">▮</span> nezapolnjen FVG (zadnji 3 v vsako smer) · <b>div</b> = RSI divergenca';
+var mleg='<br><span style="background:var(--gp);padding:0 4px">GP</span> fib zadnje noge (0.618–0.786) · POI = order block (telo) · <span style="color:var(--warn)">POC / VAH / VAL</span> volume profile · črtkano = HTF FVG<br><span style="color:var(--long)">▲</span>/<span style="color:var(--short)">▼</span> sweep (pobrano staro dno/vrh in zaprtje nazaj) · <span style="color:var(--long)">▮</span>/<span style="color:var(--short)">▮</span> nezapolnjen FVG (zadnji 3 v vsako smer) · <b>div</b> = RSI divergenca · <b>CISD ▲/▼</b> = zaprtje čez odprtje serije sveč po sweepu (zadnja 2 v vsako smer)';
 /* Okno grafa: off = koliko sveč je skritih desno (premik v preteklost), cnt = koliko sveč je vidnih. */
 var CV={off:0,cnt:90,vis:104,max:0},LC=null;
 function cvReset(){CV.off=0;CV.cnt=90}
