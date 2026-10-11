@@ -722,8 +722,8 @@ async function scan(){
         var ka=live?k.concat([live]):k,hf={lb:hd.hf.lb,fv:(hd.hf.fv||[]).filter(function(g){for(var q=ka.length-1;q>=0&&ka[q].t>=g.t;q--)if(g.bu?ka[q].l<=g.bot:ka[q].h>=g.top)return false;return true})};
         sm.hf=nearZ(hf.fv,pr);if(sm.hf)sm.hf.lb=hf.lb;
         var hfa={};['D','W','M'].forEach(function(q){var z=hd.hfa&&hd.hfa[q];hfa[q]={lb:z?z.lb:q,fv:z?(z.fv||[]).filter(function(g){for(var j=ka.length-1;j>=0&&ka[j].t>=g.t;j--)if(g.bu?ka[j].l<=g.bot:ka[j].h>=g.top)return false;return true}):[]}});
-        cres.push({hfa:hfa,s:t.symbol,rsi:lastRsi(live?k.concat([live]):k),hr:lhtf(tf).map(function(h){return {tf:h,v:hd.rr[h]}}).filter(function(z){return z.v!=null&&z.v===z.v}),price:pr,ch:+t.price24hPcnt*100,to:+t.turnover24h,sm:sm,hf:hf,htf:hd.w,htfM:hd.m,c3:hd.c3||{},w1:hd.w1||{},su:su});
-        su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;x.tH=k[x.Hx]?k[x.Hx].t:x.Hx;x.key=(m12?'12|':'')+x.s+'|'+tf+'|'+x.dir+'|'+x.tH;x.htf=hd.w;x.htfM=hd.m;x.hf=hf;var up=x.dir==='long';x.hc3=!!(hd.c3&&(up?hd.c3.L:hd.c3.S));x.hw1=!!(hd.w1&&(up?hd.w1.L:hd.w1.S));res.push(x)});
+        cres.push({hfa:hfa,s:t.symbol,rsi:lastRsi(live?k.concat([live]):k),hr:lhtf(tf).map(function(h){return {tf:h,v:hd.rr[h]}}).filter(function(z){return z.v!=null&&z.v===z.v}),price:pr,ch:+t.price24hPcnt*100,to:+t.turnover24h,sm:sm,hf:hf,htf:hd.w,htfM:hd.m,htfD:hd.d,c3:hd.c3||{},w1:hd.w1||{},su:su});
+        su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;x.tH=k[x.Hx]?k[x.Hx].t:x.Hx;x.key=(m12?'12|':'')+x.s+'|'+tf+'|'+x.dir+'|'+x.tH;x.htf=hd.w;x.htfM=hd.m;x.htfD=hd.d;x.hf=hf;var up=x.dir==='long';x.hc3=!!(hd.c3&&(up?hd.c3.L:hd.c3.S));x.hw1=!!(hd.w1&&(up?hd.w1.L:hd.w1.S));res.push(x)});
       }catch(e){fails++}
       done++;$('pg').style.width=(100*done/list.length)+'%';$('stat').textContent='Pregledujem '+done+'/'+list.length+' …';
     }
@@ -815,13 +815,13 @@ var htfCache={},htfOn=ls('jay_htf')!=='0';
 function htfDir(k,piv,tfMin){if(k.length<4*piv+2)return null;var st=jayScan(k,{piv:piv,freshD:5,tfMin:tfMin}),b=st.b,s=st.s;
   var u=b.armed&&b.H!==null?b.Hx:-1,d=s.armed&&s.lo!==null?s.lox:-1;return u<0&&d<0?0:u>d?1:-1}
 async function htfOf(sym,tf,piv){var key=sym+'|'+piv,c=htfCache[key];
-  if(!(c&&Date.now()-c.at<30*6e4)){var now=Date.now(),wd=null,md=null,kw=null,km=null,kd=null,c3=null,w1=null,fd=[],fw=[],fm=[],rr={};
+  if(!(c&&Date.now()-c.at<30*6e4)){var now=Date.now(),wd=null,md=null,kw=null,km=null,kd=null,c3=null,w1=null,fd=[],fw=[],fm=[],rr={},dd=null;
     try{kw=await kl(sym,'W',300);if(kw.length&&kw[kw.length-1].t+6048e5>now)kw.pop();wd=htfDir(kw,piv,10080);w1=candSeq(kw,4,false);fw=anz(kw).fv;rr.W=lastRsi(kw)}catch(e){}
     try{km=await kl(sym,'M',200);var lm=km[km.length-1],nd=new Date(now);if(lm){var d=new Date(lm.t);if(d.getUTCFullYear()===nd.getUTCFullYear()&&d.getUTCMonth()===nd.getUTCMonth())km.pop()}md=htfDir(km,piv,43200);fm=anz(km).fv;rr.M=lastRsi(km)}catch(e){}
-    try{kd=await kl(sym,'D',200);c3=candSeq(closed3D(kd),3,true);if(kd.length&&kd[kd.length-1].t+864e5>now)kd.pop();fd=anz(kd).fv;rr.D=lastRsi(kd)}catch(e){}
-    c={wd:wd,md:md,c3:c3,w1:w1,fd:fd,fw:fw,fm:fm,rr:rr,at:Date.now()};if(wd!==null||md!==null)htfCache[key]=c}
+    try{kd=await kl(sym,'D',200);c3=candSeq(closed3D(kd),3,true);if(kd.length&&kd[kd.length-1].t+864e5>now)kd.pop();fd=anz(kd).fv;rr.D=lastRsi(kd);dd=htfDir(kd,piv,1440)}catch(e){}
+    c={wd:wd,md:md,dd:dd,c3:c3,w1:w1,fd:fd,fw:fw,fm:fm,rr:rr,at:Date.now()};if(wd!==null||md!==null)htfCache[key]=c}
   var W=tf==='W',DD=tf==='D'||tf==='D3';
-  return {hfa:{D:{lb:'1D',fv:c.fd},W:{lb:'1W',fv:c.fw},M:{lb:'1M',fv:c.fm}},rr:c.rr||{},w:W?c.md:c.wd,m:c.md,c3:c.c3,w1:c.w1,hf:W?{lb:'1M',fv:c.fm}:DD?{lb:'1W',fv:c.fw}:{lb:'1D',fv:c.fd}}}
+  return {hfa:{D:{lb:'1D',fv:c.fd},W:{lb:'1W',fv:c.fw},M:{lb:'1M',fv:c.fm}},rr:c.rr||{},d:c.dd,w:W?c.md:c.wd,m:c.md,c3:c.c3,w1:c.w1,hf:W?{lb:'1M',fv:c.fm}:DD?{lb:'1W',fv:c.fw}:{lb:'1D',fv:c.fd}}}
 /* HTF sveče (Jayevo L-LL-HL kot zaporedje sveč): a, b, c zaporedne zaprte sveče, b.l < a.l (LL), c.l > b.l (HL),
    strogo še c.c > b.h (HL sveča zapre nad vrhom LL sveče). Short zrcalno. Šteje, če se zgodi v zadnjih n svečah. */
 function candSeq(k,n,strict){var L=false,S=false;for(var c=k.length-1;c>=Math.max(2,k.length-n);c--){var a=k[c-2],b=k[c-1],x=k[c];
@@ -1233,7 +1233,7 @@ function cRow(c){var id='c|'+c.s,cols=vcols();
   var h='<tr class="rw" tabindex="0" data-id="'+id+'">'+coinCell(c.s).replace(/<\/td>$/,newB(c.s)+'</td>')+cols.map(function(x){return x[3](c)}).join('')+'</tr>';
   return h}
 function coinR(c){var bu=side==='short'?false:side==='long'?true:(c.sm.sw?c.sm.sw.bu:c.htf!==-1);
-  return {s:c.s,dir:bu?'long':'short',state:-1,nos:true,hf:hfList(c),htf:c.htf,htfM:c.htfM,hc3:!!(bu?c.c3.L:c.c3.S),hw1:!!(bu?c.w1.L:c.w1.S),price:c.price}}
+  return {s:c.s,dir:bu?'long':'short',state:-1,nos:true,hf:hfList(c),htf:c.htf,htfM:c.htfM,htfD:c.htfD,hc3:!!(bu?c.c3.L:c.c3.S),hw1:!!(bu?c.w1.L:c.w1.S),price:c.price}}
 /* Besedilo prikazane tabele (največ 40 kovancev) za prilepiti Claudu */
 function coinsText(){var tf=$('tf').value,list=sortCoins(coins.filter(coinPass));
   function z(o,lb){return o?(o.bu?'bull ':'bear ')+lb:'-'}
@@ -1519,9 +1519,10 @@ function LT(s,e){return LANG==='en'?e:s}
 function anaSv(a){return LANG==='en'?(a===0?'on the last candle':a+(a===1?' candle':' candles')+' ago'):svNazaj(a)}
 function kratka(r,an,p,tf){var o=[],b=0,pc=function(v){return (v>p?'+':'')+((v-p)/p*100).toFixed(1)+' %'},U='<span class="up">',D='<span class="dn">',E='</span>';
   // 1) višji okvir
-  var hW=tf==='W'?null:r.htfM,h1=r.htf,hl=tf==='W'?'1M':'1W';
+  var intra=tf!=='W'&&tf!=='D'&&tf!=='D3',h1=intra?r.htfD:r.htf,hW=tf==='W'?null:intra?r.htf:r.htfM,hl=tf==='W'?'1M':intra?'1D + 1W':'1W + 1M';
+  if(h1==null&&intra){h1=r.htf;hW=null;hl='1W'}
   var hs=h1===1&&(hW==null||hW===1)?1:h1===-1&&(hW==null||hW===-1)?-1:0;b+=hs;
-  o.push(LT('Višji okvir','Higher timeframe')+' ('+hl+(hW==null?'':' + 1M')+'): '+(hs>0?U+LT('trend gor','uptrend')+E:hs<0?D+LT('trend dol','downtrend')+E:LT('mešano, brez jasne smeri','mixed, no clear direction'))+'.');
+  o.push(LT('Višji okvir','Higher timeframe')+' ('+hl+'): '+(hs>0?U+LT('trend gor','uptrend')+E:hs<0?D+LT('trend dol','downtrend')+E:LT('mešano, brez jasne smeri','mixed, no clear direction'))+'.');
   // 2) noga + GP
   if(an.fib){var g=an.gp,gt=Math.max(an.fib.g1,an.fib.g2),gb=Math.min(an.fib.g1,an.fib.g2),up=an.fib.up;b+=up?1:-1;
     o.push(LT('Zadnja noga gre ','Last leg is ')+(up?U+LT('gor','up')+E:D+LT('dol','down')+E)+' ('+(up?fp(an.fib.lo)+' → '+fp(an.fib.hi):fp(an.fib.hi)+' → '+fp(an.fib.lo))+'). '+
