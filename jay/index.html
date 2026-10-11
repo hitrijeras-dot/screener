@@ -133,7 +133,8 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
     <button class="chip" data-cf="gp" type="button" title="Cena v golden pocketu (0.618–0.786) zadnje noge">GP</button>
     <button class="chip" data-cf="po" type="button" title="Cena v POI (order block) ali manj kot eno povprečno svečo od njega">POI</button>
     <button class="chip" data-cf="va" type="button" title="Cena ob robu value area: long = pri/pod VAL, short = pri/nad VAH (volume profile)">VA rob</button>
-    <span class="lbl">Razvrsti</span><select id="csort" style="width:auto"><option value="vol">Volatilnost</option><option value="ch">24h sprememba</option><option value="to">Promet</option><option value="sw">Najnovejši sweep</option></select></span>
+    <span class="lbl">Razvrsti</span><select id="csort" style="width:auto"><option value="vol">Volatilnost</option><option value="ch">24h sprememba</option><option value="to">Promet</option><option value="sw">Najnovejši sweep</option></select>
+    <button class="chip" id="cpy" type="button" title="Skopira prikazane kovance z oznakami kot besedilo (za Clauda ali zapiske)">Kopiraj za Clauda</button></span>
     <span class="suonly"><span class="lbl" style="margin-left:4px">Stanje:</span>
     <button class="chip on" data-st="act" type="button">Za trejd</button>
     <button class="chip" data-st="all" type="button">Vse</button>
@@ -743,6 +744,22 @@ function cRow(c){var m=c.sm,coin=c.s.replace(/USDT$/,''),id='c|'+c.s,best=c.su.f
   return h}
 function coinR(c){var bu=side==='short'?false:side==='long'?true:(c.sm.sw?c.sm.sw.bu:c.htf!==-1);
   return {s:c.s,dir:bu?'long':'short',state:-1,nos:true,hf:c.hf,htf:c.htf,htfM:c.htfM,hc3:!!(bu?c.c3.L:c.c3.S),hw1:!!(bu?c.w1.L:c.w1.S),price:c.price}}
+/* Besedilo prikazane tabele (največ 40 kovancev) za prilepiti Claudu */
+function coinsText(){var tf=$('tf').value,list=coins.filter(coinPass),cs=$('csort').value;
+  list.sort(function(a,b){return cs==='ch'?Math.abs(b.ch)-Math.abs(a.ch):cs==='to'?b.to-a.to:cs==='sw'?((a.sm.sw?a.sm.sw.age:1e9)-(b.sm.sw?b.sm.sw.age:1e9)):b.sm.vol-a.sm.vol});
+  function z(o,lb){return o?(o.bu?'bull ':'bear ')+lb:'-'}
+  var t='Jay HL Screener · '+(TFN[tf]||tf)+' · '+new Date().toLocaleString('sl-SI',{timeZone:TZ})+' · izbor: '+$('vsel').options[$('vsel').selectedIndex].text+' · filtri: '+(side!=='all'?side+' ':'')+Object.keys(cf).filter(function(k){return cf[k]}).join(',')+(htfOn?' htf':'')+(hcOn?' htfsvece':'')+'\n';
+  t+='kovanec | cena | 24h % | vol % | HTF 1W/1M | HTF sveče | sweep | div | FVG | HTF FVG | fib/GP | POI | VP\n';
+  list.slice(0,40).forEach(function(c){var m=c.sm,f=m.fib;
+    t+=c.s.replace(/USDT$/,'')+' | '+fp(c.price)+' | '+c.ch.toFixed(1)+' | '+(m.vol*100).toFixed(2)+' | '+(c.htf===1?'gor':c.htf===-1?'dol':'-')+'/'+(c.htfM===1?'gor':c.htfM===-1?'dol':'-')+' | '+
+      ([c.c3.L?'3D L-LL-HL':'',c.c3.S?'3D H-HH-LH':'',c.w1.L?'1W L-LL-HL':'',c.w1.S?'1W H-HH-LH':''].filter(Boolean).join(', ')||'-')+' | '+
+      z(m.sw,m.sw?m.sw.age+' sv. nazaj':'')+' | '+z(m.dv,m.dv?m.dv.age+' sv. nazaj':'')+' | '+
+      (m.fv?z(m.fv,fp(m.fv.bot)+'-'+fp(m.fv.top)+' ('+(m.fv.d*100).toFixed(1)+' %)'):'-')+' | '+
+      (m.hf?z(m.hf,m.hf.lb+' '+fp(m.hf.bot)+'-'+fp(m.hf.top)+' ('+(m.hf.d*100).toFixed(1)+' %)'):'-')+' | '+
+      (f?'noga '+(f.up?'gor ':'dol ')+fp(f.lo)+'-'+fp(f.hi)+', GP '+fp(Math.min(f.g1,f.g2))+'-'+fp(Math.max(f.g1,f.g2))+(m.gp.inn?' (v GP)':' ('+(m.gp.d*100).toFixed(1)+' %)'):'-')+' | '+
+      (m.poi?z(m.poi,fp(m.poi.bot)+'-'+fp(m.poi.top)+' ('+(m.poi.d*100).toFixed(1)+' %)'):'-')+' | '+
+      (m.vp?'POC '+fp(m.vp.poc)+' VAH '+fp(m.vp.vah)+' VAL '+fp(m.vp.val)+' ('+(m.vp.pos>0?'nad VAH':m.vp.pos<0?'pod VAL':'v VA')+')':'-')+'\n'});
+  return t}
 function renderCoins(){
   $('thd').innerHTML='<tr><th>Kovanec</th><th>Cena</th><th>24h</th><th title="Volatilnost: povprečni razpon 14 sveč">Vol.</th><th class="l">HTF</th><th class="l" title="Zadnji sweep">Sweep</th><th class="l">Div</th><th class="l" title="Najbližji nezapolnjen FVG">FVG</th><th class="l" title="Najbližji nezapolnjen FVG na višjem okviru">HTF FVG</th><th class="l" title="Golden pocket zadnje noge">GP</th><th class="l" title="Najbližji order block (telo)">POI</th><th class="l" title="Volume profile okna (90 sveč)">VP</th></tr>';
   var list=coins.filter(coinPass),cs=$('csort').value;
@@ -770,6 +787,9 @@ THS=$('thd').innerHTML;
 document.querySelectorAll('[data-cv]').forEach(function(b){b.addEventListener('click',function(){cview=b.getAttribute('data-cv')==='coin';ls('jay_cview',cview?'coin':'setup');open=null;render()})});
 document.querySelectorAll('[data-cf]').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-cf');cf[k]=!cf[k];ls('jay_cf',JSON.stringify(cf));render()})});
 $('csort').addEventListener('change',render);
+$('cpy').addEventListener('click',function(){var t=coinsText(),b=$('cpy');
+  function ok(){b.textContent='Skopirano ✓';setTimeout(function(){b.textContent='Kopiraj za Clauda'},2000)}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,function(){prompt('Kopiraj besedilo:',t)});else prompt('Kopiraj besedilo:',t)});
 cvBtns();
 $('out').addEventListener('click',function(e){if(e.target.closest('a'))return;
   var tb=e.target.closest('[data-dtf]');if(tb){dtf=tb.getAttribute('data-dtf');render();return}
