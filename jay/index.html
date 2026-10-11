@@ -74,6 +74,7 @@ th:first-child,td:first-child,.l{text-align:left}
 .tab.on{color:var(--ink);border-bottom-color:var(--acc)}
 .view{display:none}.view.on{display:block}
 body.cv .suonly,body:not(.cv) .cvonly{display:none}
+body.cv #out td,body.cv #thd th{padding:9px 5px}
 body[data-view=hist] .scanonly,body[data-view=bt] .scanonly{display:none}
 .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
 .sum .tb .n.up{color:var(--long)}.sum .tb .n.dn{color:var(--short)}
@@ -128,6 +129,10 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible{outline:2px solid var(
     <button class="chip" data-cf="sw" type="button" title="Sweep v zadnjih 5 svečah">Sweep</button>
     <button class="chip" data-cf="dv" type="button" title="RSI divergenca v zadnjih 10 svečah">Div</button>
     <button class="chip" data-cf="fv" type="button" title="Cena v nezapolnjenem FVG ali manj kot eno povprečno svečo od njega">FVG</button>
+    <button class="chip" data-cf="hf" type="button" title="Cena v HTF FVG ali manj kot dve povprečni sveči od njega">HTF FVG</button>
+    <button class="chip" data-cf="gp" type="button" title="Cena v golden pocketu (0.618–0.786) zadnje noge">GP</button>
+    <button class="chip" data-cf="po" type="button" title="Cena v POI (order block) ali manj kot eno povprečno svečo od njega">POI</button>
+    <button class="chip" data-cf="va" type="button" title="Cena ob robu value area: long = pri/pod VAL, short = pri/nad VAH (volume profile)">VA rob</button>
     <span class="lbl">Razvrsti</span><select id="csort" style="width:auto"><option value="vol">Volatilnost</option><option value="ch">24h sprememba</option><option value="to">Promet</option><option value="sw">Najnovejši sweep</option></select></span>
     <span class="suonly"><span class="lbl" style="margin-left:4px">Stanje:</span>
     <button class="chip on" data-st="act" type="button">Za trejd</button>
@@ -356,12 +361,12 @@ function fp(p){if(p==null||isNaN(p))return '–';var a=Math.abs(p);return a>=100
 function dfmt(t){return new Date(t).toLocaleDateString('sl-SI',{day:'numeric',month:'numeric',timeZone:'UTC'})}
 async function jget(u){var r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
 async function kl(sym,iv,n,end){var r=await jget(API+'kline?category=linear&symbol='+sym+'&interval='+iv+'&limit='+n+(end?'&end='+end:''));
-  return r.list.reverse().map(function(x){return {t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4]}})}
+  return r.list.reverse().map(function(x){return {t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]||0}})}
 /* Okvirji: 90m in 23m Bybit nima -> sestavimo iz 30m / 1m, sidro vsak dan ob 00:00 UTC (kot Jayevi fraktali) */
 var TFS={D3:{api:'D',base:1440,min:4320,agg:4320,n:1000,pages:2},D:{api:'D',min:1440,n:500},'360':{api:'360',min:360,n:700},'90':{api:'30',min:90,agg:90,n:1000},'23':{api:'1',min:23,agg:23,n:1000,pages:3},
   '5':{api:'5',min:5,n:700},'3':{api:'3',min:3,n:700},'1':{api:'1',min:1,n:700},'60':{api:'60',min:60,n:700},'15':{api:'15',min:15,n:700},W:{api:'W',min:10080,n:300}};
 function aggr(k,mins){var ms=mins*6e4,big=mins>=1440,out=[],cur=null;k.forEach(function(x){var day=big?0:Math.floor(x.t/864e5)*864e5,b=day+Math.floor((x.t-day)/ms)*ms;
-  if(!cur||cur.t!==b){cur={t:b,o:x.o,h:x.h,l:x.l,c:x.c,e:big?b+ms:Math.min(b+ms,day+864e5)};out.push(cur)}else{cur.h=Math.max(cur.h,x.h);cur.l=Math.min(cur.l,x.l);cur.c=x.c}});
+  if(!cur||cur.t!==b){cur={t:b,o:x.o,h:x.h,l:x.l,c:x.c,v:x.v||0,e:big?b+ms:Math.min(b+ms,day+864e5)};out.push(cur)}else{cur.h=Math.max(cur.h,x.h);cur.l=Math.min(cur.l,x.l);cur.c=x.c;cur.v+=x.v||0}});
   if(out.length>1)out.shift();return out}
 async function klines(sym,tf,ov){var c=TFS[tf]||TFS.D,n=ov&&ov.n||c.n,pages=ov&&ov.pages||c.pages||1,all=[],end=null;
   for(var p=0;p<pages;p++){var k=await kl(sym,c.api,n,end);if(!k.length)break;all=k.concat(all);end=k[0].t-1;if(k.length<n)break}
@@ -410,9 +415,9 @@ async function scan(){
         var su=(m12?jay12Setups:jaySetups)(k,live,st,{fresh:fresh});su.forEach(applySL);
         su=su.concat(jaySweeps(k,live,m12?st:jay12Scan(k,{freshD:5,tfMin:tfMin})));
         cache[t.symbol]={k:k,live:live};
-        var pr=live?live.c:k[k.length-1].c,sm=summ(live?k.concat([live]):k,pr);
-        cres.push({s:t.symbol,price:pr,ch:+t.price24hPcnt*100,to:+t.turnover24h,sm:sm,htf:hd.w,htfM:hd.m,c3:hd.c3||{},w1:hd.w1||{},su:su});
-        su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;x.tH=k[x.Hx]?k[x.Hx].t:x.Hx;x.key=(m12?'12|':'')+x.s+'|'+tf+'|'+x.dir+'|'+x.tH;x.htf=hd.w;x.htfM=hd.m;var up=x.dir==='long';x.hc3=!!(hd.c3&&(up?hd.c3.L:hd.c3.S));x.hw1=!!(hd.w1&&(up?hd.w1.L:hd.w1.S));res.push(x)});
+        var pr=live?live.c:k[k.length-1].c,sm=summ(live?k.concat([live]):k,pr,piv);sm.hf=nearZ(hd.hf.fv,pr);if(sm.hf)sm.hf.lb=hd.hf.lb;
+        cres.push({s:t.symbol,price:pr,ch:+t.price24hPcnt*100,to:+t.turnover24h,sm:sm,hf:hd.hf,htf:hd.w,htfM:hd.m,c3:hd.c3||{},w1:hd.w1||{},su:su});
+        su.forEach(function(x){x.s=t.symbol;x.ch=+t.price24hPcnt*100;x.tH=k[x.Hx]?k[x.Hx].t:x.Hx;x.key=(m12?'12|':'')+x.s+'|'+tf+'|'+x.dir+'|'+x.tH;x.htf=hd.w;x.htfM=hd.m;x.hf=hd.hf;var up=x.dir==='long';x.hc3=!!(hd.c3&&(up?hd.c3.L:hd.c3.S));x.hw1=!!(hd.w1&&(up?hd.w1.L:hd.w1.S));res.push(x)});
       }catch(e){fails++}
       done++;$('pg').style.width=(100*done/list.length)+'%';$('stat').textContent='Pregledujem '+done+'/'+list.length+' …';
     }
@@ -480,14 +485,14 @@ notifBtn();
 var htfCache={},htfOn=ls('jay_htf')!=='0';
 function htfDir(k,piv,tfMin){if(k.length<4*piv+2)return null;var st=jayScan(k,{piv:piv,freshD:5,tfMin:tfMin}),b=st.b,s=st.s;
   var u=b.armed&&b.H!==null?b.Hx:-1,d=s.armed&&s.lo!==null?s.lox:-1;return u<0&&d<0?0:u>d?1:-1}
-async function htfOf(sym,tf,piv){var key=sym+'|'+piv,c=htfCache[key];if(c&&Date.now()-c.at<30*6e4)return c;
-  var now=new Date(),w=null,m=null;
-  try{var kw=await kl(sym,'W',300);if(kw.length&&kw[kw.length-1].t+6048e5>now)kw.pop();w=htfDir(kw,piv,10080)}catch(e){}
-  try{var km=await kl(sym,'M',200),lm=km[km.length-1];if(lm){var d=new Date(lm.t);if(d.getUTCFullYear()===now.getUTCFullYear()&&d.getUTCMonth()===now.getUTCMonth())km.pop()}m=htfDir(km,piv,43200)}catch(e){}
-  var c3=null,w1=null;
-  try{var kd=await kl(sym,'D',60);c3=candSeq(closed3D(kd),3,true)}catch(e){}
-  if(kw&&kw.length)w1=candSeq(kw,4,false);
-  c={w:tf==='W'?m:w,m:m,c3:c3,w1:w1,at:Date.now()};if(w!==null||m!==null)htfCache[key]=c;return c}
+async function htfOf(sym,tf,piv){var key=sym+'|'+piv,c=htfCache[key];
+  if(!(c&&Date.now()-c.at<30*6e4)){var now=Date.now(),wd=null,md=null,kw=null,km=null,kd=null,c3=null,w1=null,fd=[],fw=[],fm=[];
+    try{kw=await kl(sym,'W',300);if(kw.length&&kw[kw.length-1].t+6048e5>now)kw.pop();wd=htfDir(kw,piv,10080);w1=candSeq(kw,4,false);fw=anz(kw).fv}catch(e){}
+    try{km=await kl(sym,'M',200);var lm=km[km.length-1],nd=new Date(now);if(lm){var d=new Date(lm.t);if(d.getUTCFullYear()===nd.getUTCFullYear()&&d.getUTCMonth()===nd.getUTCMonth())km.pop()}md=htfDir(km,piv,43200);fm=anz(km).fv}catch(e){}
+    try{kd=await kl(sym,'D',200);c3=candSeq(closed3D(kd),3,true);if(kd.length&&kd[kd.length-1].t+864e5>now)kd.pop();fd=anz(kd).fv}catch(e){}
+    c={wd:wd,md:md,c3:c3,w1:w1,fd:fd,fw:fw,fm:fm,at:Date.now()};if(wd!==null||md!==null)htfCache[key]=c}
+  var W=tf==='W',DD=tf==='D'||tf==='D3';
+  return {w:W?c.md:c.wd,m:c.md,c3:c.c3,w1:c.w1,hf:W?{lb:'1M',fv:c.fm}:DD?{lb:'1W',fv:c.fw}:{lb:'1D',fv:c.fd}}}
 /* HTF sveče (Jayevo L-LL-HL kot zaporedje sveč): a, b, c zaporedne zaprte sveče, b.l < a.l (LL), c.l > b.l (HL),
    strogo še c.c > b.h (HL sveča zapre nad vrhom LL sveče). Short zrcalno. Šteje, če se zgodi v zadnjih n svečah. */
 function candSeq(k,n,strict){var L=false,S=false;for(var c=k.length-1;c>=Math.max(2,k.length-n);c--){var a=k[c-2],b=k[c-1],x=k[c];
@@ -709,6 +714,10 @@ function coinPass(c){var m=c.sm;
   if(cf.sw&&!(m.sw&&m.sw.age<=5&&dirOK(m.sw.bu)))return false;
   if(cf.dv&&!(m.dv&&m.dv.age<=10&&dirOK(m.dv.bu)))return false;
   if(cf.fv&&!(m.fv&&m.fv.d<=Math.max(m.vol,0.002)&&dirOK(m.fv.bu)))return false;
+  if(cf.hf&&!(m.hf&&m.hf.d<=Math.max(2*m.vol,0.004)&&dirOK(m.hf.bu)))return false;
+  if(cf.gp&&!(m.gp&&m.gp.inn&&dirOK(m.gp.bu)))return false;
+  if(cf.po&&!(m.poi&&m.poi.d<=Math.max(m.vol,0.002)&&dirOK(m.poi.bu)))return false;
+  if(cf.va&&!(m.vp&&(function(){var vl=m.vol*c.price,L=c.price<=m.vp.val+vl,S=c.price>=m.vp.vah-vl;return side==='long'?L:side==='short'?S:(L||S)})()))return false;
   if(htfOn&&!(side==='all'?!!c.htf:c.htf===(side==='long'?1:-1)))return false;
   if(hcOn&&!(side==='all'?(c.c3.L||c.c3.S||c.w1.L||c.w1.S):side==='long'?(c.c3.L||c.w1.L):(c.c3.S||c.w1.S)))return false;
   return true}
@@ -723,16 +732,19 @@ function cRow(c){var m=c.sm,coin=c.s.replace(/USDT$/,''),id='c|'+c.s,best=c.su.f
     '<td class="l">'+(m.sw?mk(m.sw,ago(m.sw.age)):mk(null))+'</td>'+
     '<td class="l">'+(m.dv?mk(m.dv,ago(m.dv.age)):mk(null))+'</td>'+
     '<td class="l">'+(m.fv?mk(m.fv,m.fv.d===0?'v FVG':(m.fv.d*100).toFixed(1)+' %'):mk(null))+'</td>'+
-    '<td class="l">'+(best?'<span class="pill '+best.dir+'">'+(best.dir==='long'?'L':'S')+'</span> '+stCell(best):'<span class="mut">–</span>')+'</td></tr>';
-  if(open===id)h+='<tr class="dt"><td colspan="9"><div class="dtw">'+detail(coinR(c))+'</div></td></tr>';
+    '<td class="l">'+(m.hf?mk(m.hf,m.hf.lb+' '+(m.hf.d===0?'v FVG':(m.hf.d*100).toFixed(1)+' %')):mk(null))+'</td>'+
+    '<td class="l">'+(m.gp?(m.gp.inn?mk(m.gp,'v GP'):'<span class="mut">'+(m.gp.bu?'▲':'▼')+' '+(m.gp.d>0?'do GP '+(m.gp.d*100).toFixed(1)+' %':(m.gp.bu?'pod GP':'nad GP'))+'</span>'):mk(null))+'</td>'+
+    '<td class="l">'+(m.poi?mk(m.poi,m.poi.d===0?'v POI':(m.poi.d*100).toFixed(1)+' %'):mk(null))+'</td>'+
+    '<td class="l" title="'+(m.vp?'POC '+fp(m.vp.poc)+' · VAH '+fp(m.vp.vah)+' · VAL '+fp(m.vp.val):'')+'">'+(m.vp?(m.vp.pos>0?'<span class="dn">nad VAH</span>':m.vp.pos<0?'<span class="up">pod VAL</span>':'<span class="mut">v VA</span>'):'<span class="mut">–</span>')+'</td></tr>';
+  if(open===id)h+='<tr class="dt"><td colspan="12"><div class="dtw">'+detail(coinR(c))+'</div></td></tr>';
   return h}
 function coinR(c){var bu=side==='short'?false:side==='long'?true:(c.sm.sw?c.sm.sw.bu:c.htf!==-1);
-  return {s:c.s,dir:bu?'long':'short',state:-1,nos:true,htf:c.htf,htfM:c.htfM,hc3:!!(bu?c.c3.L:c.c3.S),hw1:!!(bu?c.w1.L:c.w1.S),price:c.price}}
+  return {s:c.s,dir:bu?'long':'short',state:-1,nos:true,hf:c.hf,htf:c.htf,htfM:c.htfM,hc3:!!(bu?c.c3.L:c.c3.S),hw1:!!(bu?c.w1.L:c.w1.S),price:c.price}}
 function renderCoins(){
-  $('thd').innerHTML='<tr><th>Kovanec</th><th>Cena</th><th>24h</th><th title="Povprečni razpon 14 sveč">Volatilnost</th><th class="l">HTF</th><th class="l">Zadnji sweep</th><th class="l">Div</th><th class="l" title="Najbližji nezapolnjen FVG">FVG</th><th class="l">Setup</th></tr>';
+  $('thd').innerHTML='<tr><th>Kovanec</th><th>Cena</th><th>24h</th><th title="Volatilnost: povprečni razpon 14 sveč">Vol.</th><th class="l">HTF</th><th class="l" title="Zadnji sweep">Sweep</th><th class="l">Div</th><th class="l" title="Najbližji nezapolnjen FVG">FVG</th><th class="l" title="Najbližji nezapolnjen FVG na višjem okviru">HTF FVG</th><th class="l" title="Golden pocket zadnje noge">GP</th><th class="l" title="Najbližji order block (telo)">POI</th><th class="l" title="Volume profile okna (90 sveč)">VP</th></tr>';
   var list=coins.filter(coinPass),cs=$('csort').value;
   list.sort(function(a,b){return cs==='ch'?Math.abs(b.ch)-Math.abs(a.ch):cs==='to'?b.to-a.to:cs==='sw'?((a.sm.sw?a.sm.sw.age:1e9)-(b.sm.sw?b.sm.sw.age:1e9)):b.sm.vol-a.sm.vol});
-  $('out').innerHTML=list.length?list.map(cRow).join(''):'<tr><td colspan="9" class="empty">'+(coins.length?'Ni kovancev s temi filtri.':'Klikni "Skeniraj".')+'</td></tr>'}
+  $('out').innerHTML=list.length?list.map(cRow).join(''):'<tr><td colspan="12" class="empty">'+(coins.length?'Ni kovancev s temi filtri.':'Klikni "Skeniraj".')+'</td></tr>'}
 function render(){
   cvBtns();
   if(cview)return renderCoins();
@@ -758,6 +770,7 @@ $('csort').addEventListener('change',render);
 cvBtns();
 $('out').addEventListener('click',function(e){if(e.target.closest('a'))return;
   var tb=e.target.closest('[data-dtf]');if(tb){dtf=tb.getAttribute('data-dtf');render();return}
+  var mb=e.target.closest('[data-mk]');if(mb){var mkk=mb.getAttribute('data-mk');MK[mkk]=MK[mkk]?0:1;ls('jay_mk',JSON.stringify(MK));render();return}
   var tr=e.target.closest('.rw');if(!tr)return;var id=tr.getAttribute('data-id');open=open===id?null:id;dtf=null;render();openLoad()});
 function openLoad(){var id=open,r=id&&(id.indexOf('c|')===0?coins.filter(function(c){return 'c|'+c.s===id}).map(coinR)[0]:rows.filter(function(x){return rid(x)===id})[0]);if(r)mtfLoad(r).then(function(){if(open===id)render()})}
 $('out').addEventListener('keydown',function(e){if(e.key==='Enter'){var tr=e.target.closest('.rw');if(tr)tr.click()}});
@@ -793,7 +806,8 @@ function detail(r){
   var want=r.dir==='long'?1:-1,known=dirs.filter(function(x){return x.d!==null}),same=known.filter(function(x){return x.d===want}).length,loading=known.length<dirs.length&&dirs.some(function(x){return !x.m});
   var head='<div class="bar" style="margin-bottom:8px">'+tabs.map(function(tf){var x=dirs[tabs.indexOf(tf)];
       return '<button class="chip'+(tf===sel?' on':'')+'" data-dtf="'+tf+'" type="button">'+(TFN[tf]||tf)+' '+(x.d===null?'<span class="mut">…</span>':arrow(x.d))+'</button>'}).join('')+
-    '<span class="lbl"><b>Poravnava:</b> '+(loading?'nalagam …':same+'/'+known.length+' okvirjev v smeri '+(want===1?'↑ long':'↓ short'))+'</span></div>';
+    '<span class="lbl"><b>Poravnava:</b> '+(loading?'nalagam …':same+'/'+known.length+' okvirjev v smeri '+(want===1?'↑ long':'↓ short'))+'</span></div>'+
+    '<div class="bar" style="margin:-4px 0 8px;gap:4px"><span class="lbl">Na grafu:</span>'+MKN.map(function(m){return '<button class="chip'+(MK[m[0]]?' on':'')+'" data-mk="'+m[0]+'" type="button" style="padding:3px 9px;font-size:12px">'+m[1]+'</button>'}).join('')+'</div>';
   if(sel===cur)return head+chart(r,cache[r.s],cur);
   var m=mtfGet(r,sel);
   if(!m)return head+'<div class="empty">Nalagam '+(TFN[sel]||sel)+' …</div>';
@@ -835,23 +849,74 @@ function anz(k){var n=k.length,i,j,avg=0,cnt=0,fv=[],sw=[],dv=[];
   for(i=1;i<Q.length;i++)d(Q[i-1],Q[i],false);
   dv.sort(function(x,y){return x.b-y.b});
   return {fv:fv,sw:sw,dv:dv,n:n}}
+/* Fib zadnje noge: zadnji potrjen pivot (P/P, kot jayPivot) določi smer. Zadnji je vrh -> noga gor od zadnjega dna do najvišje cene od takrat (GP spodaj);
+   zadnje je dno -> noga dol od zadnjega vrha do najnižje cene od takrat (GP zgoraj). GP = 0.618–0.786. */
+function fibLeg(k,P){var n=k.length,hx=-1,lx=-1,c,i;
+  for(c=n-1-P;c>=P&&(hx<0||lx<0);c--){if(hx<0&&jayPivot(k,c,P,true))hx=c;if(lx<0&&jayPivot(k,c,P,false))lx=c}
+  if(hx<0||lx<0)return null;var up=hx>lx,hi,lo;
+  function legUp(){lo=k[lx].l;hi=-Infinity;for(i=lx;i<n;i++)if(k[i].h>hi){hi=k[i].h;hx=i}}
+  function legDn(){hi=k[hx].h;lo=Infinity;for(i=hx;i<n;i++)if(k[i].l<lo){lo=k[i].l;lx=i}}
+  if(up){legUp();for(i=hx;i<n;i++)if(k[i].l<lo){up=false;legDn();break}}
+  else{legDn();for(i=lx;i<n;i++)if(k[i].h>hi){up=true;legUp();break}}
+  var R=hi-lo;if(!(R>0))return null;
+  return {up:up,hi:hi,lo:lo,hx:hx,lx:lx,g1:up?hi-R*0.618:lo+R*0.618,g2:up?hi-R*0.786:lo+R*0.786,g5:up?hi-R*0.5:lo+R*0.5}}
+function gpState(f,p){if(!f)return null;var top=Math.max(f.g1,f.g2),bot=Math.min(f.g1,f.g2),inn=p>=bot&&p<=top;
+  return {bu:f.up,inn:inn,d:inn?0:f.up?(p>top?(p-top)/p:-(bot-p)/p):(p<bot?(bot-p)/p:-(p-top)/p)}}
+/* POI = order block po telesu: zadnja nasprotna sveča (do 5 sveč) pred sunkom, ki je pustil nezapolnjen FVG; neveljaven, ko sveča zapre skozi telo. */
+function pois(k,fv){var out=[],seen={};
+  fv.forEach(function(g){var j=g.i-2,lim=Math.max(0,g.i-7);
+    while(j>=lim&&(g.bu?!(k[j].c<k[j].o):!(k[j].c>k[j].o)))j--;
+    if(j<lim||seen[j])return;var top=Math.max(k[j].o,k[j].c),bot=Math.min(k[j].o,k[j].c);
+    for(var q=g.i+1;q<k.length;q++)if(g.bu?k[q].c<bot:k[q].c>top)return;
+    seen[j]=1;out.push({i:j,top:top,bot:bot,bu:g.bu})});
+  return out}
+/* Volume profile okna: 40 košev, volumen sveče enakomerno po njenem razponu; POC = največ volumna, VA = 70 % okoli POC. */
+function vprof(k,from){var n=k.length,lo=Infinity,hi=-Infinity,i,q,B=40;for(i=from;i<n;i++){if(k[i].l<lo)lo=k[i].l;if(k[i].h>hi)hi=k[i].h}
+  if(!(hi>lo))return null;var w=(hi-lo)/B,b=new Array(B).fill(0),tot=0;
+  for(i=from;i<n;i++){var x=k[i],v=x.v||0;if(!v)continue;var a=Math.max(0,Math.min(B-1,Math.floor((x.l-lo)/w))),z=Math.max(a,Math.min(B-1,Math.floor((x.h-lo)/w)));
+    for(q=a;q<=z;q++)b[q]+=v/(z-a+1);tot+=v}
+  if(!tot)return null;var pc=0;for(i=1;i<B;i++)if(b[i]>b[pc])pc=i;var li=pc,hi2=pc,acc=b[pc];
+  while(acc<tot*0.7&&(li>0||hi2<B-1)){var dn=li>0?b[li-1]:-1,upv=hi2<B-1?b[hi2+1]:-1;if(upv>=dn){hi2++;acc+=b[hi2]}else{li--;acc+=b[li]}}
+  return {lo:lo,w:w,b:b,max:b[pc],poc:lo+(pc+0.5)*w,vah:lo+(hi2+1)*w,val:lo+li*w}}
+function nearZ(list,p){var nf=null;(list||[]).forEach(function(g){var d=p>=g.bot&&p<=g.top?0:Math.min(Math.abs(p-g.top),Math.abs(p-g.bot))/p;if(!nf||d<nf.d)nf={d:d,bu:g.bu,top:g.top,bot:g.bot}});return nf}
 /* Povzetek za tabelo kovancev: volatilnost (povprečni razpon 14 sveč v %), zadnji sweep, zadnja divergenca, najbližji nezapolnjen FVG */
-function summ(k,price){var a=anz(k),n=k.length,v=0,c=0,i;for(i=Math.max(0,n-14);i<n;i++){v+=(k[i].h-k[i].l)/k[i].c;c++}
+function summ(k,price,P){var a=anz(k),n=k.length,v=0,c=0,i;for(i=Math.max(0,n-14);i<n;i++){v+=(k[i].h-k[i].l)/k[i].c;c++}
   var ls=a.sw[a.sw.length-1],ld=a.dv[a.dv.length-1],nf=null;
   a.fv.forEach(function(g){var d=price>=g.bot&&price<=g.top?0:Math.min(Math.abs(price-g.top),Math.abs(price-g.bot))/price;if(!nf||d<nf.d)nf={d:d,bu:g.bu,top:g.top,bot:g.bot}});
-  return {vol:c?v/c:0,sw:ls?{bu:ls.bu,age:n-1-ls.i}:null,dv:ld&&n-1-ld.b<=30?{bu:ld.bu,age:n-1-ld.b}:null,fv:nf}}
-function marks(k,from,n,X,Y,cw,xe){var s='',a=anz(k.slice(0,n));
-  a.fv.filter(function(g){return g.i>=from&&g.bu}).slice(-3).concat(a.fv.filter(function(g){return g.i>=from&&!g.bu}).slice(-3)).forEach(function(g){var x1=X(g.i-1);
+  var fb=fibLeg(k,P||5),vp=vprof(k,Math.max(0,n-90)),po=nearZ(pois(k,a.fv),price);
+  return {vol:c?v/c:0,sw:ls?{bu:ls.bu,age:n-1-ls.i}:null,dv:ld&&n-1-ld.b<=30?{bu:ld.bu,age:n-1-ld.b}:null,fv:nf,fib:fb,gp:gpState(fb,price),poi:po,
+    vp:vp?{poc:vp.poc,vah:vp.vah,val:vp.val,pos:price>vp.vah?1:price<vp.val?-1:0}:null}}
+var MK={fvg:1,sw:1,dv:1,fib:1,poi:1,vp:1,hfv:1};try{Object.assign(MK,JSON.parse(ls('jay_mk')||'{}'))}catch(e){}
+var MKN=[['fib','Fib/GP'],['poi','POI'],['vp','Volume profile'],['hfv','HTF FVG'],['fvg','FVG'],['sw','Sweep'],['dv','Div']];
+function marks(k,from,n,X,Y,cw,xe,o){o=o||{};var s='',a=anz(k.slice(0,n)),kk=k.slice(0,n),lo=o.lo,hi=o.hi,x0=X(from);
+  function inR(t,b){return t>=lo&&b<=hi}
+  function zone(t,b,x1,col,txt,dash,op){t=Math.min(t,hi);b=Math.max(b,lo);return '<rect x="'+x1+'" y="'+Y(t)+'" width="'+Math.max(1,xe-x1)+'" height="'+Math.max(1,Y(b)-Y(t))+'" fill="'+col+'" opacity="'+op+'"'+(dash?' stroke="'+col+'" stroke-dasharray="4 3" stroke-opacity=".9"':'')+'/>'+
+    '<text x="'+(xe-2)+'" y="'+(Y((t+b)/2)+3)+'" text-anchor="end" font-size="9" font-weight="700" fill="'+col+'">'+txt+'</text>'}
+  // volume profile (ob desnem robu)
+  if(MK.vp){var vp=vprof(kk,from);if(vp){var mw=(xe-x0)*0.2;
+    vp.b.forEach(function(v,i){if(!v)return;var y1=Y(vp.lo+(i+1)*vp.w),y2=Y(vp.lo+i*vp.w),wp=v/vp.max*mw;s+='<rect x="'+(xe-wp)+'" y="'+y1+'" width="'+wp+'" height="'+Math.max(0.5,y2-y1-0.5)+'" fill="var(--mut)" opacity="'+(vp.lo+(i+0.5)*vp.w>=vp.val&&vp.lo+(i+0.5)*vp.w<=vp.vah?.28:.14)+'"/>'});
+    [[vp.poc,'POC',''],[vp.vah,'VAH','3 3'],[vp.val,'VAL','3 3']].forEach(function(z){s+='<line x1="'+x0+'" x2="'+xe+'" y1="'+Y(z[0])+'" y2="'+Y(z[0])+'" stroke="var(--warn)" stroke-width="1" opacity=".75"'+(z[2]?' stroke-dasharray="'+z[2]+'"':'')+'/>'+
+      '<text x="'+(xe-mw-4)+'" y="'+(Y(z[0])-3)+'" text-anchor="end" font-size="9" font-weight="700" fill="var(--warn)">'+z[1]+'</text>'})}}
+  // HTF FVG
+  if(MK.hfv&&o.hf){var pz=kk[n-1].c,dz=function(g){return pz>=g.bot&&pz<=g.top?0:Math.min(Math.abs(pz-g.top),Math.abs(pz-g.bot))}; (o.hf.fv||[]).slice().sort(function(x,y){return dz(x)-dz(y)}).slice(0,3).forEach(function(g){if(inR(g.top,g.bot))s+=zone(g.top,g.bot,x0,g.bu?'var(--long)':'var(--short)',o.hf.lb+' FVG',true,.07)})}
+  // POI
+  if(MK.poi){var ps=pois(kk,a.fv);ps.filter(function(g){return g.bu}).slice(-2).concat(ps.filter(function(g){return !g.bu}).slice(-2)).forEach(function(g){if(inR(g.top,g.bot))s+=zone(g.top,g.bot,X(Math.max(from,g.i)-0.5),g.bu?'var(--long)':'var(--short)','POI',false,.22)})}
+  // fib zadnje noge + GP
+  if(MK.fib&&!o.su){var f=fibLeg(kk,o.P||5);if(f){var fx=X(Math.max(from,Math.min(f.lx,f.hx))),R=f.hi-f.lo,lv=function(r){return f.up?f.hi-R*r:f.lo+R*r};
+    var gt=Math.min(hi,Math.max(f.g1,f.g2)),gb=Math.max(lo,Math.min(f.g1,f.g2));if(gt>gb)s+='<rect x="'+fx+'" y="'+Y(gt)+'" width="'+(xe-fx)+'" height="'+(Y(gb)-Y(gt))+'" fill="var(--gp)"/>';
+    [[0,'0'],[0.5,'0.5'],[0.618,'0.618'],[0.786,'0.786'],[1,'1']].forEach(function(z){var v=lv(z[0]);if(v<lo||v>hi)return;var y=Y(v);s+='<line x1="'+fx+'" x2="'+xe+'" y1="'+y+'" y2="'+y+'" stroke="var(--val)" stroke-width="1" opacity="'+(z[0]===0||z[0]===1?.45:.75)+'"'+(z[0]===0.5?' stroke-dasharray="3 3"':'')+'/>'+
+      '<text x="'+(xe+4)+'" y="'+(y+4)+'" font-size="10" fill="var(--val)" font-family="ui-monospace,Menlo,monospace">'+z[1]+'</text>'})}}
+  if(MK.fvg)a.fv.filter(function(g){return g.i>=from&&g.bu}).slice(-3).concat(a.fv.filter(function(g){return g.i>=from&&!g.bu}).slice(-3)).forEach(function(g){var x1=X(g.i-1);
     s+='<rect x="'+x1+'" y="'+Y(g.top)+'" width="'+Math.max(1,xe-x1)+'" height="'+Math.max(1,Y(g.bot)-Y(g.top))+'" fill="'+(g.bu?'var(--long)':'var(--short)')+'" opacity=".16"/>'+
       '<text x="'+(xe-2)+'" y="'+(Y((g.top+g.bot)/2)+3)+'" text-anchor="end" font-size="9" font-weight="700" fill="'+(g.bu?'var(--long)':'var(--short)')+'">FVG</text>'});
-  a.sw.forEach(function(w){if(w.i<from)return;var K=k[w.i],col=w.bu?'var(--long)':'var(--short)';
+  if(MK.sw)a.sw.forEach(function(w){if(w.i<from)return;var K=k[w.i],col=w.bu?'var(--long)':'var(--short)';
     s+='<line x1="'+X(Math.max(from,w.x))+'" x2="'+X(w.i)+'" y1="'+Y(w.v)+'" y2="'+Y(w.v)+'" stroke="'+col+'" stroke-width="1" stroke-dasharray="2 2" opacity=".8"/>'+
       (w.bu?'<path d="M'+X(w.i)+' '+(Y(K.l)+4)+' l-4 7 h8 z" fill="'+col+'"/>':'<path d="M'+X(w.i)+' '+(Y(K.h)-4)+' l-4 -7 h8 z" fill="'+col+'"/>')});
-  a.dv.forEach(function(d){if(d.b<from)return;var ya=d.bu?Y(k[d.a].l)+9:Y(k[d.a].h)-9,yb=d.bu?Y(k[d.b].l)+9:Y(k[d.b].h)-9,col=d.bu?'var(--long)':'var(--short)';
+  if(MK.dv)a.dv.forEach(function(d){if(d.b<from)return;var ya=d.bu?Y(k[d.a].l)+9:Y(k[d.a].h)-9,yb=d.bu?Y(k[d.b].l)+9:Y(k[d.b].h)-9,col=d.bu?'var(--long)':'var(--short)';
     s+='<line x1="'+X(Math.max(d.a,from))+'" x2="'+X(d.b)+'" y1="'+(d.a<from?yb:ya)+'" y2="'+yb+'" stroke="'+col+'" stroke-width="1.6"/>'+
       '<text x="'+X(d.b)+'" y="'+(d.bu?yb+12:yb-4)+'" text-anchor="middle" font-size="10" font-weight="700" fill="'+col+'">div</text>'});
   return s}
-var mleg='<br><span style="color:var(--long)">▲</span>/<span style="color:var(--short)">▼</span> sweep (pobrano staro dno/vrh in zaprtje nazaj) · <span style="color:var(--long)">▮</span>/<span style="color:var(--short)">▮</span> nezapolnjen FVG (zadnji 3 v vsako smer) · <b>div</b> = RSI divergenca';
+var mleg='<br><span style="background:var(--gp);padding:0 4px">GP</span> fib zadnje noge (0.618–0.786) · POI = order block (telo) · <span style="color:var(--warn)">POC / VAH / VAL</span> volume profile · črtkano = HTF FVG<br><span style="color:var(--long)">▲</span>/<span style="color:var(--short)">▼</span> sweep (pobrano staro dno/vrh in zaprtje nazaj) · <span style="color:var(--long)">▮</span>/<span style="color:var(--short)">▮</span> nezapolnjen FVG (zadnji 3 v vsako smer) · <b>div</b> = RSI divergenca';
 function chart(r,c,tf){
   if(!c)return '';
   var k=c.k.slice();if(c.live)k.push(c.live);
@@ -880,7 +945,7 @@ function chart(r,c,tf){
   // staro L (likvidnost)
   if(su&&r.L!=null&&r.Lx!=null&&r.Lx>=from)s+='<line x1="'+X(r.Lx)+'" x2="'+xe+'" y1="'+Y(r.L)+'" y2="'+Y(r.L)+'" stroke="var(--val)" stroke-width="1.6" stroke-dasharray="2 4"/>';
   // oznake: FVG, sweep, RSI divergenca (samo prikaz)
-  s+=marks(k,from,n,X,Y,cw,xe);
+  s+=marks(k,from,n,X,Y,cw,xe,{lo:lo,hi:hi,su:su,hf:r.hf,P:+$('piv').value||5});
   // sveče
   bars.forEach(function(x,j){var i=from+j,u=x.c>=x.o,col=u?'var(--long)':'var(--short)',yt=Y(Math.max(x.o,x.c)),yb=Y(Math.min(x.o,x.c));
     s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'" stroke-width="1"/><rect x="'+(X(i)-cw*0.32)+'" y="'+yt+'" width="'+(cw*0.64)+'" height="'+Math.max(1,yb-yt)+'" fill="'+col+'"'+(i===n-1&&c.live?' opacity=".55"':'')+'/>'});
@@ -924,11 +989,15 @@ function chart(r,c,tf){
   for(var g=0;g<=4;g++){var p=lo+(hi-lo)*g/4;s+='<text x="'+(W-4)+'" y="'+(Y(p)+4)+'" text-anchor="end" font-size="10" fill="var(--mut)" font-family="ui-monospace,Menlo,monospace">'+fp(p)+'</text>'}
   s+='</svg>';
   var a=+$('acct').value,pc=+$('rpct').value,risk=a*pc/100,qty=risk/Math.abs(r.entry-r.sl);
-  if(!su){var an=summ(k,k[n-1].c),kv0='<div class="kv">'+
+  if(!su){var an=summ(k,k[n-1].c,+$('piv').value||5),kv0='<div class="kv">'+
     (r.nos?'':'<span>Struktura</span><b>'+(r.state===4?'sweep, čaka sunek':(up?'L '+fp(r.L)+' → LL '+fp(r.LL)+' → H '+fp(r.H):'H '+fp(r.L)+' → HH '+fp(r.LL)+' → L '+fp(r.H)))+'</b>')+
     '<span>Volatilnost</span><b>'+(an.vol*100).toFixed(2)+' % na svečo</b>'+
     '<span>Zadnji sweep</span><b>'+(an.sw?(an.sw.bu?'<span class="up">▲ dno</span> ':'<span class="dn">▼ vrh</span> ')+svNazaj(an.sw.age):'–')+'</b>'+
     '<span>Divergenca</span><b>'+(an.dv?(an.dv.bu?'<span class="up">bull</span> ':'<span class="dn">bear</span> ')+svNazaj(an.dv.age):'–')+'</b>'+
+    '<span>HTF FVG</span><b>'+(function(){var z=r.hf?nearZ(r.hf.fv,k[n-1].c):null;return z?(z.bu?'<span class="up">bull</span> ':'<span class="dn">bear</span> ')+r.hf.lb+' '+fp(z.bot)+' – '+fp(z.top)+(z.d===0?' (cena v njem)':' ('+(z.d*100).toFixed(1)+' %)'):'–'})()+'</b>'+
+    '<span>Fib / GP</span><b>'+(an.fib?(an.fib.up?'noga ↑ ':'noga ↓ ')+fp(an.fib.lo)+' – '+fp(an.fib.hi)+' · GP '+fp(Math.min(an.fib.g1,an.fib.g2))+' – '+fp(Math.max(an.fib.g1,an.fib.g2))+(an.gp.inn?' <span class="'+(an.gp.bu?'up':'dn')+'">(cena v GP)</span>':''):'–')+'</b>'+
+    '<span>POI</span><b>'+(an.poi?(an.poi.bu?'<span class="up">bull</span> ':'<span class="dn">bear</span> ')+fp(an.poi.bot)+' – '+fp(an.poi.top)+(an.poi.d===0?' (cena v njem)':' ('+(an.poi.d*100).toFixed(1)+' %)'):'–')+'</b>'+
+    '<span>Volume profile</span><b>'+(an.vp?'POC '+fp(an.vp.poc)+' · VAH '+fp(an.vp.vah)+' · VAL '+fp(an.vp.val):'–')+'</b>'+
     '<span>Najbližji FVG</span><b>'+(an.fv?(an.fv.bu?'<span class="up">bull</span> ':'<span class="dn">bear</span> ')+fp(an.fv.bot)+' – '+fp(an.fv.top)+(an.fv.d===0?' (cena v njem)':' ('+(an.fv.d*100).toFixed(1)+' %)'):'–')+'</b>'+
     '<span>HTF</span><b>'+($('tf').value==='W'?'1M ':'1W ')+arrow(r.htf)+($('tf').value==='W'?'':' · 1M '+arrow(r.htfM))+'</b>'+
     '<span>HTF sveče</span><b>3D '+(r.hc3?'<span class="up">✓</span>':'<span class="mut">✗</span>')+' · 1W '+(r.hw1?'<span class="up">✓</span>':'<span class="mut">✗</span>')+'</b></div>';
