@@ -101,6 +101,7 @@ th[data-sort]{cursor:pointer;user-select:none}th[data-sort]:hover{color:var(--in
 .gauge{grid-column:1/-1;position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--long) 0 30%,var(--line) 30% 70%,var(--short) 70%);opacity:.9}
 .gauge i{position:absolute;top:-3px;width:4px;height:12px;border-radius:2px;background:var(--ink);transform:translateX(-2px)}
 .rsi-x{margin-top:2px;font-size:11px}.rsi-x b{font-weight:700}
+.rsi-ch{grid-column:1/-1;margin-top:8px;cursor:default;min-width:0}.rsi-ch .det{grid-template-columns:1fr}.rsi-ch svg{width:100%;height:auto;display:block}.rsi-r.rsi-open{background:color-mix(in srgb,var(--acc) 4%,transparent)}
 .rsi-e{padding:28px 14px;text-align:center;color:var(--mut)}
 .empty{padding:48px 20px;text-align:center;color:var(--mut);white-space:normal!important}
 /* telefon: vrstice kot kartice */
@@ -522,6 +523,7 @@ var I18N_EX={'Orodja':'Tools','Ujemanje':'Agreement','Najnovejši':'Newest','Lov
  'S HTF svečami':'With HTF candles','Vol.':'Vol.','Od ':'From ','Naprej':'Forward','Nazaj v čas':'Back in time','nalagam …':'loading …','Sweep':'Sweep',
  'Obvestila vklopljena':'Notifications on','Vklopi obvestila':'Enable notifications','Obvestila blokirana v brskalniku':'Notifications blocked in browser','Obvestila niso podprta':'Notifications not supported'};
 var I18N_PH=[
+ ['Za ta kovanec ni sveč za graf.','No candles for a chart for this coin.'],['Graf ni na voljo.','Chart not available.'],
  ['(na 5m in 15m: CISD tega okvira)','(on 5m and 15m: CISD of that timeframe)'],['zadnja sveča','last candle'],
  ['Pripravljeni za long ▲','Ready for long ▲'],['Pripravljeni za short ▼','Ready for short ▼'],['Ni kovanca z vsaj 3 točkami za long.','No coin with at least 3 points for long.'],['Ni kovanca z vsaj 3 točkami za short.','No coin with at least 3 points for short.'],
  ['CISD ▲ · bikovski','CISD ▲ · bullish'],['CISD ▼ · medvedji','CISD ▼ · bearish'],['Ni svežega bikovskega CISD.','No fresh bullish CISD.'],['Ni svežega medvedjega CISD.','No fresh bearish CISD.'],['nivo','level'],['Ni podatkov.','No data.'],
@@ -1127,7 +1129,7 @@ var LOV={
  gl:{name:'Gainers/Losers',title:'Gainers / Losers 24h',desc:'15 kovancev z največjo rastjo in 15 z največjim padcem v 24 h (med izbranimi po prometu). Zraven RSI, sweep, deviation in divergenca na izbranem okviru.',tfs:['15','60','240','D'],tf:'60',postLb:'Oznake',
   fromTk:function(list){return list.map(function(t){return {s:t.symbol,price:+t.lastPrice,ch:+t.price24hPcnt*100}})},
   pick:function(out){var g=out.slice().sort(function(a,b){return b.ch-a.ch}).slice(0,15),l=out.slice().sort(function(a,b){return a.ch-b.ch}).slice(0,15);g.forEach(function(x){x.side='L'});l.forEach(function(x){if(!x.side)x.side='R'});return g.concat(l)},
-  post:async function(x,tf){var k=await kl(x.s,tf,200);if(k.length<40)return;var kc=closedK(k,tf),a=anz(kc),n=kc.length,w=a.sw[a.sw.length-1],d=a.dv[a.dv.length-1];x.v=lastRsi(k);
+  post:async function(x,tf){var k=await kl(x.s,tf,200);if(k.length<40)return;x.k=k;x.ktf=tf;var kc=closedK(k,tf),a=anz(kc),n=kc.length,w=a.sw[a.sw.length-1],d=a.dv[a.dv.length-1];x.v=lastRsi(k);
     x.sw=w&&n-1-w.i<=5?{bu:w.bu,age:n-1-w.i}:null;x.dv=d&&n-1-d.b<=10?{bu:d.bu,age:n-1-d.b}:null;x.dev=devOf(kc)},
   lists:[{side:'L',cls:'os',title:'Gainers 24h',empty:'Ni podatkov.',sort:function(a,b){return b.ch-a.ch}},{side:'R',cls:'ob',title:'Losers 24h',empty:'Ni podatkov.',sort:function(a,b){return a.ch-b.ch}}],
   big:function(x){return [pct(x.ch),'24h']},
@@ -1204,7 +1206,7 @@ async function rsiRun(){if(LS.busy)return;LS.busy=true;$('rsigo').disabled=true;
     var out=[];
     if(M.fromTk){out=M.fromTk(list);var sel=M.pick(out);if(M.post)await pool(sel,function(x){return M.post(x,tf)},M.postLb||'Open interest')}
     else await pool(list,async function(t){var k=await kl(t.symbol,tf,200);if(k.length<40)return;var kc=closedK(k,tf),x=M.calc(t,k,kc,tf);if(!x)return;
-      x.s=t.symbol;x.price=k[k.length-1].c;x.ch=+t.price24hPcnt*100;out.push(x)},'Preverjam');
+      x.s=t.symbol;x.price=k[k.length-1].c;x.ch=+t.price24hPcnt*100;x.k=k;x.ktf=tf;out.push(x)},'Preverjam');
     if(M.hk){var hq=[];out.forEach(function(x){if(!x.side)return;x.h=[];hlist(M,tf).forEach(function(h){hq.push([x,h])})});
       await pool(hq,async function(j){var k=await kl(j[0].s,j[1],200);if(k.length>20)j[0].h.push(M.hk(j[0],k,j[1]))},'Višji okvirji');
       out.forEach(function(x){if(x.h)x.h.sort(function(a,b){var L=hlist(M,tf);return L.indexOf(a.tf)-L.indexOf(b.tf)})})}
@@ -1215,18 +1217,24 @@ async function rsiRun(){if(LS.busy)return;LS.busy=true;$('rsigo').disabled=true;
 function lovHtf(x,col){var h=x.h||[];if(!h.length)return '';var m=h.filter(function(z){return z.ok});
   return '<span>HTF: '+h.map(function(z){return '<b class="'+(z.ok?col:z.near?'':'mut')+'">'+z.t+(z.ok?' ✓':'')+'</b>'}).join(' · ')+'</span>'+
     '<span class="'+(m.length?col:'mut')+'">'+(m.length?'ujema z '+m.map(function(z){return RSI_N[z.tf]}).join(' + '):'HTF se ne ujema')+'</span>'}
+/* Graf v razširjeni kartici: obstoječi chart() na svečah, ki jih je rubrika že naložila (x.k, okvir rubrike). Pan/zoom stanje Screenerja (CV) se ne spremeni. */
+function rsiChart(x){if(!x.k||x.k.length<30)return '<div class="rsi-e">Za ta kovanec ni sveč za graf.</div>';var kc=closedK(x.k,x.ktf),c={k:kc,live:kc.length<x.k.length?x.k[x.k.length-1]:null},
+    r={s:x.s,dir:x.bu===false?'short':'long',state:-1,nos:true,nocx:true,price:x.price},cv0=CV,html;
+  CV={off:0,cnt:90,vis:104,max:0};try{html=chart(r,c,x.ktf)}catch(e){html='<div class="rsi-e">Graf ni na voljo.</div>'}CV=cv0;return html}
 function rsiRow(x,L){var M=LOV[LS.m],col=L.cls==='ob'?'dn':'up',b=M.big(x),inC=coins.some(function(c){return c.s===x.s}),ex=(M.extra?M.extra(x):'')+lovHtf(x,col);
-  return '<div class="rsi-r'+(inC?' go':'')+'"'+(inC?' data-rsiopen="'+x.s+'"':'')+'><div>'+coinCell(x.s,lovTf()).replace(/^<td>|<\/td>$/g,'')+
+  var exp=!!x.k,op=exp&&LS.open===LS.m+'|'+x.s;
+  return '<div class="rsi-r'+(exp||inC?' go':'')+(op?' rsi-open':'')+'"'+(exp?' data-rsiexp="'+x.s+'"':inC?' data-rsiopen="'+x.s+'"':'')+'><div>'+coinCell(x.s,lovTf()).replace(/^<td>|<\/td>$/g,'')+
     '<div class="rsi-m"><span class="mono">'+fp(x.price)+'</span><span class="mono '+(x.ch>=0?'up':'dn')+'">'+pct(x.ch)+'</span>'+M.meta(x)+'</div>'+(ex?'<div class="rsi-m rsi-x">'+ex+'</div>':'')+'</div>'+
-    '<div class="rsi-v '+col+'">'+b[0]+'<small>'+b[1]+'</small></div>'+(M.gauge?'<div class="gauge"><i style="left:'+Math.max(0,Math.min(100,x.v))+'%"></i></div>':'')+'</div>'}
+    '<div class="rsi-v '+col+'">'+b[0]+'<small>'+b[1]+'</small></div>'+(M.gauge?'<div class="gauge"><i style="left:'+Math.max(0,Math.min(100,x.v))+'%"></i></div>':'')+(op?'<div class="rsi-ch">'+rsiChart(x)+'</div>':'')+'</div>'}
 function rsiRender(){var o=$('rsiout');if(!o)return;var M=LOV[LS.m],R=LS.res[LS.m];
   if(!R||R.key!==lovKey()){o.innerHTML=LS.busy?'':'<div class="rsi-col" style="grid-column:1/-1"><div class="rsi-e">Pritisni "Preveri".</div></div>';return}
   o.innerHTML=M.lists.map(function(L){var so=M.sorts?(M.sorts.filter(function(z){return z[0]===LS.so[LS.m]})[0]||M.sorts[0])[2]:L.sort,l=R.res.filter(function(x){return x.side===L.side&&(!favOn||FAV[x.s])&&(!L.min||M.pts(x)>=L.min)}).sort(so);
     return '<div class="rsi-col '+L.cls+'"><h3><span>'+L.title+'</span><span class="mono" style="font-size:16px">'+l.length+'</span></h3>'+(l.length?l.map(function(x){return rsiRow(x,L)}).join(''):'<div class="rsi-e">'+L.empty+'</div>')+'</div>'}).join('')}
 document.addEventListener('click',function(e){var fv=e.target.closest('#rsiout [data-fav]');if(fv){var sy=fv.getAttribute('data-fav');if(FAV[sy])delete FAV[sy];else FAV[sy]=1;ls('jay_fav',JSON.stringify(FAV));rsiRender();render();return}
-  var b=e.target.closest('[data-rsitf],[data-rsin],#rsigo,[data-rsiopen],[data-lovm],[data-rsiso]');if(!b||e.target.closest('a'))return;
+  var b=e.target.closest('[data-rsitf],[data-rsin],#rsigo,[data-rsiopen],[data-rsiexp],[data-lovm],[data-rsiso]');if(!b||e.target.closest('a'))return;
   if(b.hasAttribute('data-rsiso')){LS.so[LS.m]=b.getAttribute('data-rsiso');ls('jay_lovso',JSON.stringify(LS.so));rsiChips();return rsiRender()}
   if(b.id==='rsigo')return rsiRun();
+  if(b.hasAttribute('data-rsiexp')){if(e.target.closest('.rsi-ch'))return;var id=LS.m+'|'+b.getAttribute('data-rsiexp');LS.open=LS.open===id?null:id;return rsiRender()}
   if(b.hasAttribute('data-rsiopen')){open='c|'+b.getAttribute('data-rsiopen');dtf=null;cvReset();render();openLoad();return}
   if(b.hasAttribute('data-lovm')){LS.m=b.getAttribute('data-lovm');LS.mm[LS.g]=LS.m;if(LS.g==='rsi')ls('jay_lovm',LS.m);return rsiOpen()}
   if(b.hasAttribute('data-rsitf')){LS.tf[LS.m]=b.getAttribute('data-rsitf');ls('jay_lovtf',JSON.stringify(LS.tf))}else{LS.n=+b.getAttribute('data-rsin');ls('jay_rsin',String(LS.n))}
@@ -1709,7 +1717,7 @@ function chart(r,c,tf){
   // staro L (likvidnost)
   if(su&&r.L!=null&&r.Lx!=null&&r.Lx>=from)s+='<line x1="'+X(r.Lx)+'" x2="'+xe+'" y1="'+Y(r.L)+'" y2="'+Y(r.L)+'" stroke="var(--val)" stroke-width="1.6" stroke-dasharray="2 4"/>';
   // oznake: FVG, sweep, RSI divergenca (samo prikaz)
-  if(MK.cisd)cxLoad(r.s);s+=marks(k,from,n,X,Y,cw,xe,{lo:lo,hi:hi,su:su,hf:r.hf,P:+$('piv').value||5,live:liveOn,cx:MK.cisd?cxGet(r.s,tf):null,ctf:tf});
+  if(MK.cisd&&!r.nocx)cxLoad(r.s);s+=marks(k,from,n,X,Y,cw,xe,{lo:lo,hi:hi,su:su,hf:r.hf,P:+$('piv').value||5,live:liveOn,cx:MK.cisd&&!r.nocx?cxGet(r.s,tf):null,ctf:tf});
   // sveče
   bars.forEach(function(x,j){var i=from+j,u=x.c>=x.o,col=u?'var(--long)':'var(--short)',yt=Y(Math.max(x.o,x.c)),yb=Y(Math.min(x.o,x.c));
     s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'" stroke-width="1"/><rect x="'+(X(i)-cw*0.32)+'" y="'+yt+'" width="'+(cw*0.64)+'" height="'+Math.max(1,yb-yt)+'" fill="'+col+'"'+(i===n-1&&liveOn?' opacity=".55"':'')+'/>'});
