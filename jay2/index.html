@@ -25,7 +25,7 @@ button{font:inherit;color:var(--ink)}
 /* zgornja vrstica */
 .top{position:sticky;top:0;z-index:30;background:var(--glass);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 10px) 0 10px}
 .top .in{max-width:1180px;margin:0 auto;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand svg{flex:none}
 .brand b{font-size:17px;letter-spacing:-.2px;display:block;line-height:1.1}
 .brand small{color:var(--mut);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .acts{display:flex;gap:6px}
@@ -101,6 +101,11 @@ th[data-sort]{cursor:pointer;user-select:none}th[data-sort]:hover{color:var(--in
 .gauge{grid-column:1/-1;position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--long) 0 30%,var(--line) 30% 70%,var(--short) 70%);opacity:.9}
 .gauge i{position:absolute;top:-3px;width:4px;height:12px;border-radius:2px;background:var(--ink);transform:translateX(-2px)}
 .rsi-x{margin-top:2px;font-size:11px}.rsi-x b{font-weight:700}
+.hrw{cursor:pointer}.hrw.on td{background:color-mix(in srgb,var(--acc) 6%,transparent)}
+.hdet td{white-space:normal;text-align:left;padding:0;background:var(--card)}
+.hdw{position:sticky;left:0;width:calc(min(1180px,100vw) - 34px);box-sizing:border-box;padding:12px}
+.hgrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:12px}@media (max-width:760px){.hgrid{grid-template-columns:1fr}}
+.hgrid svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px;background:var(--card)}
 .rsi-ch{grid-column:1/-1;margin-top:8px;cursor:default;min-width:0}.rsi-ch .det{grid-template-columns:1fr}.rsi-ch svg{width:100%;height:auto;display:block}.rsi-r.rsi-open{background:color-mix(in srgb,var(--acc) 4%,transparent)}
 .rsi-e{padding:28px 14px;text-align:center;color:var(--mut)}
 .empty{padding:48px 20px;text-align:center;color:var(--mut);white-space:normal!important}
@@ -523,6 +528,11 @@ var I18N_EX={'Orodja':'Tools','Ujemanje':'Agreement','Najnovejši':'Newest','Lov
  'S HTF svečami':'With HTF candles','Vol.':'Vol.','Od ':'From ','Naprej':'Forward','Nazaj v čas':'Back in time','nalagam …':'loading …','Sweep':'Sweep',
  'Obvestila vklopljena':'Notifications on','Vklopi obvestila':'Enable notifications','Obvestila blokirana v brskalniku':'Notifications blocked in browser','Obvestila niso podprta':'Notifications not supported'};
 var I18N_PH=[
+ ['Nalagam sveče …','Loading candles …'],['Sveč ni bilo mogoče naložiti.','Could not load candles.'],['Signalna sveča je starejša od naloženih sveč – grafa ni.','The signal candle is older than the loaded candles – no chart.'],
+ ['Povzetek trada','Trade recap'],['Zapis iz zgodovine signalov, ni finančni nasvet.','Record from the signal history, not financial advice.'],['ob zaprtju signalne sveče','at the signal candle close'],
+ ['cena je bila v golden pocketu (0.618–0.786) zadnje noge, signalna sveča je zaprla','price was in the golden pocket (0.618–0.786) of the last leg, the signal candle closed'],['Konfluenca:','Confluence:'],
+ ['brez dodatne (samo osnovni setup)','none extra (base setup only)'],['Jayevo časovno okno','Jay time window'],['HTF struktura v smeri','HTF structure in direction'],['3D/1W sveče v smeri','3D/1W candles in direction'],
+ ['leži v coni','lies in the zone'],['Izid: TP zadet','Result: TP hit'],['Izid: še odprt','Result: still open'],['Izid: SL','Result: SL'],['po proviziji','after fees'],['svečah','candles'],['Vstop','Entry'],['nato umik v golden pocket (0.618–0.786) in potrjen','then a pullback into the golden pocket (0.618–0.786) and a confirmed'],['starega dna','an old low'],['starega vrha','an old high'],['in sunek','and displacement'],
  ['Za ta kovanec ni sveč za graf.','No candles for a chart for this coin.'],['Graf ni na voljo.','Chart not available.'],
  ['(na 5m in 15m: CISD tega okvira)','(on 5m and 15m: CISD of that timeframe)'],['zadnja sveča','last candle'],
  ['Pripravljeni za long ▲','Ready for long ▲'],['Pripravljeni za short ▼','Ready for short ▼'],['Ni kovanca z vsaj 3 točkami za long.','No coin with at least 3 points for long.'],['Ni kovanca z vsaj 3 točkami za short.','No coin with at least 3 points for short.'],
@@ -1049,12 +1059,47 @@ function renderHist(){
   $('hout').innerHTML=h.slice().reverse().map(function(x){var up=x.dir==='long',coin=x.s.replace(/USDT$/,''),
       d=new Date(x.t).toLocaleString(LOC(),{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit',timeZone:TZ}),
       cur=!x.res&&x.last!=null?((up?x.last-x.e:x.e-x.last)/Math.abs(x.e-x.sl)):null;
-    return '<tr><td class="mono">'+d+'</td><td class="l"><b>'+coin+'</b></td><td class="l">'+(TFN[x.tf]||x.tf)+'</td><td class="l"><span class="pill '+x.dir+'">'+(up?'LONG':'SHORT')+'</span></td>'+
+    return '<tr class="hrw'+(hOpen===x.id?' on':'')+'" data-hid="'+escH(x.id)+'"><td class="mono">'+d+'</td><td class="l"><b>'+coin+'</b></td><td class="l">'+(TFN[x.tf]||x.tf)+'</td><td class="l"><span class="pill '+x.dir+'">'+(up?'LONG':'SHORT')+'</span></td>'+
       '<td class="mono">'+fp(x.e)+'</td><td class="mono dn">'+fp(x.sl)+'</td><td class="mono up">'+fp(x.tp)+'</td>'+
       '<td class="l">'+(x.liq?'<span class="fl liq">+liq</span>':'')+(x.time?'<span class="fl cas">+čas</span>':'')+(x.htf?'<span class="fl htf">HTF</span>':'')+(x.hc?'<span class="fl htf">3D/1W</span>':'')+(!x.liq&&!x.time&&!x.htf&&!x.hc?'<span class="mut">–</span>':'')+'</td>'+
       '<td class="l">'+(x.res==='TP'?'<span class="st s1">TP zadet</span>':x.res==='SL'?'<span class="st s1s">SL</span>':'<span class="st s3">odprt'+(cur!=null?' · zdaj '+(cur>0?'+':'')+cur.toFixed(1)+'R':'')+'</span>')+'</td>'+
-      '<td class="mono '+(x.R>0?'up':x.R<0?'dn':'mut')+'"><b>'+(x.R==null?'–':(x.R>0?'+':'')+x.R.toFixed(2))+'</b></td></tr>'}).join('');
+      '<td class="mono '+(x.R>0?'up':x.R<0?'dn':'mut')+'"><b>'+(x.R==null?'–':(x.R>0?'+':'')+x.R.toFixed(2))+'</b></td></tr>'+
+      (hOpen===x.id?'<tr class="hdet"><td colspan="10"><div class="hdw">'+histDet(x)+'</div></td></tr>':'')}).join('');
 }
+/* Zgodovina: klik na vrstico pokaže graf samo z orodjem long/short (vstop, SL, TP) in kratek povzetek razloga. Sveče se naložijo ob odprtju (enkrat). */
+var hOpen=null,HK={};
+function histDet(x){var c=HK[x.s+'|'+x.tf];if(!c){histLoad(x);return '<div class="lbl">Nalagam sveče …</div>'}if(c.err)return '<div class="lbl">Sveč ni bilo mogoče naložiti.</div>';
+  return '<div class="hgrid"><div>'+histSvg(x,c.k)+'</div>'+histRecap(x,c.k)+'</div>'}
+function histLoad(x){var key=x.s+'|'+x.tf;if(HK[key]&&HK[key].busy)return;HK[key]={busy:true};
+  klines(x.s,x.tf).then(function(k){HK[key]={k:k};renderHist()}).catch(function(){HK[key]={err:true};renderHist()})}
+function hIdx(k,t){for(var i=k.length-1;i>=0;i--)if(k[i].t<=t)return i;return -1}
+function histSvg(x,k){var si=hIdx(k,x.t);if(si<0||k[si].t!==x.t)return '<div class="lbl">Signalna sveča je starejša od naloženih sveč – grafa ni.</div>';
+  var up=x.dir==='long',ei=x.tx?hIdx(k,x.tx):k.length-1,from=Math.max(0,si-40),to=Math.min(k.length-1,Math.max(ei,si)+12),bars=k.slice(from,to+1);
+  var lo=Math.min(x.sl,x.tp,x.e),hi=Math.max(x.sl,x.tp,x.e);bars.forEach(function(b){lo=Math.min(lo,b.l);hi=Math.max(hi,b.h)});var pad=(hi-lo)*0.06;lo-=pad;hi+=pad;
+  var W=760,H=300,pl=8,pr=70,pt=14,pb=20,N=bars.length+2,cw=(W-pl-pr)/N,X=function(i){return pl+(i-from+0.5)*cw},Y=function(p){return pt+(hi-p)/(hi-lo)*(H-pt-pb)};
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Trade '+x.s+'">',x1=X(si)-cw/2,x2=X(ei)+cw/2,tpC='var(--long)',slC='var(--short)';
+  // orodje long/short: TP cona (zelena) in SL cona (rdeča) od signalne sveče do izhoda (ali zdaj)
+  s+='<rect x="'+x1+'" y="'+Math.min(Y(x.tp),Y(x.e))+'" width="'+(x2-x1)+'" height="'+Math.abs(Y(x.tp)-Y(x.e))+'" fill="'+tpC+'" opacity=".16"/>';
+  s+='<rect x="'+x1+'" y="'+Math.min(Y(x.sl),Y(x.e))+'" width="'+(x2-x1)+'" height="'+Math.abs(Y(x.sl)-Y(x.e))+'" fill="'+slC+'" opacity=".16"/>';
+  [[x.tp,tpC,'TP '+fp(x.tp)],[x.e,'var(--ink)','Vstop '+fp(x.e)],[x.sl,slC,'SL '+fp(x.sl)]].forEach(function(z){var y=Y(z[0]);s+='<line x1="'+x1+'" x2="'+x2+'" y1="'+y+'" y2="'+y+'" stroke="'+z[1]+'" stroke-width="1.3"/>'+
+    '<text x="'+(x2+4)+'" y="'+(y+3)+'" font-size="10" font-weight="700" fill="'+z[1]+'">'+z[2]+'</text>'});
+  bars.forEach(function(b,j){var i=from+j,xc=X(i),g=b.c>=b.o,col=g?'var(--long)':'var(--short)';s+='<line x1="'+xc+'" x2="'+xc+'" y1="'+Y(b.h)+'" y2="'+Y(b.l)+'" stroke="'+col+'" stroke-width="1"/>'+
+    '<rect x="'+(xc-cw*0.35)+'" y="'+Math.min(Y(b.o),Y(b.c))+'" width="'+cw*0.7+'" height="'+Math.max(1,Math.abs(Y(b.o)-Y(b.c)))+'" fill="'+col+'"/>'});
+  s+='<path d="M'+X(si)+' '+(up?Y(k[si].l)+6:Y(k[si].h)-6)+' l-5 '+(up?9:-9)+' h10 z" fill="var(--acc)"/>';
+  if(x.res)s+='<text x="'+X(ei)+'" y="'+(x.res==='TP'?Y(x.tp)-5:Y(x.sl)+(up?13:-5))+'" text-anchor="middle" font-size="11" font-weight="800" fill="'+(x.res==='TP'?tpC:slC)+'">'+(x.res==='TP'?'✓ TP':'✗ SL')+'</text>';
+  for(var g=0;g<=3;g++){var p=lo+(hi-lo)*g/3;s+='<text x="'+(W-3)+'" y="'+(Y(p)+3)+'" text-anchor="end" font-size="9" fill="var(--mut)" font-family="ui-monospace,Menlo,monospace">'+fp(p)+'</text>'}
+  return s+'</svg>'}
+function histRecap(x,k){var up=x.dir==='long',m12=x.id.indexOf('12|')===0,risk=Math.abs(x.e-x.sl),rr=Math.abs(x.tp-x.e)/risk,si=hIdx(k,x.t),ei=x.tx?hIdx(k,x.tx):-1,tfn=TFN[x.tf]||x.tf,o=[];
+  o.push(m12?'<b>1-2 setup '+(up?'long':'short')+'</b> na '+tfn+': sweep '+(up?'starega dna':'starega vrha')+' in sunek, nato umik v golden pocket (0.618–0.786) in potrjen '+(up?'HL':'LH')+'.':
+    '<b>Potrjen '+(up?'HL (long)':'LH (short)')+'</b> na '+tfn+': cena je bila v golden pocketu (0.618–0.786) zadnje noge, signalna sveča je zaprla '+(up?'nad':'pod')+' 0.618.');
+  o.push('Vstop '+fp(x.e)+' ob zaprtju signalne sveče · SL '+fp(x.sl)+' ('+(risk/x.e*100).toFixed(1)+' %) · TP '+fp(x.tp)+' ('+rr.toFixed(1)+'R).');
+  var kf=[];if(x.liq)kf.push('+liq (staro '+(up?'L':'H')+' leži v coni)');if(x.time)kf.push('+čas (Jayevo časovno okno)');if(x.htf)kf.push('HTF struktura v smeri');if(x.hc)kf.push('3D/1W sveče v smeri');
+  o.push('Konfluenca: '+(kf.length?kf.join(', '):'brez dodatne (samo osnovni setup)')+'.');
+  o.push(x.res==='TP'?'<span class="up">Izid: TP zadet'+(ei>=0&&si>=0?' po '+(ei-si)+' svečah':'')+' ('+(x.R>0?'+':'')+x.R.toFixed(2)+'R po proviziji).</span>':
+    x.res==='SL'?'<span class="dn">Izid: SL'+(ei>=0&&si>=0?' po '+(ei-si)+' svečah':'')+' ('+x.R.toFixed(2)+'R).</span>':
+    'Izid: še odprt'+(x.last!=null?', zdaj '+(((up?x.last-x.e:x.e-x.last)/risk)>0?'+':'')+((up?x.last-x.e:x.e-x.last)/risk).toFixed(1)+'R':'')+'.');
+  return '<div class="ana"><div class="ana-h">Povzetek trada · '+x.s.replace(/USDT$/,'')+' '+(up?'LONG':'SHORT')+'</div><ul>'+o.map(function(t){return '<li>'+t+'</li>'}).join('')+'</ul><div class="ana-f">Zapis iz zgodovine signalov, ni finančni nasvet.</div></div>'}
+$('hout').addEventListener('click',function(e){if(e.target.closest('a,.hdet'))return;var tr=e.target.closest('tr.hrw');if(!tr)return;var id=tr.getAttribute('data-hid');hOpen=hOpen===id?null:id;renderHist()});
 $('hclr').addEventListener('click',function(){if(confirm(tr('Res izbrišem vso zgodovino signalov?'))){ls('jay_hist','[]');renderHist()}});
 /* Orodja: podmeni za RSI, Gain/Lose in pogled Lov (skriti zavihki ostanejo, da vse ostalo deluje kot prej) */
 function toolsSync(){var v=document.body.getAttribute('data-view')||'scan',on=v==='rsi'||v==='gl';$('toolsb').classList.toggle('on',on);
