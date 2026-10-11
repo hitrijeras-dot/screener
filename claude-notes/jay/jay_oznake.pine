@@ -1,0 +1,424 @@
+//@version=5
+// Jay oznake – iste oznake kot na grafu v Jay HL Screenerju (/jay/): sweep, FVG, RSI divergenca, fib zadnje noge + GP,
+// POI (order block po telesu), volume profile, HTF FVG in senčenje časovnih fraktalov. Samo prikaz, brez signalov za vstop.
+// Pravila so opisana v claude-notes/jay/README.md (točke 17–22). Analiza na zaprtih svečah; odprta sveča le zapolni FVG.
+indicator("Jay oznake · sweep / FVG / div / fib / POI / VP", shorttitle="Jay oznake", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500, max_bars_back=1000)
+
+// =================== Nastavitve ===================
+grpO = "Oznake"
+shSw   = input.bool(true, "Sweep ▲▼", group=grpO)
+shFvg  = input.bool(true, "FVG (nezapolnjeni)", group=grpO)
+shDiv  = input.bool(true, "RSI divergenca", group=grpO)
+shFib  = input.bool(true, "Fib zadnje noge + GP 0.618–0.786", group=grpO)
+shPoi  = input.bool(true, "POI (order block po telesu)", group=grpO)
+shVp   = input.bool(true, "Volume profile (POC / VAH / VAL)", group=grpO)
+shHf   = input.bool(true, "HTF FVG (pod 1D → 1D, 1D/3D → 1W, 1W → 1M)", group=grpO)
+shTime = input.bool(true, "Senčenje 3. 6H / 3. 90m / 3. 23m (pod 1D)", group=grpO)
+grpN = "Nastavitve"
+fibP = input.int(5, "Fib: swing sveče levo/desno", minval=2, maxval=20, group=grpN)
+vpN  = input.int(90, "Volume profile: število sveč", minval=20, maxval=500, group=grpN)
+nFvg = input.int(3, "FVG: koliko v vsako smer", minval=1, maxval=10, group=grpN)
+nPoi = input.int(2, "POI: koliko v vsako smer", minval=1, maxval=10, group=grpN)
+
+cUp   = #18966E
+cDn   = #CF4636
+cVal  = #2C68D2
+cWarn = #C97A00
+cTime = #C0185A
+cGold = #B8860B
+cMut  = #787B86
+
+// =================== Časovni fraktali (pod 1D) ===================
+// 3. 6H = 12–18 UTC; 3. 90m v vsakem 6H = min 180–270 od začetka 6H; 3. 23m v 3. 90m = min 226–249 (kot screener)
+tfMin = timeframe.in_seconds() / 60
+midT  = time + int((nz(time_close, time + 60000) - time) / 2)
+mDay  = math.floor((midT % 86400000) / 60000)
+m360  = mDay % 360
+in6   = mDay >= 720 and mDay < 1080
+in90  = m360 >= 180 and m360 < 270
+in23  = m360 >= 226 and m360 < 249
+bgCol = not (shTime and timeframe.isintraday) ? color(na) : (tfMin <= 23 and in23) ? color.new(cGold, 70) : (tfMin <= 90 and in90) ? color.new(cTime, in6 ? 80 : 88) : in6 ? color.new(cTime, 91) : color(na)
+bgcolor(bgCol, title="Časovni fraktali")
+
+// =================== Sweep ===================
+// Sveča gre pod nepobran swing low (3 levo / 2 desno) in zapre nad njim (short zrcalno). Zunanja sveča: ostane tista, kjer je zaprtje dlje od nivoja.
+pl32 = ta.pivotlow(low, 3, 2)
+ph32 = ta.pivothigh(high, 3, 2)
+var array<float> swLv = array.new<float>()
+var array<int>   swLx = array.new<int>()
+var array<float> swHv = array.new<float>()
+var array<int>   swHx = array.new<int>()
+sweepL = false
+sweepS = false
+if barstate.isconfirmed
+    if not na(pl32)
+        array.push(swLv, pl32)
+        array.push(swLx, bar_index - 2)
+    if not na(ph32)
+        array.push(swHv, ph32)
+        array.push(swHx, bar_index - 2)
+    float sl = na
+    int slx = na
+    float sh = na
+    int shx = na
+    if array.size(swLv) > 0
+        for i = 0 to array.size(swLv) - 1
+            v = array.get(swLv, i)
+            if low < v and close > v and (na(sl) or v < sl)
+                sl := v
+                slx := array.get(swLx, i)
+    if array.size(swHv) > 0
+        for i = 0 to array.size(swHv) - 1
+            v = array.get(swHv, i)
+            if high > v and close < v and (na(sh) or v > sh)
+                sh := v
+                shx := array.get(swHx, i)
+    if not na(sl) and not na(sh)
+        if math.abs(close - sl) >= math.abs(close - sh)
+            sh := na
+        else
+            sl := na
+    // pobrani nivoji odpadejo
+    if array.size(swLv) > 0
+        for i = array.size(swLv) - 1 to 0
+            if low < array.get(swLv, i)
+                array.remove(swLv, i)
+                array.remove(swLx, i)
+    if array.size(swHv) > 0
+        for i = array.size(swHv) - 1 to 0
+            if high > array.get(swHv, i)
+                array.remove(swHv, i)
+                array.remove(swHx, i)
+    if array.size(swLv) > 60
+        array.shift(swLv)
+        array.shift(swLx)
+    if array.size(swHv) > 60
+        array.shift(swHv)
+        array.shift(swHx)
+    sweepL := not na(sl)
+    sweepS := not na(sh)
+    if shSw and sweepL
+        line.new(slx, sl, bar_index, sl, color=color.new(cUp, 20), style=line.style_dotted, width=1)
+    if shSw and sweepS
+        line.new(shx, sh, bar_index, sh, color=color.new(cDn, 20), style=line.style_dotted, width=1)
+plotshape(shSw and sweepL, "Sweep dna", shape.triangleup, location.belowbar, cUp, size=size.tiny)
+plotshape(shSw and sweepS, "Sweep vrha", shape.triangledown, location.abovebar, cDn, size=size.tiny)
+
+// =================== FVG in POI ===================
+// FVG bull: low > high[2] (bear zrcalno), manjši od 0.25 × povprečnega razpona 100 sveč se ne šteje; zapolnjen, ko sveča gre skozi do konca.
+// POI: zadnja nasprotna sveča (telo) 2–6 sveč nazaj pred sunkom, ki je pustil FVG; neveljaven, ko sveča ZAPRE skozi telo (tudi če je FVG zapolnjen).
+avgR = nz(ta.sma(high - low, 100)) * 0.25
+var array<float> fT = array.new<float>()
+var array<float> fB = array.new<float>()
+var array<int>   fX = array.new<int>()
+var array<bool>  fU = array.new<bool>()
+var array<float> pT = array.new<float>()
+var array<float> pB = array.new<float>()
+var array<int>   pX = array.new<int>()
+var array<bool>  pU = array.new<bool>()
+if barstate.isconfirmed
+    // najprej zapolnitev / neveljavnost starih (nova cona te sveče se ne preverja)
+    if array.size(fT) > 0
+        for i = array.size(fT) - 1 to 0
+            if array.get(fU, i) ? low <= array.get(fB, i) : high >= array.get(fT, i)
+                array.remove(fT, i)
+                array.remove(fB, i)
+                array.remove(fX, i)
+                array.remove(fU, i)
+    if array.size(pT) > 0
+        for i = array.size(pT) - 1 to 0
+            if array.get(pU, i) ? close < array.get(pB, i) : close > array.get(pT, i)
+                array.remove(pT, i)
+                array.remove(pB, i)
+                array.remove(pX, i)
+                array.remove(pU, i)
+    gapU = bar_index >= 2 and low > high[2] and (low - high[2]) >= avgR
+    gapD = bar_index >= 2 and high < low[2] and (low[2] - high) >= avgR
+    if gapU or gapD
+        array.push(fT, gapU ? low : low[2])
+        array.push(fB, gapU ? high[2] : high)
+        array.push(fX, bar_index - 1)
+        array.push(fU, gapU)
+        if array.size(fT) > 100
+            array.shift(fT)
+            array.shift(fB)
+            array.shift(fX)
+            array.shift(fU)
+        int j = na
+        for off = 2 to 6
+            if na(j) and bar_index >= off and (gapU ? close[off] < open[off] : close[off] > open[off])
+                j := off
+        if not na(j)
+            ot = math.max(open[j], close[j])
+            ob = math.min(open[j], close[j])
+            bool ok = not array.includes(pX, bar_index - j)
+            for q = 0 to j - 1
+                if gapU ? close[q] < ob : close[q] > ot
+                    ok := false
+            if ok
+                array.push(pT, ot)
+                array.push(pB, ob)
+                array.push(pX, bar_index - j)
+                array.push(pU, gapU)
+                if array.size(pT) > 100
+                    array.shift(pT)
+                    array.shift(pB)
+                    array.shift(pX)
+                    array.shift(pU)
+
+// =================== RSI divergenca ===================
+// RSI 14 na pivotih 3/3, zaporedna pivota ≤ 30 sveč narazen; bull: nižje dno cene, RSI višji za > 2 in prvi RSI < 40 (bear zrcalno, > 60).
+rsiV = ta.rsi(close, 14)
+pl33 = ta.pivotlow(low, 3, 3)
+ph33 = ta.pivothigh(high, 3, 3)
+var int   dLx = na
+var float dLp = na
+var float dLr = na
+var int   dHx = na
+var float dHp = na
+var float dHr = na
+divBull = false
+divBear = false
+if barstate.isconfirmed and not na(pl33)
+    x = bar_index - 3
+    p = low[3]
+    rr = rsiV[3]
+    if not na(dLx) and not na(rr) and not na(dLr) and x - dLx <= 30 and p < dLp and rr > dLr + 2 and dLr < 40
+        divBull := true
+        if shDiv
+            line.new(dLx, dLp, x, p, color=cUp, width=2)
+            label.new(x, p, "div", style=label.style_label_up, color=color.new(cUp, 100), textcolor=cUp, size=size.tiny)
+    dLx := x
+    dLp := p
+    dLr := rr
+if barstate.isconfirmed and not na(ph33)
+    x = bar_index - 3
+    p = high[3]
+    rr = rsiV[3]
+    if not na(dHx) and not na(rr) and not na(dHr) and x - dHx <= 30 and p > dHp and rr < dHr - 2 and dHr > 60
+        divBear := true
+        if shDiv
+            line.new(dHx, dHp, x, p, color=cDn, width=2)
+            label.new(x, p, "div", style=label.style_label_down, color=color.new(cDn, 100), textcolor=cDn, size=size.tiny)
+    dHx := x
+    dHp := p
+    dHr := rr
+
+// =================== Fib zadnje noge ===================
+// Smer da zadnji potrjen pivot (fibP/fibP). Od njega naprej: noga gor raste z novimi vrhovi, zlom njenega dna jo obrne navzdol in obratno.
+phF = ta.pivothigh(high, fibP, fibP)
+plF = ta.pivotlow(low, fibP, fibP)
+var int fHx = na
+var int fLx = na
+if barstate.isconfirmed
+    if not na(phF)
+        fHx := bar_index - fibP
+    if not na(plF)
+        fLx := bar_index - fibP
+
+// =================== HTF FVG ===================
+htfTf = timeframe.isintraday ? "D" : timeframe.isdaily ? "W" : "M"
+htfLb = timeframe.isintraday ? "1D" : timeframe.isdaily ? "1W" : "1M"
+// v HTF kontekstu: FVG iz že zaprtih sveč ([1] in [3]), zapolnitev tudi z odprto HTF svečo; vrne zadnje 3 bull in 3 bear cone
+fHtf() =>
+    var array<float> uT = array.new<float>()
+    var array<float> uB = array.new<float>()
+    var array<float> dT = array.new<float>()
+    var array<float> dB = array.new<float>()
+    av = nz(ta.sma(high - low, 100)) * 0.25
+    if bar_index >= 3 and low[1] > high[3] and (low[1] - high[3]) >= av[1]
+        array.push(uT, low[1])
+        array.push(uB, high[3])
+    if bar_index >= 3 and high[1] < low[3] and (low[3] - high[1]) >= av[1]
+        array.push(dT, low[3])
+        array.push(dB, high[1])
+    if array.size(uB) > 0
+        for i = array.size(uB) - 1 to 0
+            if low <= array.get(uB, i)
+                array.remove(uT, i)
+                array.remove(uB, i)
+    if array.size(dT) > 0
+        for i = array.size(dT) - 1 to 0
+            if high >= array.get(dT, i)
+                array.remove(dT, i)
+                array.remove(dB, i)
+    if array.size(uT) > 50
+        array.shift(uT)
+        array.shift(uB)
+    if array.size(dT) > 50
+        array.shift(dT)
+        array.shift(dB)
+    nu = array.size(uT)
+    nd = array.size(dT)
+    [nu > 0 ? array.get(uT, nu - 1) : na, nu > 0 ? array.get(uB, nu - 1) : na, nu > 1 ? array.get(uT, nu - 2) : na, nu > 1 ? array.get(uB, nu - 2) : na, nu > 2 ? array.get(uT, nu - 3) : na, nu > 2 ? array.get(uB, nu - 3) : na, nd > 0 ? array.get(dT, nd - 1) : na, nd > 0 ? array.get(dB, nd - 1) : na, nd > 1 ? array.get(dT, nd - 2) : na, nd > 1 ? array.get(dB, nd - 2) : na, nd > 2 ? array.get(dT, nd - 3) : na, nd > 2 ? array.get(dB, nd - 3) : na]
+[hu1t, hu1b, hu2t, hu2b, hu3t, hu3b, hd1t, hd1b, hd2t, hd2b, hd3t, hd3b] = request.security(syminfo.tickerid, htfTf, fHtf(), lookahead=barmerge.lookahead_off)
+
+// =================== Risanje na zadnji sveči ===================
+var array<box>   dBox = array.new<box>()
+var array<line>  dLin = array.new<line>()
+var array<label> dLab = array.new<label>()
+zoneBox(float t, float b, int x1, color col, string txt, int transp, bool dashed) =>
+    box.new(x1, t, bar_index + 3, b, border_color=dashed ? color.new(col, 30) : color.new(col, 100), border_style=dashed ? line.style_dashed : line.style_solid, bgcolor=color.new(col, transp), extend=extend.right, text=txt, text_size=size.tiny, text_color=col, text_halign=text.align_right, text_valign=text.align_center)
+
+if barstate.islast
+    while array.size(dBox) > 0
+        box.delete(array.pop(dBox))
+    while array.size(dLin) > 0
+        line.delete(array.pop(dLin))
+    while array.size(dLab) > 0
+        label.delete(array.pop(dLab))
+
+    // FVG: zadnjih nFvg v vsako smer, ki jih tudi odprta sveča ni zapolnila
+    if shFvg and array.size(fT) > 0
+        cu = 0
+        cd = 0
+        for i = array.size(fT) - 1 to 0
+            u = array.get(fU, i)
+            t = array.get(fT, i)
+            b = array.get(fB, i)
+            liveFill = u ? low <= b : high >= t
+            if not liveFill and (u ? cu < nFvg : cd < nFvg)
+                array.push(dBox, zoneBox(t, b, array.get(fX, i), u ? cUp : cDn, "FVG", 84, false))
+                if u
+                    cu += 1
+                else
+                    cd += 1
+
+    // POI: zadnjih nPoi v vsako smer
+    if shPoi and array.size(pT) > 0
+        cu = 0
+        cd = 0
+        for i = array.size(pT) - 1 to 0
+            u = array.get(pU, i)
+            if u ? cu < nPoi : cd < nPoi
+                array.push(dBox, zoneBox(array.get(pT, i), array.get(pB, i), array.get(pX, i), u ? cUp : cDn, "POI", 75, false))
+                if u
+                    cu += 1
+                else
+                    cd += 1
+
+    // HTF FVG: 3 najbližje ceni
+    if shHf
+        ts = array.from(hu1t, hu2t, hu3t, hd1t, hd2t, hd3t)
+        bs = array.from(hu1b, hu2b, hu3b, hd1b, hd2b, hd3b)
+        ds = array.new<float>()
+        for i = 0 to 5
+            t = array.get(ts, i)
+            b = array.get(bs, i)
+            array.push(ds, na(t) or na(b) ? 1e99 : (close >= b and close <= t ? 0.0 : math.min(math.abs(close - t), math.abs(close - b))))
+        for n = 1 to 3
+            mi = -1
+            md = 1e98
+            for i = 0 to 5
+                if array.get(ds, i) < md
+                    md := array.get(ds, i)
+                    mi := i
+            if mi >= 0
+                array.push(dBox, zoneBox(array.get(ts, mi), array.get(bs, mi), bar_index - 150, mi < 3 ? cUp : cDn, htfLb + " FVG", 93, true))
+                array.set(ds, mi, 1e99)
+
+    // Fib zadnje noge + GP
+    if shFib and not na(fHx) and not na(fLx)
+        bool up = fHx > fLx
+        s0 = up ? fLx : fHx
+        lastI = barstate.isconfirmed ? bar_index : bar_index - 1
+        if bar_index - s0 < 900
+            float hi = high[bar_index - s0]
+            float lo = low[bar_index - s0]
+            int hx = s0
+            int lx = s0
+            if lastI > s0
+                for i = s0 + 1 to lastI
+                    off = bar_index - i
+                    h = high[off]
+                    l = low[off]
+                    if up
+                        if h > hi
+                            hi := h
+                            hx := i
+                        if l < lo
+                            up := false
+                            lo := l
+                            lx := i
+                    else
+                        if l < lo
+                            lo := l
+                            lx := i
+                        if h > hi
+                            up := true
+                            hi := h
+                            hx := i
+            R = hi - lo
+            if R > 0
+                x1 = math.min(hx, lx)
+                g618 = up ? hi - R * 0.618 : lo + R * 0.618
+                g786 = up ? hi - R * 0.786 : lo + R * 0.786
+                array.push(dBox, box.new(x1, math.max(g618, g786), bar_index + 3, math.min(g618, g786), border_color=color.new(cVal, 100), bgcolor=color.new(cVal, 86), extend=extend.right))
+                levels = array.from(0.0, 0.5, 0.618, 0.786, 1.0)
+                for q = 0 to 4
+                    r = array.get(levels, q)
+                    y = up ? hi - R * r : lo + R * r
+                    array.push(dLin, line.new(x1, y, bar_index + 3, y, color=color.new(cVal, r == 0.0 or r == 1.0 ? 55 : 25), style=r == 0.5 ? line.style_dashed : line.style_solid, extend=extend.right))
+                    array.push(dLab, label.new(bar_index + 4, y, str.tostring(r), style=label.style_none, textcolor=cVal, size=size.tiny))
+
+    // Volume profile zadnjih vpN sveč: 40 košev, volumen sveče enakomerno po njenem razponu, VA = 70 % okoli POC
+    if shVp
+        n = math.min(vpN, bar_index + 1)
+        float vlo = low
+        float vhi = high
+        for i = 0 to n - 1
+            vlo := math.min(vlo, low[i])
+            vhi := math.max(vhi, high[i])
+        w = (vhi - vlo) / 40
+        if w > 0
+            bins = array.new<float>(40, 0.0)
+            tot = 0.0
+            for i = 0 to n - 1
+                v = nz(volume[i])
+                if v > 0
+                    a = math.max(0, math.min(39, math.floor((low[i] - vlo) / w)))
+                    z = math.max(a, math.min(39, math.floor((high[i] - vlo) / w)))
+                    per = v / (z - a + 1)
+                    for q = a to z
+                        array.set(bins, q, array.get(bins, q) + per)
+                    tot += v
+            if tot > 0
+                pc = 0
+                for q = 1 to 39
+                    if array.get(bins, q) > array.get(bins, pc)
+                        pc := q
+                li = pc
+                hi2 = pc
+                acc = array.get(bins, pc)
+                while acc < tot * 0.7 and (li > 0 or hi2 < 39)
+                    dn = li > 0 ? array.get(bins, li - 1) : -1.0
+                    upv = hi2 < 39 ? array.get(bins, hi2 + 1) : -1.0
+                    if upv >= dn
+                        hi2 += 1
+                        acc += array.get(bins, hi2)
+                    else
+                        li -= 1
+                        acc += array.get(bins, li)
+                maxV = array.get(bins, pc)
+                for q = 0 to 39
+                    bv = array.get(bins, q)
+                    if bv > 0
+                        wb = math.max(1, math.round(bv / maxV * 25))
+                        inVa = q >= li and q <= hi2
+                        array.push(dBox, box.new(bar_index + 6, vlo + (q + 1) * w, bar_index + 6 + wb, vlo + q * w, border_color=color.new(cMut, 100), bgcolor=color.new(cMut, inVa ? 65 : 82)))
+                poc = vlo + (pc + 0.5) * w
+                vah = vlo + (hi2 + 1) * w
+                val = vlo + li * w
+                x0 = bar_index - n + 1
+                array.push(dLin, line.new(x0, poc, bar_index + 32, poc, color=color.new(cWarn, 15), width=1))
+                array.push(dLin, line.new(x0, vah, bar_index + 32, vah, color=color.new(cWarn, 35), style=line.style_dashed))
+                array.push(dLin, line.new(x0, val, bar_index + 32, val, color=color.new(cWarn, 35), style=line.style_dashed))
+                array.push(dLab, label.new(bar_index + 33, poc, "POC", style=label.style_none, textcolor=cWarn, size=size.tiny))
+                array.push(dLab, label.new(bar_index + 33, vah, "VAH", style=label.style_none, textcolor=cWarn, size=size.tiny))
+                array.push(dLab, label.new(bar_index + 33, val, "VAL", style=label.style_none, textcolor=cWarn, size=size.tiny))
+
+// =================== Alarmi ===================
+alertcondition(sweepL, "Jay: sweep dna", "Jay oznake: sweep starega dna in zaprtje nazaj")
+alertcondition(sweepS, "Jay: sweep vrha", "Jay oznake: sweep starega vrha in zaprtje nazaj")
+alertcondition(divBull, "Jay: bull divergenca", "Jay oznake: bull RSI divergenca")
+alertcondition(divBear, "Jay: bear divergenca", "Jay oznake: bear RSI divergenca")

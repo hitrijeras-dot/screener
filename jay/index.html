@@ -851,12 +851,12 @@ function rsi14(c){var n=14,out=new Array(c.length).fill(NaN);if(c.length<=n)retu
   for(var i=1;i<=n;i++){d=c[i]-c[i-1];if(d>=0)g+=d;else l-=d}g/=n;l/=n;out[n]=rv();
   for(i=n+1;i<c.length;i++){d=c[i]-c[i-1];g=(g*(n-1)+Math.max(d,0))/n;l=(l*(n-1)+Math.max(-d,0))/n;out[i]=rv()}return out}
 /* Analiza oznak na svečah k (zaprte + morebitna odprta na koncu): nezapolnjeni FVG, sweepi, RSI divergence. */
-function anz(k){var n=k.length,i,j,avg=0,cnt=0,fv=[],sw=[],dv=[];
+function anz(k){var n=k.length,i,j,avg=0,cnt=0,fv=[],fa=[],sw=[],dv=[];
   for(i=Math.max(0,n-100);i<n;i++){avg+=k[i].h-k[i].l;cnt++}avg=cnt?avg/cnt*0.25:0;
   for(i=2;i<n;i++){var bu=k[i].l>k[i-2].h,be=k[i].h<k[i-2].l;if(!bu&&!be)continue;
     var top=bu?k[i].l:k[i-2].l,bot=bu?k[i-2].h:k[i].h;if(top-bot<avg)continue;var fill=false;
     for(j=i+1;j<n;j++)if(bu?k[j].l<=bot:k[j].h>=top){fill=true;break}
-    if(!fill)fv.push({i:i,t:k[i].t,top:top,bot:bot,bu:bu})}
+    fa.push({i:i,top:top,bot:bot,bu:bu});if(!fill)fv.push({i:i,t:k[i].t,top:top,bot:bot,bu:bu})}
   function pv(c,hi){if(c<3||c+2>=n)return false;var v=hi?k[c].h:k[c].l;for(var q=1;q<=3;q++){var x=hi?k[c-q].h:k[c-q].l;if(hi?x>=v:x<=v)return false}
     for(q=1;q<=2;q++){x=hi?k[c+q].h:k[c+q].l;if(hi?x>v:x<v)return false}return true}
   var pl=[],ph=[];
@@ -876,7 +876,7 @@ function anz(k){var n=k.length,i,j,avg=0,cnt=0,fv=[],sw=[],dv=[];
   for(i=1;i<P.length;i++)d(P[i-1],P[i],true);
   for(i=1;i<Q.length;i++)d(Q[i-1],Q[i],false);
   dv.sort(function(x,y){return x.b-y.b});
-  return {fv:fv,sw:sw,dv:dv,n:n}}
+  return {fv:fv,fa:fa,sw:sw,dv:dv,n:n}}
 /* Fib zadnje noge: zadnji potrjen pivot (P/P, kot jayPivot) določi smer. Zadnji je vrh -> noga gor od zadnjega dna do najvišje cene od takrat (GP spodaj);
    zadnje je dno -> noga dol od zadnjega vrha do najnižje cene od takrat (GP zgoraj). GP = 0.618–0.786. */
 function fibLeg(k,P){var n=k.length,hx=-1,lx=-1,c,i;
@@ -891,7 +891,7 @@ function fibLeg(k,P){var n=k.length,hx=-1,lx=-1,c,i;
   return {up:up,hi:hi,lo:lo,hx:hx,lx:lx,g1:up?hi-R*0.618:lo+R*0.618,g2:up?hi-R*0.786:lo+R*0.786,g5:up?hi-R*0.5:lo+R*0.5}}
 function gpState(f,p){if(!f)return null;var top=Math.max(f.g1,f.g2),bot=Math.min(f.g1,f.g2),inn=p>=bot&&p<=top;
   return {bu:f.up,inn:inn,d:inn?0:f.up?(p>top?(p-top)/p:-(bot-p)/p):(p<bot?(bot-p)/p:-(p-top)/p)}}
-/* POI = order block po telesu: zadnja nasprotna sveča (do 5 sveč) pred sunkom, ki je pustil nezapolnjen FVG; neveljaven, ko sveča zapre skozi telo. */
+/* POI = order block po telesu: zadnja nasprotna sveča (do 5 sveč) pred sunkom, ki je pustil FVG (tudi če je FVG kasneje zapolnjen); neveljaven, ko sveča zapre skozi telo. */
 function pois(k,fv){var out=[],seen={};
   fv.forEach(function(g){var j=g.i-2,lim=Math.max(0,g.i-6);
     while(j>=lim&&(g.bu?!(k[j].c<k[j].o):!(k[j].c>k[j].o)))j--;
@@ -913,7 +913,7 @@ function fvLive(fv,lv){return lv?fv.filter(function(g){return g.bu?lv.l>g.bot:lv
 function summ(k,price,P,lv){var a=anz(k),n=k.length,v=0,c=0,i;a.fv=fvLive(a.fv,lv);for(i=Math.max(0,n-14);i<n;i++){v+=(k[i].h-k[i].l)/k[i].c;c++}
   var ls=a.sw[a.sw.length-1],ld=a.dv[a.dv.length-1],nf=null;
   a.fv.forEach(function(g){var d=price>=g.bot&&price<=g.top?0:Math.min(Math.abs(price-g.top),Math.abs(price-g.bot))/price;if(!nf||d<nf.d)nf={d:d,bu:g.bu,top:g.top,bot:g.bot}});
-  var fb=fibLeg(k,P||5),vp=vprof(lv?k.concat([lv]):k,Math.max(0,n-90)),po=nearZ(pois(k,a.fv),price);
+  var fb=fibLeg(k,P||5),vp=vprof(lv?k.concat([lv]):k,Math.max(0,n-90)),po=nearZ(pois(k,a.fa),price);
   return {vol:c?v/c:0,sw:ls?{bu:ls.bu,age:n-1-ls.i}:null,dv:ld&&n-1-ld.b<=30?{bu:ld.bu,age:n-1-ld.b}:null,fv:nf,fib:fb,gp:gpState(fb,price),poi:po,
     vp:vp?{poc:vp.poc,vah:vp.vah,val:vp.val,pos:price>vp.vah?1:price<vp.val?-1:0}:null}}
 var MK={fvg:1,sw:1,dv:1,fib:1,poi:1,vp:1,hfv:1};try{Object.assign(MK,JSON.parse(ls('jay_mk')||'{}'))}catch(e){}
@@ -930,7 +930,7 @@ function marks(k,from,n,X,Y,cw,xe,o){o=o||{};var nc=o.live?n-1:n,kk=k.slice(0,nc
   // HTF FVG
   if(MK.hfv&&o.hf){var pz=k[n-1].c,dz=function(g){return pz>=g.bot&&pz<=g.top?0:Math.min(Math.abs(pz-g.top),Math.abs(pz-g.bot))}; (o.hf.fv||[]).slice().sort(function(x,y){return dz(x)-dz(y)}).slice(0,3).forEach(function(g){if(inR(g.top,g.bot))s+=zone(g.top,g.bot,x0,g.bu?'var(--long)':'var(--short)',o.hf.lb+' FVG',true,.07)})}
   // POI
-  if(MK.poi){var ps=pois(kk,a.fv);ps.filter(function(g){return g.bu}).slice(-2).concat(ps.filter(function(g){return !g.bu}).slice(-2)).forEach(function(g){if(inR(g.top,g.bot))s+=zone(g.top,g.bot,X(Math.max(from,g.i)-0.5),g.bu?'var(--long)':'var(--short)','POI',false,.22)})}
+  if(MK.poi){var ps=pois(kk,a.fa);ps.filter(function(g){return g.bu}).slice(-2).concat(ps.filter(function(g){return !g.bu}).slice(-2)).forEach(function(g){if(inR(g.top,g.bot))s+=zone(g.top,g.bot,X(Math.max(from,g.i)-0.5),g.bu?'var(--long)':'var(--short)','POI',false,.22)})}
   // fib zadnje noge + GP
   if(MK.fib&&!o.su){var f=fibLeg(kk,o.P||5);if(f){var fx=X(Math.max(from,Math.min(f.lx,f.hx))),R=f.hi-f.lo,lv=function(r){return f.up?f.hi-R*r:f.lo+R*r};
     var gt=Math.min(hi,Math.max(f.g1,f.g2)),gb=Math.max(lo,Math.min(f.g1,f.g2));if(gt>gb)s+='<rect x="'+fx+'" y="'+Y(gt)+'" width="'+(xe-fx)+'" height="'+(Y(gb)-Y(gt))+'" fill="var(--gp)"/>';
