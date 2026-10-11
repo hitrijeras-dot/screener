@@ -505,6 +505,7 @@ var I18N_EX={'FVG okvir':'FVG timeframe','HTF FVG okvir':'HTF FVG timeframe','ok
  'S HTF svečami':'With HTF candles','Vol.':'Vol.','Od ':'From ','Naprej':'Forward','Nazaj v čas':'Back in time','nalagam …':'loading …','Sweep':'Sweep',
  'Obvestila vklopljena':'Notifications on','Vklopi obvestila':'Enable notifications','Obvestila blokirana v brskalniku':'Notifications blocked in browser','Obvestila niso podprta':'Notifications not supported'};
 var I18N_PH=[
+ ['črtkano 1H / 5m CISD = zadnji na 1H in 5m','dashed 1H / 5m CISD = latest on 1H and 5m'],
  ['= zaprtje čez odprtje serije sveč po sweepu (zadnja 2 v vsako smer)','= close beyond the open of the candle series after a sweep (last 2 per direction)'],
  ['Najbližji nezapolnjen FVG (okvir izbereš v Filtrih)','Nearest unfilled FVG (choose the timeframe in Filters)'],['Najbližji nezapolnjen FVG na višjem okviru (okvir izbereš v Filtrih)','Nearest unfilled higher-timeframe FVG (choose the timeframe in Filters)'],
  ['Cena v GP ali največ toliko % do 0.618. 0 = izklop.','Price in GP or at most this % to 0.618. 0 = off.'],['Odpri na TradingView (layout Jay Time & Value)','Open on TradingView (Jay Time & Value layout)'],
@@ -1335,11 +1336,17 @@ function outClick(e){if(e.target.closest('a'))return;if(e.target.closest('[data-
   var tb=e.target.closest('[data-dtf]');if(tb){dtf=tb.getAttribute('data-dtf');cvReset();render();return}
   var zb=e.target.closest('[data-cvz]');if(zb){var zk=zb.getAttribute('data-cvz'),stp=Math.max(1,Math.round(CV.cnt/4));
     if(zk==='l')CV.off=Math.min(CV.max-20,CV.off+stp);else if(zk==='r')CV.off=Math.max(0,CV.off-stp);else if(zk==='o')return cvZoom(1.4);else if(zk==='i')return cvZoom(1/1.4);else cvReset();cvRedraw();return}
-  var mb=e.target.closest('[data-mk]');if(mb){var mkk=mb.getAttribute('data-mk');MK[mkk]=MK[mkk]?0:1;ls('jay_mk',JSON.stringify(MK));render();return}
+  var mb=e.target.closest('[data-mk]');if(mb){var mkk=mb.getAttribute('data-mk');MK[mkk]=MK[mkk]?0:1;ls('jay_mk',JSON.stringify(MK));if(mkk==='cisd'){var orr=openRow();if(orr)cxLoad(orr.s)}render();return}
   var tr=e.target.closest('.rw');if(!tr)return;var id=tr.getAttribute('data-id');open=open===id?null:id;dtf=null;cvReset();render();openLoad()}
 $('out').addEventListener('click',outClick);$('sheet').addEventListener('click',outClick);
 $('m-coin').addEventListener('click',function(e){if(e.target===this)closeSheet()});
-function openLoad(){var id=open,r=id&&(id.indexOf('c|')===0?coins.filter(function(c){return 'c|'+c.s===id}).map(coinR)[0]:rows.filter(function(x){return rid(x)===id})[0]);if(r)mtfLoad(r).then(function(){if(open===id)render()})}
+/* 1H in 5m CISD za graf (na vsakem okviru): sveče naložimo ob odprtju kovanca, osvežimo po 5 min (1H) oz. 1 min (5m) */
+var CX={};
+function cxLoad(sym){if(!MK.cisd||!sym)return;[['60',3e5],['5',6e4]].forEach(function(z){var key=sym+'|'+z[0],c=CX[key];if(c&&(c.busy||Date.now()-c.at<z[1]))return;
+  CX[key]={busy:true,at:c?c.at:0,l:c?c.l:[]};kl(sym,z[0],300).then(function(k){if(k.length&&k[k.length-1].t+(+z[0])*6e4>Date.now())k.pop();
+    var l=cisdList(k,0).map(function(x){return {bu:x.bu,lvl:x.lvl,t:k[x.ci].t}});CX[key]={at:Date.now(),l:l};if(open&&open.indexOf(sym)>=0)render()}).catch(function(){CX[key]={at:Date.now(),l:[]}})})}
+function cxGet(sym,tf){return [['60','1H'],['5','5m']].filter(function(z){return z[0]!==tf}).map(function(z){var c=CX[sym+'|'+z[0]];return {lb:z[1],l:c&&c.l?c.l:[]}})}
+function openLoad(){var id=open,r=id&&(id.indexOf('c|')===0?coins.filter(function(c){return 'c|'+c.s===id}).map(coinR)[0]:rows.filter(function(x){return rid(x)===id})[0]);if(r){cxLoad(r.s);mtfLoad(r).then(function(){if(open===id)render()})}}
 $('out').addEventListener('keydown',function(e){if(e.key==='Enter'){var tr=e.target.closest('.rw');if(tr)tr.click()}});
 
 /* ---------- Risba setupa (kot na TV) ---------- */
@@ -1518,8 +1525,14 @@ function marks(k,from,n,X,Y,cw,xe,o){o=o||{};var nc=o.live?n-1:n,kk=k.slice(0,nc
     var col=c.bu?'var(--long)':'var(--short)',x1=X(Math.max(from,c.st)),x2=X(c.ci),y=Y(c.lvl);
     s+='<line x1="'+x1+'" x2="'+x2+'" y1="'+y+'" y2="'+y+'" stroke="'+col+'" stroke-width="1.4"/>'+
       '<text x="'+x2+'" y="'+(c.bu?y-4:y+11)+'" text-anchor="end" font-size="9" font-weight="700" fill="'+col+'">'+(c.bu?'CISD ▲':'CISD ▼')+'</text>'})}
+  // 1H in 5m CISD: zadnji v vsako smer, črtkano od sveče grafa, v kateri je bilo zaprtje, do desnega roba
+  if(MK.cisd&&o.cx)o.cx.forEach(function(g){[true,false].forEach(function(bu){var c=null;g.l.forEach(function(x){if(x.bu===bu)c=x});if(!c||c.lvl<lo||c.lvl>hi)return;
+    var ne=Math.min(n,k.length)-1,dt=ne>0?k[ne].t-k[ne-1].t:0;if(c.t>=k[ne].t+dt)return;var ix=-1;for(var j=ne;j>=0;j--){if(k[j].t<=c.t){ix=j;break}}if(ix<0)return;
+    var col=bu?'var(--long)':'var(--short)',x1=X(Math.max(from,ix)),y=Y(c.lvl);
+    s+='<line x1="'+x1+'" x2="'+xe+'" y1="'+y+'" y2="'+y+'" stroke="'+col+'" stroke-width="1.2" stroke-dasharray="5 3" opacity=".85"/>'+
+      '<text x="'+(x1+2)+'" y="'+(bu?y-4:y+11)+'" font-size="9" font-weight="700" fill="'+col+'">'+g.lb+' CISD '+(bu?'▲':'▼')+'</text>'})});
   return s}
-var mleg='<br><span style="background:var(--gp);padding:0 4px">GP</span> fib zadnje noge (0.618–0.786) · POI = order block (telo) · <span style="color:var(--warn)">POC / VAH / VAL</span> volume profile · črtkano = HTF FVG<br><span style="color:var(--long)">▲</span>/<span style="color:var(--short)">▼</span> sweep (pobrano staro dno/vrh in zaprtje nazaj) · <span style="color:var(--long)">▮</span>/<span style="color:var(--short)">▮</span> nezapolnjen FVG (zadnji 3 v vsako smer) · <b>div</b> = RSI divergenca · <b>CISD ▲/▼</b> = zaprtje čez odprtje serije sveč po sweepu (zadnja 2 v vsako smer)';
+var mleg='<br><span style="background:var(--gp);padding:0 4px">GP</span> fib zadnje noge (0.618–0.786) · POI = order block (telo) · <span style="color:var(--warn)">POC / VAH / VAL</span> volume profile · črtkano = HTF FVG<br><span style="color:var(--long)">▲</span>/<span style="color:var(--short)">▼</span> sweep (pobrano staro dno/vrh in zaprtje nazaj) · <span style="color:var(--long)">▮</span>/<span style="color:var(--short)">▮</span> nezapolnjen FVG (zadnji 3 v vsako smer) · <b>div</b> = RSI divergenca · <b>CISD ▲/▼</b> = zaprtje čez odprtje serije sveč po sweepu (zadnja 2 v vsako smer) · črtkano 1H / 5m CISD = zadnji na 1H in 5m';
 /* Okno grafa: off = koliko sveč je skritih desno (premik v preteklost), cnt = koliko sveč je vidnih. */
 var CV={off:0,cnt:90,vis:104,max:0},LC=null;
 function cvReset(){CV.off=0;CV.cnt=90}
@@ -1606,7 +1619,7 @@ function chart(r,c,tf){
   // staro L (likvidnost)
   if(su&&r.L!=null&&r.Lx!=null&&r.Lx>=from)s+='<line x1="'+X(r.Lx)+'" x2="'+xe+'" y1="'+Y(r.L)+'" y2="'+Y(r.L)+'" stroke="var(--val)" stroke-width="1.6" stroke-dasharray="2 4"/>';
   // oznake: FVG, sweep, RSI divergenca (samo prikaz)
-  s+=marks(k,from,n,X,Y,cw,xe,{lo:lo,hi:hi,su:su,hf:r.hf,P:+$('piv').value||5,live:liveOn});
+  if(MK.cisd)cxLoad(r.s);s+=marks(k,from,n,X,Y,cw,xe,{lo:lo,hi:hi,su:su,hf:r.hf,P:+$('piv').value||5,live:liveOn,cx:MK.cisd?cxGet(r.s,tf):null});
   // sveče
   bars.forEach(function(x,j){var i=from+j,u=x.c>=x.o,col=u?'var(--long)':'var(--short)',yt=Y(Math.max(x.o,x.c)),yb=Y(Math.min(x.o,x.c));
     s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'" stroke-width="1"/><rect x="'+(X(i)-cw*0.32)+'" y="'+yt+'" width="'+(cw*0.64)+'" height="'+Math.max(1,yb-yt)+'" fill="'+col+'"'+(i===n-1&&liveOn?' opacity=".55"':'')+'/>'});
