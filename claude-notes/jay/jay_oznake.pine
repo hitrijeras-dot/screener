@@ -1,5 +1,5 @@
 //@version=5
-// Jay oznake – iste oznake kot na grafu v Jay HL Screenerju (/jay/): sweep, FVG, RSI divergenca, fib zadnje noge + GP,
+// Jay oznake – iste oznake kot na grafu v Jay App (/jay2/): sweep, FVG, RSI divergenca, fib zadnje noge + GP,
 // POI (order block po telesu), volume profile, HTF FVG in senčenje časovnih fraktalov. Samo prikaz, brez signalov za vstop.
 // Pravila so opisana v claude-notes/jay/README.md (točke 17–22). Analiza na zaprtih svečah; odprta sveča le zapolni FVG.
 indicator("Jay oznake · sweep / FVG / div / fib / POI / VP", shorttitle="Jay oznake", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500, max_bars_back=1000)
@@ -257,8 +257,11 @@ fHtf() =>
 var array<box>   dBox = array.new<box>()
 var array<line>  dLin = array.new<line>()
 var array<label> dLab = array.new<label>()
+// Risanje s starim bar_index (npr. FVG pred 1200+ svečami) sproži "historical offset is beyond the historical buffer's limit",
+// zato levi rob cone omejimo na največ 500 sveč nazaj (cona se še vedno riše do desnega roba).
 zoneBox(float t, float b, int x1, color col, string txt, int transp, bool dashed) =>
-    box.new(x1, t, bar_index + 3, b, border_color=dashed ? color.new(col, 30) : color.new(col, 100), border_style=dashed ? line.style_dashed : line.style_solid, bgcolor=color.new(col, transp), extend=extend.right, text=txt, text_size=size.tiny, text_color=col, text_halign=text.align_right, text_valign=text.align_center)
+    int xs = math.max(x1, bar_index - 500)
+    box.new(xs, t, bar_index + 3, b, border_color=dashed ? color.new(col, 30) : color.new(col, 100), border_style=dashed ? line.style_dashed : line.style_solid, bgcolor=color.new(col, transp), extend=extend.right, text=txt, text_size=size.tiny, text_color=col, text_halign=text.align_right, text_valign=text.align_center)
 
 if barstate.islast
     while array.size(dBox) > 0
