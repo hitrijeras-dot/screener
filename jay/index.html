@@ -403,7 +403,7 @@ var I18N_EX={'pod':'below','nad':'above','vsi':'all','Vse':'All','vse':'all','Ko
  'Cena':'Price','Smer':'Side','Stanje':'Status','Stanje:':'Status:','Vstop':'Entry','Velikost':'Size','Kovanec':'Coin','Kovanci':'Coins','Setupi':'Setups','Okvir':'Timeframe',
  'Izid':'Result','Zgodovina':'History','Promet':'Turnover','Volatilnost':'Volatility','Struktura':'Structure','Konfluenca':'Confluence','Upravljanje':'Management',
  'Ekstenzije':'Extensions','Divergenca':'Divergence','Tradeov':'Trades','Zadetih':'Win rate','Skupaj R':'Total R','Na trade':'Per trade','Varianta':'Variant',
- 'Nastavitve':'Settings','Okvirji':'Timeframes','Skeniraj':'Scan','Pogled:':'View:','Oznake:':'Marks:','Razvrsti':'Sort','Samodejno:':'Auto:','Filter:':'Filter:','Graf:':'Chart:',
+ 'Nastavitve':'Settings','Okvirji':'Timeframes','Klasični':'Classic','Skeniraj':'Scan','Pogled:':'View:','Oznake:':'Marks:','Razvrsti':'Sort','Samodejno:':'Auto:','Filter:':'Filter:','Graf:':'Chart:',
  'Na grafu:':'On chart:','Poravnava:':'Alignment:','Za trejd':'Tradeable','Signal':'Signal','Model':'Model','HTF sveče':'HTF candles','Najbližji FVG':'Nearest FVG',
  'Zadnji sweep':'Last sweep','Golden pocket':'Golden pocket','Do GP':'To GP','Volume profile':'Volume profile','Backtest':'Backtest','Screener':'Screener',
  'Pripravljenih:':'Ready:','Pripravljen':'Ready','Kopiraj za Clauda':'Copy for Claude','Skopirano ✓':'Copied ✓','Zaženi backtest':'Run backtest','Počisti zgodovino':'Clear history',
@@ -503,7 +503,7 @@ var I18N_PH=[
  ['+čas: 3. teden','+time: week 3'],['+čas: nov mesec','+time: new month'],['15.–21. v mesecu – Jayevo okno za swing','15th–21st of the month – Jay\'s swing window'],['prvih 5 dni meseca','first 5 days of the month'],['za 1D','for 1D'],
  ['dostava, vstop','delivery, entry'],['past/manipulacija','trap/manipulation'],['odpiranje','opening'],['zaključek','close'],['začetek kvartala','start of quarter'],
  ['Javim, ko','I will tell you when'],['nov','new'],['potrjen HL','confirmed HL'],['potrjen LH','confirmed LH'],['v coni','in zone'],['nova setupa','new setups'],['novi setupi','new setups'],['novih setupov','new setups'],
- ['Rezultat:','Result:'],['vsi, cilj','all, target'],['Bybit se ne odziva','Bybit is not responding'],['★ Spremljam','★ Watching'],['Jay (3D, 1D, 6H, 90m, 23m, 5m)','Jay (3D, 1D, 6H, 90m, 23m, 5m)'],['Klasični (1D, 4H, 1H, 15m, 5m)','Classic (1D, 4H, 1H, 15m, 5m)'],['Polna črta = nov dan','Solid line = new day'],['Ne spremljaj več','Stop watching'],['Spremljaj','Watch'],['Stolpci','Columns'],['osnovno','basic'],
+ ['Rezultat:','Result:'],['vsi, cilj','all, target'],['Bybit se ne odziva','Bybit is not responding'],['★ Spremljam','★ Watching'],['Jayevi okvirji:','Jay timeframes:'],['Običajni okvirji:','Classic timeframes:'],['Jay (3D, 1D, 6H, 90m, 23m, 5m)','Jay (3D, 1D, 6H, 90m, 23m, 5m)'],['Klasični (1D, 4H, 1H, 15m, 5m)','Classic (1D, 4H, 1H, 15m, 5m)'],['Polna črta = nov dan','Solid line = new day'],['Ne spremljaj več','Stop watching'],['Spremljaj','Watch'],['Stolpci','Columns'],['osnovno','basic'],
  ['Samo kovanci z zvezdico. Kovanci z zvezdico se pregledajo vedno, tudi če niso med izbranimi po volatilnosti.','Starred coins only. Starred coins are always scanned, even if they are not among the coins selected by volatility.'],
  ['Ni kovancev z zvezdico med prikazanimi. Klikni ☆ pri kovancu, da ga spremljaš.','No starred coins among the shown ones. Click ☆ next to a coin to watch it.'],
  ['(shrani se sama, samo v tem brskalniku)','(saved automatically, only in this browser)'],['Opomba za','Note for'],['npr. čakam sweep pod 1.02, nato 5m CISD','e.g. waiting for a sweep below 1.02, then a 5m CISD'],['Napaka:','Error:'],['ni podatkov','no data'],['ali','or'],['zadnja sveča','last candle'],['zdaj','now'],['CISD vstop','CISD entry'],['Long (vsi, cilj H)','Long (all, target H)'],['(vsi, cilj H)','(all, target H)'],['(+HTF, cilj H)','(+HTF, target H)'],['R (vsi, H)','R (all, H)'],['R (+čas, 2R)','R (+time, 2R)']
@@ -1014,6 +1014,7 @@ $('cpy').addEventListener('click',function(){var t=coinsText(),b=$('cpy');
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,function(){prompt('Kopiraj besedilo:',t)});else prompt('Kopiraj besedilo:',t)});
 cvBtns();
 $('out').addEventListener('click',function(e){if(e.target.closest('a'))return;
+  var ds=e.target.closest('[data-dset]');if(ds){DSET=ds.getAttribute('data-dset');ls('jay_dset',DSET);dtf=null;cvReset();render();openLoad();return}
   var fv=e.target.closest('[data-fav]');if(fv){var sy=fv.getAttribute('data-fav');if(FAV[sy])delete FAV[sy];else FAV[sy]=1;ls('jay_fav',JSON.stringify(FAV));render();return}
   if(e.target.closest('.noteb'))return;
   var tb=e.target.closest('[data-dtf]');if(tb){dtf=tb.getAttribute('data-dtf');cvReset();render();return}
@@ -1040,7 +1041,10 @@ $('slm').addEventListener('change',function(){rows.forEach(applySL);for(var key 
 
 /* ---------- Več okvirjev v odprti vrstici ---------- */
 var mtf={},dtf=null;
-function MTFL(){return tfSet()==='c'?['D','240','60','15','5']:['W','D3','D','360','90','23','5']}
+/* Okvirji v odprti vrstici: privzeto kot pregled (Nastavitve → Okvirji), preklop Jay / Klasični neposredno nad grafom */
+var DSET=ls('jay_dset')||'';
+function dSet(){return DSET==='c'||DSET==='j'?DSET:tfSet()}
+function MTFL(){return dSet()==='c'?['D','240','60','15','5']:['W','D3','D','360','90','23','5']}
 function mtfKey(sym,tf){return sym+'|'+tf+'|'+(+$('piv').value||5)+'|'+$('model').value}
 async function mtfLoad(r){
   var tfs=MTFL().filter(function(tf){var m=mtf[mtfKey(r.s,tf)];return tf!==$('tf').value&&!(m&&Date.now()-m.at<5*6e4)});
@@ -1058,7 +1062,7 @@ function detail0(r){
   var ML=MTFL(),tabs=(ML.indexOf(cur)<0?[cur].concat(ML):ML);
   var dirs=tabs.map(function(tf){var m=mtfGet(r,tf);return {tf:tf,m:m,d:m&&!m.err?(m.dir==null?0:m.dir):null}});
   var want=r.dir==='long'?1:-1,known=dirs.filter(function(x){return x.d!==null}),same=known.filter(function(x){return x.d===want}).length,loading=known.length<dirs.length&&dirs.some(function(x){return !x.m});
-  var head='<div class="bar" style="margin-bottom:8px">'+tabs.map(function(tf){var x=dirs[tabs.indexOf(tf)];
+  var head='<div class="bar" style="margin-bottom:8px">'+[['j','Jay'],['c','Klasični']].map(function(o){return '<button class="chip'+(dSet()===o[0]?' on':'')+'" data-dset="'+o[0]+'" type="button" title="'+(o[0]==='j'?'Jayevi okvirji: 1W, 3D, 1D, 6H, 90m, 23m, 5m':'Običajni okvirji: 1D, 4H, 1H, 15m, 5m')+'" style="padding:3px 10px;font-size:12px">'+o[1]+'</button>'}).join('')+'<span class="lbl" style="margin:0 2px">│</span>'+tabs.map(function(tf){var x=dirs[tabs.indexOf(tf)];
       return '<button class="chip'+(tf===sel?' on':'')+'" data-dtf="'+tf+'" type="button">'+(TFN[tf]||tf)+' '+(x.d===null?'<span class="mut">…</span>':arrow(x.d))+'</button>'}).join('')+
     '<span class="lbl"><b>Poravnava:</b> '+(loading?'nalagam …':same+'/'+known.length+' okvirjev v smeri '+(want===1?'↑ long':'↓ short'))+'</span></div>'+
     '<div class="bar" style="margin:-4px 0 8px;gap:4px"><span class="lbl">Na grafu:</span>'+MKN.map(function(m){return '<button class="chip'+(MK[m[0]]?' on':'')+'" data-mk="'+m[0]+'" type="button" style="padding:3px 9px;font-size:12px">'+m[1]+'</button>'}).join('')+'</div>';
@@ -1245,7 +1249,7 @@ function chart(r,c,tf){
     return '<text x="'+x+'" y="'+(pt+10+row*11)+'" font-size="10" font-weight="700" fill="'+col+'">'+t+'</text>'}
   function md(t){return Math.floor((t%864e5)/6e4)}
   function p23(t){var y=new Date(t).getUTCFullYear(),doy=Math.floor((t-Date.UTC(y,0,1))/864e5),bk=Math.min(3,Math.floor(doy/90));return y*16+bk*4+Math.min(3,Math.floor((doy-bk*90)/23))}
-  var jayT=tfSet()==='j';
+  var jayT=dSet()==='j';
   if(tmin<1440&&!jayT){leg='Polna črta = nov dan';
     for(var j=1;j<bars.length;j++){var m0=md(bars[j-1].t),m1=md(bars[j].t),i=from+j;if(m1<m0)s+=vl(i,'var(--time)',1.3,'',.5)+tx(i,dfmt(bars[j].t),'var(--time)')}}
   else if(tmin<1440){
@@ -1316,7 +1320,7 @@ document.querySelectorAll('[data-side]').forEach(function(b){b.addEventListener(
 document.querySelectorAll('[data-st]').forEach(function(b){b.addEventListener('click',function(){stf=b.getAttribute('data-st');document.querySelectorAll('[data-st]').forEach(function(x){x.classList.toggle('on',x===b)});render()})});
 $('setb').addEventListener('click',function(){$('set').classList.toggle('show')});
 $('scan').addEventListener('click',scan);
-$('tfset').addEventListener('change',function(){ls('jay_tfset',tfSet());var old=$('tf').value;tfOpts();ls('jay_tf',$('tf').value);open=null;dtf=null;mtf={};rows=[];coins=[];cache={};render();scan()});
+$('tfset').addEventListener('change',function(){ls('jay_tfset',tfSet());DSET='';ls('jay_dset','');var old=$('tf').value;tfOpts();ls('jay_tf',$('tf').value);open=null;dtf=null;mtf={};rows=[];coins=[];cache={};render();scan()});
 ['tf','piv','model'].forEach(function(id){$(id).addEventListener('change',function(){open=null;rows=[];coins=[];cache={};render();scan()})});
 ['acct','rpct'].forEach(function(id){$(id).addEventListener('input',render)});
 $('langb').addEventListener('click',function(){LANG=LANG==='en'?'sl':'en';ls('jay_lang',LANG);langBtn();
