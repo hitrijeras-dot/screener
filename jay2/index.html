@@ -195,7 +195,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible,.icb:focus-visible{out
   <div class="sortbar" id="sortbar"></div>
   <div class="card">
     <table>
-      <thead id="thd"><tr><th>Kovanec</th><th class="l">Smer</th><th class="l" title="Struktura na 1W (in 1M) · zaporedje sveč L-LL-HL na 3D / 1W">HTF</th><th class="l">Stanje</th><th>Cena</th><th>Golden pocket</th><th>Do GP</th><th class="l" title="5m CISD v smeri trejda v zadnjih 30 min (za setupe, ki so potrjeni, v coni, nad cono ali možni ob zaprtju)">5m</th><th>Vstop</th><th>SL</th><th>TP</th><th>RR</th><th>Velikost</th></tr></thead>
+      <thead id="thd"><tr><th>Kovanec</th><th class="l">Smer</th><th class="l" title="Struktura na 1W (in 1M) · zaporedje sveč L-LL-HL na 3D / 1W">HTF</th><th class="l">Stanje</th><th>Cena</th><th>Golden pocket</th><th>Do GP</th><th class="l" title="5m CISD v smeri trejda v zadnjih 30 min (za setupe, ki so potrjeni, v coni, nad cono ali možni ob zaprtju)">5m</th></tr></thead>
       <tbody id="out"><tr><td colspan="12" class="empty">Klikni "Skeniraj". Pregled 80 kovancev traja približno pol minute.</td></tr></tbody>
     </table>
   </div>
@@ -1208,7 +1208,7 @@ function coinsText(){var tf=$('tf').value,list=sortCoins(coins.filter(coinPass))
       (m.vp?'POC '+fp(m.vp.poc)+' VAH '+fp(m.vp.vah)+' VAL '+fp(m.vp.val)+' ('+(m.vp.pos>0?'nad VAH':m.vp.pos<0?'pod VAL':'v VA')+')':'-')+'\n'});
   return t}
 /* Razvrščanje s klikom na stolpec: 1. klik = največ/najbližje/najnovejše zgoraj, 2. klik = obratno. Prazne vrednosti vedno spodaj. */
-var SORTC={v:'vol',d:1},SORTS={v:'st',d:1};try{Object.assign(SORTC,JSON.parse(ls('jay_sortc')||'{}'))}catch(e){}try{Object.assign(SORTS,JSON.parse(ls('jay_sorts')||'{}'))}catch(e){}
+var SORTC={v:'vol',d:1},SORTS={v:'st',d:1};try{Object.assign(SORTC,JSON.parse(ls('jay_sortc')||'{}'))}catch(e){}try{Object.assign(SORTS,JSON.parse(ls('jay_sorts')||'{}'))}catch(e){}if(SORTS.v==='rr')SORTS={v:'st',d:1};
 function nd(o){return o?-o.d:null}
 var SKC={coin:['Kovanec',function(c){return c.s}],price:['Cena',function(c){return c.price}],ch:['24h',function(c){return c.ch}],vol:['Vol.',function(c){return c.sm.vol}],to:['Promet',function(c){return c.to}],
   htf:['HTF',function(c){return (c.htf||0)*10+((c.c3.L||c.w1.L)?1:0)-((c.c3.S||c.w1.S)?1:0)}],sw:['Sweep',function(c){return c.sm.sw?-c.sm.sw.age:null}],dv:['Div',function(c){return c.sm.dv?-c.sm.dv.age:null}],
@@ -1216,13 +1216,13 @@ var SKC={coin:['Kovanec',function(c){return c.s}],price:['Cena',function(c){retu
   poi:['POI',function(c){return nd(c.sm.poi)}],vp:['VP',function(c){return c.sm.vp?c.sm.vp.pos:null}]};
 var SKS={coin:['Kovanec',function(r){return r.s}],htf:['HTF',function(r){return r.htf||0}],st:['Stanje',null],price:['Cena',function(r){return r.price}],dist:['Do GP',function(r){return r.state===3||r.state===5?-Math.abs(r.dist):r.state===2||r.state===1?1:null}],
   m5:['5m',function(r){return r.m5?(r.m5.ok?1:0):null}],rr:['RR',function(r){return r.state===4?null:r.rr}]};
-var SKS_COL={0:'coin',2:'htf',3:'st',4:'price',6:'dist',7:'m5',11:'rr'};
+var SKS_COL={0:'coin',2:'htf',3:'st',4:'price',6:'dist',7:'m5'};
 function sortL(list,fn,d){list.sort(function(a,b){var x=fn(a),y=fn(b),xn=x==null||x!==x,yn=y==null||y!==y;if(xn||yn)return xn-yn;
   if(typeof x==='string')return d*(x<y?-1:x>y?1:0);return d*(y-x)})}
 function sortCoins(list){var k=SKC[SORTC.v]||SKC.vol;sortL(list,k[1],SORTC.d);return list}
 function sar(on,d){return on?'<span class="sar">'+(d>0?'▼':'▲')+'</span>':''}
 function sortClick(v){var S=cview?SORTC:SORTS;if(S.v===v)S.d=-S.d;else{S.v=v;S.d=1}ls(cview?'jay_sortc':'jay_sorts',JSON.stringify(S));render()}
-function sortBar(){var S=cview?SORTC:SORTS,keys=cview?['vol','ch','to','price'].concat(ccols().map(function(x){return x[0]}).filter(function(k){return ['vol','ch','price'].indexOf(k)<0})).concat(['coin']):['st','dist','rr','m5','htf','price','coin'],M=cview?SKC:SKS;
+function sortBar(){var S=cview?SORTC:SORTS,keys=cview?['vol','ch','to','price'].concat(ccols().map(function(x){return x[0]}).filter(function(k){return ['vol','ch','price'].indexOf(k)<0})).concat(['coin']):['st','dist','m5','htf','price','coin'],M=cview?SKC:SKS;
   $('sortbar').innerHTML='<span class="lbl">Razvrsti:</span>'+keys.map(function(k){var on=S.v===k;return '<button class="chip'+(on?' on':'')+'" data-sortk="'+k+'" type="button">'+M[k][0]+sar(on,S.d)+'</button>'}).join('')}
 function thSort(map){var S=cview?SORTC:SORTS;[].forEach.call(document.querySelectorAll('#thd th'),function(th,i){var k=map(i);if(!k)return;th.setAttribute('data-sort',k);if(S.v===k){th.classList.add('son');th.insertAdjacentHTML('beforeend',sar(true,S.d))}})}
 document.addEventListener('click',function(e){var t=e.target.closest('#thd th[data-sort],[data-sortk]');if(!t)return;sortClick(t.getAttribute('data-sort')||t.getAttribute('data-sortk'))});
@@ -1260,16 +1260,15 @@ function render0(){
   var list=rows.filter(function(r){return (side==='all'||r.dir===side)&&(stf==='sw'?r.state===4:stf==='all'||ACT[r.state])&&passF(r)&&(!favOn||FAV[r.s])});
   list.sort(function(a,b){return a.state-b.state||(a.state===1||a.state===4?a.age-b.age:0)||(a.state===3?Math.abs(a.dist)-Math.abs(b.dist):0)||b.rr-a.rr});
   if(SORTS.v==='st'){if(SORTS.d<0)list.reverse()}else if(SKS[SORTS.v])sortL(list,SKS[SORTS.v][1],SORTS.d);
-  if(!list.length){$('out').innerHTML='<tr><td colspan="13" class="empty">'+(rows.length?'Ni setupov s temi filtri. Poskusi "Stanje: Vse"'+(htfOn||hcOn?' ali izklopi filtra HTF':'')+'.':'Klikni "Skeniraj".')+'</td></tr>';return}
+  if(!list.length){$('out').innerHTML='<tr><td colspan="8" class="empty">'+(rows.length?'Ni setupov s temi filtri. Poskusi "Stanje: Vse"'+(htfOn||hcOn?' ali izklopi filtra HTF':'')+'.':'Klikni "Skeniraj".')+'</td></tr>';return}
   var h='';list.forEach(function(r,ix){var id=rid(r);var coin=r.s.replace(/USDT$/,'');
     h+='<tr class="rw" tabindex="0" data-id="'+id+'">'+coinCell(r.s)+
       '<td class="l"><span class="pill '+r.dir+'">'+(r.dir==='long'?'LONG':'SHORT')+'</span></td><td class="l">'+htfCell(r)+' '+hcCell(r)+'</td><td class="l">'+stCell(r)+'</td>'+
-      (r.state===4?'<td class="mono">'+fp(r.price)+'</td><td class="mono mut">–</td><td class="mono" title="Koliko mora cena še narediti do zloma (sunka)">do zloma '+(Math.max(0,r.dist)*100).toFixed(1)+' %</td><td class="l mut">–</td><td class="mono mut">–</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono mut">–</td><td class="mono mut">–</td><td class="mono mut">–</td></tr>':
+      (r.state===4?'<td class="mono">'+fp(r.price)+'</td><td class="mono mut">–</td><td class="mono" title="Koliko mora cena še narediti do zloma (sunka)">do zloma '+(Math.max(0,r.dist)*100).toFixed(1)+' %</td><td class="l mut">–</td></tr>':
       '<td class="mono">'+fp(r.price)+'</td><td class="mono">'+fp(Math.min(r.g1,r.g2))+'–'+fp(Math.max(r.g1,r.g2))+'</td>'+
-      '<td class="mono '+(r.state===3||r.state===5?'':'mut')+'">'+(r.state===3||r.state===5?(Math.abs(r.dist)*100).toFixed(1)+' %':r.state===6?(r.dir==='long'?'pod':'nad'):r.state===1?'–':'v coni')+'</td>'+m5Cell(r)+
-      '<td class="mono">'+fp(r.entry)+'</td><td class="mono dn">'+fp(r.sl)+'</td><td class="mono up">'+fp(r.tp)+'</td><td class="mono"><b>'+r.rr.toFixed(1)+'</b></td><td class="mono">'+size(r)+'</td></tr>');
+      '<td class="mono '+(r.state===3||r.state===5?'':'mut')+'">'+(r.state===3||r.state===5?(Math.abs(r.dist)*100).toFixed(1)+' %':r.state===6?(r.dir==='long'?'pod':'nad'):r.state===1?'–':'v coni')+'</td>'+m5Cell(r)+'</tr>');
   });
-  h+='<tr><td colspan="13" class="l lbl">Pripravljenih: <b>'+list.filter(ready).length+'</b> (potrjen ali v coni + 5m CISD v smeri v zadnjih 30 min)</td></tr>';
+  h+='<tr><td colspan="8" class="l lbl">Pripravljenih: <b>'+list.filter(ready).length+'</b> (potrjen ali v coni + 5m CISD v smeri v zadnjih 30 min)</td></tr>';
   $('out').innerHTML=h;
 }
 THS=$('thd').innerHTML;
