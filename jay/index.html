@@ -63,6 +63,7 @@ th:first-child,td:first-child,.l{text-align:left}
 .kv b{overflow-wrap:anywhere}
 .det{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:14px}
 @media (max-width:700px){.det{grid-template-columns:1fr}}
+.chw svg{touch-action:pan-y;cursor:grab;user-select:none}.chw.drag svg{cursor:grabbing}
 .det svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;align-content:start}
 .kv span:nth-child(odd){color:var(--mut)}
@@ -792,9 +793,11 @@ $('cpy').addEventListener('click',function(){var t=coinsText(),b=$('cpy');
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,function(){prompt('Kopiraj besedilo:',t)});else prompt('Kopiraj besedilo:',t)});
 cvBtns();
 $('out').addEventListener('click',function(e){if(e.target.closest('a'))return;
-  var tb=e.target.closest('[data-dtf]');if(tb){dtf=tb.getAttribute('data-dtf');render();return}
+  var tb=e.target.closest('[data-dtf]');if(tb){dtf=tb.getAttribute('data-dtf');cvReset();render();return}
+  var zb=e.target.closest('[data-cvz]');if(zb){var zk=zb.getAttribute('data-cvz'),stp=Math.max(1,Math.round(CV.cnt/4));
+    if(zk==='l')CV.off=Math.min(CV.max-20,CV.off+stp);else if(zk==='r')CV.off=Math.max(0,CV.off-stp);else if(zk==='o')return cvZoom(1.4);else if(zk==='i')return cvZoom(1/1.4);else cvReset();cvRedraw();return}
   var mb=e.target.closest('[data-mk]');if(mb){var mkk=mb.getAttribute('data-mk');MK[mkk]=MK[mkk]?0:1;ls('jay_mk',JSON.stringify(MK));render();return}
-  var tr=e.target.closest('.rw');if(!tr)return;var id=tr.getAttribute('data-id');open=open===id?null:id;dtf=null;render();openLoad()});
+  var tr=e.target.closest('.rw');if(!tr)return;var id=tr.getAttribute('data-id');open=open===id?null:id;dtf=null;cvReset();render();openLoad()});
 function openLoad(){var id=open,r=id&&(id.indexOf('c|')===0?coins.filter(function(c){return 'c|'+c.s===id}).map(coinR)[0]:rows.filter(function(x){return rid(x)===id})[0]);if(r)mtfLoad(r).then(function(){if(open===id)render()})}
 $('out').addEventListener('keydown',function(e){if(e.key==='Enter'){var tr=e.target.closest('.rw');if(tr)tr.click()}});
 
@@ -831,14 +834,14 @@ function detail(r){
       return '<button class="chip'+(tf===sel?' on':'')+'" data-dtf="'+tf+'" type="button">'+(TFN[tf]||tf)+' '+(x.d===null?'<span class="mut">…</span>':arrow(x.d))+'</button>'}).join('')+
     '<span class="lbl"><b>Poravnava:</b> '+(loading?'nalagam …':same+'/'+known.length+' okvirjev v smeri '+(want===1?'↑ long':'↓ short'))+'</span></div>'+
     '<div class="bar" style="margin:-4px 0 8px;gap:4px"><span class="lbl">Na grafu:</span>'+MKN.map(function(m){return '<button class="chip'+(MK[m[0]]?' on':'')+'" data-mk="'+m[0]+'" type="button" style="padding:3px 9px;font-size:12px">'+m[1]+'</button>'}).join('')+'</div>';
-  if(sel===cur)return head+chart(r,cache[r.s],cur);
+  if(sel===cur)return head+chartBox(r,cache[r.s],cur);
   var m=mtfGet(r,sel);
   if(!m)return head+'<div class="empty">Nalagam '+(TFN[sel]||sel)+' …</div>';
   if(m.err)return head+'<div class="empty">Ni podatkov za '+(TFN[sel]||sel)+'.</div>';
   var r2=r.nos?null:(m.su.filter(function(x){return x.dir===r.dir})[0]||m.su[0]);
-  if(!r2)return head+chart(Object.assign({},r,{nos:true,state:-1}),m,sel);
+  if(!r2)return head+chartBox(Object.assign({},r,{nos:true,state:-1}),m,sel);
   r2.htf=r.htf;r2.htfM=r.htfM;
-  return head+'<div class="lbl" style="margin-bottom:6px">'+(TFN[sel]||sel)+': <span class="pill '+r2.dir+'">'+(r2.dir==='long'?'LONG':'SHORT')+'</span> '+stCell(r2)+'</div>'+chart(r2,m,sel);
+  return head+'<div class="lbl" style="margin-bottom:6px">'+(TFN[sel]||sel)+': <span class="pill '+r2.dir+'">'+(r2.dir==='long'?'LONG':'SHORT')+'</span> '+stCell(r2)+'</div>'+chartBox(r2,m,sel);
 }
 /* Oznake na grafu. FVG: bull k[i].l > k[i-2].h (bear zrcalno), riše se do zapolnitve, manjši od 0.25 povprečnega razpona se ne riše.
    Sweep: sveča gre pod nepobran swing low (3 levo / 2 desno) in zapre nad njim (bear zrcalno).
@@ -942,10 +945,30 @@ function marks(k,from,n,X,Y,cw,xe,o){o=o||{};var nc=o.live?n-1:n,kk=k.slice(0,nc
       '<text x="'+X(d.b)+'" y="'+(d.bu?yb+12:yb-4)+'" text-anchor="middle" font-size="10" font-weight="700" fill="'+col+'">div</text>'});
   return s}
 var mleg='<br><span style="background:var(--gp);padding:0 4px">GP</span> fib zadnje noge (0.618–0.786) · POI = order block (telo) · <span style="color:var(--warn)">POC / VAH / VAL</span> volume profile · črtkano = HTF FVG<br><span style="color:var(--long)">▲</span>/<span style="color:var(--short)">▼</span> sweep (pobrano staro dno/vrh in zaprtje nazaj) · <span style="color:var(--long)">▮</span>/<span style="color:var(--short)">▮</span> nezapolnjen FVG (zadnji 3 v vsako smer) · <b>div</b> = RSI divergenca';
+/* Okno grafa: off = koliko sveč je skritih desno (premik v preteklost), cnt = koliko sveč je vidnih. */
+var CV={off:0,cnt:90,vis:104,max:0},LC=null;
+function cvReset(){CV.off=0;CV.cnt=90}
+function chartBox(r,c,tf){LC={r:r,c:c,tf:tf};
+  return '<div class="bar" style="margin:0 0 6px;gap:4px"><span class="lbl">Graf:</span>'+[['l','◀','Nazaj v čas'],['r','▶','Naprej'],['o','−','Pomanjšaj (več sveč)'],['i','+','Povečaj (manj sveč)'],['z','Zdaj','Nazaj na zadnjo svečo']].map(function(b){return '<button class="chip" data-cvz="'+b[0]+'" type="button" title="'+b[2]+'" style="padding:3px 10px;font-size:12px">'+b[1]+'</button>'}).join('')+
+    '<span class="lbl" id="cvst">'+(CV.off?'premaknjeno '+CV.off+' sveč nazaj':'zadnja sveča')+' · povleci graf ali zavrti kolesce</span></div><div class="chw" id="chw">'+chart(r,c,tf)+'</div>'}
+function cvRedraw(){var el=$('chw');if(!el||!LC)return;el.innerHTML=chart(LC.r,LC.c,LC.tf);var st=$('cvst');if(st)st.textContent=(CV.off?'premaknjeno '+CV.off+' sveč nazaj':'zadnja sveča')+' · povleci graf ali zavrti kolesce'}
+function cvZoom(f){CV.cnt=Math.max(25,Math.min(600,Math.round(CV.cnt*f)));if(CV.max)CV.cnt=Math.min(CV.cnt,CV.max);cvRedraw()}
+(function(){var drag=null,raf=0;
+  document.addEventListener('pointerdown',function(e){var el=e.target.closest&&e.target.closest('#chw');if(!el||e.button>0)return;var svg=el.querySelector('svg');if(!svg)return;
+    drag={x:e.clientX,off:CV.off,w:svg.getBoundingClientRect().width,id:e.pointerId};el.classList.add('drag');try{el.setPointerCapture(e.pointerId)}catch(_){}});
+  document.addEventListener('pointermove',function(e){if(!drag||e.pointerId!==drag.id)return;var per=drag.w/Math.max(10,CV.vis),d=Math.round((e.clientX-drag.x)/per),no=Math.max(0,Math.min(CV.max-20,drag.off+d));
+    if(no!==CV.off){CV.off=no;if(!raf)raf=requestAnimationFrame(function(){raf=0;cvRedraw()})}});
+  function end(){if(!drag)return;drag=null;var el=$('chw');if(el)el.classList.remove('drag')}
+  document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);
+  document.addEventListener('wheel',function(e){var el=e.target.closest&&e.target.closest('#chw');if(!el)return;e.preventDefault();cvZoom(e.deltaY>0?1.15:1/1.15)},{passive:false});
+  document.addEventListener('dblclick',function(e){if(e.target.closest&&e.target.closest('#chw')){cvReset();cvRedraw()}});
+})();
 function chart(r,c,tf){
   if(!c)return '';
   var k=c.k.slice();if(c.live)k.push(c.live);
-  var n=k.length,from=Math.max(0,Math.min(r.Lx!=null?r.Lx-6:n-90,n-90)),bars=k.slice(from),W=760,H=360,pl=8,pr=72,pt=16,pb=24,ext=14;
+  var nA=k.length;CV.off=Math.max(0,Math.min(CV.off,nA-20));CV.max=nA;
+  var n=nA-CV.off,liveOn=!!c.live&&CV.off===0,from=CV.off===0&&CV.cnt===90?Math.max(0,Math.min(r.Lx!=null?r.Lx-6:n-90,n-90)):Math.max(0,n-CV.cnt),bars=k.slice(from,n),W=760,H=360,pl=8,pr=72,pt=16,pb=24,ext=CV.off?2:14;
+  CV.vis=n-from+ext;
   var lo=Infinity,hi=-Infinity;bars.forEach(function(x){lo=Math.min(lo,x.l);hi=Math.max(hi,x.h)});
   var su=$('shsu').value==='1'&&!r.nos;
   (!su?[]:r.state===4?[r.sl,r.H,r.L]:[r.tp,r.sl,r.g1,r.g2,extP(r,0.27),extP(r,0.65)]).forEach(function(v){lo=Math.min(lo,v);hi=Math.max(hi,v)});var pad=(hi-lo)*0.06;lo-=pad;hi+=pad;
@@ -970,10 +993,10 @@ function chart(r,c,tf){
   // staro L (likvidnost)
   if(su&&r.L!=null&&r.Lx!=null&&r.Lx>=from)s+='<line x1="'+X(r.Lx)+'" x2="'+xe+'" y1="'+Y(r.L)+'" y2="'+Y(r.L)+'" stroke="var(--val)" stroke-width="1.6" stroke-dasharray="2 4"/>';
   // oznake: FVG, sweep, RSI divergenca (samo prikaz)
-  s+=marks(k,from,n,X,Y,cw,xe,{lo:lo,hi:hi,su:su,hf:r.hf,P:+$('piv').value||5,live:!!c.live});
+  s+=marks(k,from,n,X,Y,cw,xe,{lo:lo,hi:hi,su:su,hf:r.hf,P:+$('piv').value||5,live:liveOn});
   // sveče
   bars.forEach(function(x,j){var i=from+j,u=x.c>=x.o,col=u?'var(--long)':'var(--short)',yt=Y(Math.max(x.o,x.c)),yb=Y(Math.min(x.o,x.c));
-    s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'" stroke-width="1"/><rect x="'+(X(i)-cw*0.32)+'" y="'+yt+'" width="'+(cw*0.64)+'" height="'+Math.max(1,yb-yt)+'" fill="'+col+'"'+(i===n-1&&c.live?' opacity=".55"':'')+'/>'});
+    s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y(x.h)+'" y2="'+Y(x.l)+'" stroke="'+col+'" stroke-width="1"/><rect x="'+(X(i)-cw*0.32)+'" y="'+yt+'" width="'+(cw*0.64)+'" height="'+Math.max(1,yb-yt)+'" fill="'+col+'"'+(i===n-1&&liveOn?' opacity=".55"':'')+'/>'});
   if(r.state===4){if(su)[[r.H,'var(--ink)','zlom: zaprtje '+(up?'nad ':'pod ')+fp(r.H)],[r.sl,'var(--short)','SL '+fp(r.sl)]].forEach(function(z){if(z[0]==null||isNaN(z[0]))return;
     s+='<line x1="'+X(Math.max(from,r.LLx))+'" x2="'+xe+'" y1="'+Y(z[0])+'" y2="'+Y(z[0])+'" stroke="'+z[1]+'" stroke-width="1" stroke-dasharray="5 3"/><text x="'+(X(Math.max(from,r.LLx))+4)+'" y="'+(Y(z[0])-4)+'" font-size="11" font-weight="600" fill="'+z[1]+'" font-family="ui-monospace,Menlo,monospace">'+z[2]+'</text>'})}
   else if(su)
@@ -981,7 +1004,7 @@ function chart(r,c,tf){
   [[r.entry,'var(--ink)',(up?'LONG ':'SHORT ')+fp(r.entry)],[r.sl,'var(--short)','SL '+fp(r.sl)],[r.tp,'var(--long)','TP '+fp(r.tp)]].forEach(function(z){
     s+='<line x1="'+px+'" x2="'+xe+'" y1="'+Y(z[0])+'" y2="'+Y(z[0])+'" stroke="'+z[1]+'" stroke-width="1"/><text x="'+(px+4)+'" y="'+(Y(z[0])-4)+'" font-size="11" font-weight="600" fill="'+z[1]+'" font-family="ui-monospace,Menlo,monospace">'+z[2]+'</text>'});
   // oznake
-  function lab(i,p,t,col,below){if(i==null||i<from)return '';return '<text x="'+X(i)+'" y="'+(below?Y(p)+15:Y(p)-6)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+col+'">'+t+'</text>'}
+  function lab(i,p,t,col,below){if(i==null||i<from||i>=n)return '';return '<text x="'+X(i)+'" y="'+(below?Y(p)+15:Y(p)-6)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+col+'">'+t+'</text>'}
   if(su)s+=lab(r.Lx,r.L,up?'L':'H','var(--val)',up)+lab(r.LLx,r.LL,up?'LL':'HH','var(--warn)',up)+lab(r.Hx,r.H,up?'H':'L','var(--mut)',!up);
   if(su&&r.HL!=null&&r.HLx!=null)s+=lab(Math.min(r.HLx,n-1),r.HL,up?'HL':'LH','var(--val)',up);
   // čas: časovni fraktali (senčenje gre v ozadje, črte čez)
