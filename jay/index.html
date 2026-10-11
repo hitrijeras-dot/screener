@@ -497,7 +497,7 @@ var I18N_PH=[
  ['+čas: 3. teden','+time: week 3'],['+čas: nov mesec','+time: new month'],['15.–21. v mesecu – Jayevo okno za swing','15th–21st of the month – Jay\'s swing window'],['prvih 5 dni meseca','first 5 days of the month'],['za 1D','for 1D'],
  ['dostava, vstop','delivery, entry'],['past/manipulacija','trap/manipulation'],['odpiranje','opening'],['zaključek','close'],['začetek kvartala','start of quarter'],
  ['Javim, ko','I will tell you when'],['nov','new'],['potrjen HL','confirmed HL'],['potrjen LH','confirmed LH'],['v coni','in zone'],['nova setupa','new setups'],['novi setupi','new setups'],['novih setupov','new setups'],
- ['Rezultat:','Result:'],['vsi, cilj','all, target'],['ali','or'],['zadnja sveča','last candle'],['zdaj','now'],['CISD vstop','CISD entry'],['Long (vsi, cilj H)','Long (all, target H)'],['(vsi, cilj H)','(all, target H)'],['(+HTF, cilj H)','(+HTF, target H)'],['R (vsi, H)','R (all, H)'],['R (+čas, 2R)','R (+time, 2R)']
+ ['Rezultat:','Result:'],['vsi, cilj','all, target'],['Bybit se ne odziva','Bybit is not responding'],['Napaka:','Error:'],['ni podatkov','no data'],['ali','or'],['zadnja sveča','last candle'],['zdaj','now'],['CISD vstop','CISD entry'],['Long (vsi, cilj H)','Long (all, target H)'],['(vsi, cilj H)','(all, target H)'],['(+HTF, cilj H)','(+HTF, target H)'],['R (vsi, H)','R (all, H)'],['R (+čas, 2R)','R (+time, 2R)']
 ];
 var I18N_RX=[
  [/moved (\d+) (sveč|sveče|sveči|svečo) nazaj/g,'moved $1 candles back'],
@@ -529,7 +529,8 @@ function langBtn(){$('langb').textContent=LANG==='en'?'SL':'EN';$('langb').title
 ['tf','topn','piv','fresh','acct','rpct','auto','slm','model','shsu','vsel','minto','csort'].forEach(function(id){var v=ls('jay_'+id);if(v!==null&&v!==undefined)$(id).value=v;$(id).addEventListener('change',function(){ls('jay_'+id,$(id).value)})});
 function fp(p){if(p==null||isNaN(p))return '–';var a=Math.abs(p);return a>=1000?p.toFixed(1):a>=100?p.toFixed(2):a>=1?p.toFixed(3):a>=0.1?p.toFixed(4):a>=0.01?p.toFixed(5):a>=0.001?p.toFixed(6):p.toPrecision(4)}
 function dfmt(t){return new Date(t).toLocaleDateString(LOC(),{day:'numeric',month:'numeric',timeZone:'UTC'})}
-async function jget(u){var r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
+async function jget(u){var ac=typeof AbortController!=='undefined'?new AbortController():null,tm=ac?setTimeout(function(){ac.abort()},15000):0,r;
+  try{r=await fetch(u,ac?{signal:ac.signal}:undefined)}catch(e){throw new Error(e&&e.name==='AbortError'?'Bybit se ne odziva (15 s)':e.message)}finally{clearTimeout(tm)}if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
 async function kl(sym,iv,n,end){var r=await jget(API+'kline?category=linear&symbol='+sym+'&interval='+iv+'&limit='+n+(end?'&end='+end:''));
   return r.list.reverse().map(function(x){return {t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]||0}})}
 /* Okvirji: 90m in 23m Bybit nima -> sestavimo iz 30m / 1m, sidro vsak dan ob 00:00 UTC (kot Jayevi fraktali) */
@@ -580,11 +581,12 @@ async function scan(){
     async function one(t){
       try{var k=await klines(t.symbol,tf);var now=Date.now(),last=k[k.length-1],live=null;
         if(last&&last.e>now){live=k.pop()}
-        var m12=$('model').value==='12',st=m12?jay12Scan(k,{freshD:5,tfMin:tfMin}):jayScan(k,{piv:piv,freshD:5,tfMin:tfMin});
+        var sigs=[],onS=function(g,d){if(g.i>=k.length-fresh)sigs.push({g:g,d:d})};
+        var m12=$('model').value==='12',st=m12?jay12Scan(k,{freshD:5,tfMin:tfMin,onSig:onS}):jayScan(k,{piv:piv,freshD:5,tfMin:tfMin,onSig:onS});
         var hd=await htfOf(t.symbol,tf,piv);
         var su=(m12?jay12Setups:jaySetups)(k,live,st,{fresh:fresh});su.forEach(applySL);su.forEach(zoneState);
         su=su.concat(jaySweeps(k,live,m12?st:jay12Scan(k,{freshD:5,tfMin:tfMin})));
-        cache[t.symbol]={k:k,live:live};
+        cache[t.symbol]={k:k,live:live,sigs:sigs,hd:hd,m12:m12};
         var pr=live?live.c:k[k.length-1].c,sm=summ(k,pr,piv,live);
         /* 2) HTF FVG, ki so ga sveče tega okvirja (tudi odprta) po nastanku že zapolnile, odpade */
         var ka=live?k.concat([live]):k,hf={lb:hd.hf.lb,fv:(hd.hf.fv||[]).filter(function(g){for(var q=ka.length-1;q>=0&&ka[q].t>=g.t;q--)if(g.bu?ka[q].l<=g.bot:ka[q].h>=g.top)return false;return true})};
@@ -620,7 +622,7 @@ function checkNew(res,tf){
   var all={};try{all=JSON.parse(ls('jay_seen')||'{}')||{}}catch(e){}
   var first=!all[tf],seen=all[tf]||{},now=Date.now(),fresh=[];
   res.forEach(function(r){if(r.state!==1&&r.state!==2)return;var lvl=r.state===1?2:1,p=seen[r.key];
-    if(!p||p.l<lvl){seen[r.key]={l:lvl,t:now};if(!first&&passF(r)){fresh.push(r);newKeys[r.key]=1}}else p.t=now});
+    if(!p||p.l<lvl){var ok=passF(r);if(first||ok){seen[r.key]={l:lvl,t:now};if(!first){fresh.push(r);newKeys[r.key]=1}}}else p.t=now});
   for(var key in seen)if(now-seen[key].t>30*864e5)delete seen[key];
   all[tf]=seen;ls('jay_seen',JSON.stringify(all));
   setTitle();
@@ -630,7 +632,7 @@ function setTitle(){var n=Object.keys(newKeys).length;document.title=(n?'('+n+')
 function setupTxt(r){return r.s.replace(/USDT$/,'')+' '+(r.dir==='long'?'long':'short')+': '+(r.state===1?(r.dir==='long'?'potrjen HL':'potrjen LH'):'v coni')}
 function notify(list,tf){
   if(ls('jay_notif')!=='1'||!('Notification' in window)||Notification.permission!=='granted')return;
-  var tfn=$('tf').options[$('tf').selectedIndex].text.split(' ')[0];
+  var tfn=TFN[tf]||tf;
   var title=list.length===1?'Jay HL '+tfn+' · '+setupTxt(list[0]):'Jay HL '+tfn+' · '+(function(n){var m=n%100;return n+(m===2?' nova setupa':m===3||m===4?' novi setupi':' novih setupov')})(list.length);
   var body=list.length===1?'Vstop '+fp(list[0].entry)+' · SL '+fp(list[0].sl)+' · TP '+fp(list[0].tp):list.slice(0,6).map(setupTxt).join('\n')+(list.length>6?'\n…':'');
   showNote(title,body,'jay-'+Date.now());
@@ -683,8 +685,8 @@ function hcOK(r){return !hcOn||r.hc3||r.hw1}
 function passF(r){return htfOK(r)&&hcOK(r)}
 function hcCell(r){return (r.hc3?'<span class="fl htf" title="3D: L-LL-HL, HL sveča zaprla nad vrhom LL sveče (zadnje 3 sveče)">3D ✓</span>':'')+(r.hw1?'<span class="fl htf" title="1W: L-LL-HL v zadnjih 4 tednih">1W ✓</span>':'')+(!r.hc3&&!r.hw1?'<span class="mut">–</span>':'')}
 function hcBtn(){$('hcf').classList.toggle('on',hcOn)}
-function htfOK(r){return !htfOn||r.htf===(r.dir==='long'?1:-1)}
-function arrow(v){return v===1?'<b class="up">↑</b>':v===-1?'<b class="dn">↓</b>':'<span class="mut">–</span>'}
+function htfOK(r){return !htfOn||r.htf==null||r.htf===(r.dir==='long'?1:-1)}
+function arrow(v){return v===1?'<b class="up">↑</b>':v===-1?'<b class="dn">↓</b>':v==null?'<span class="mut" title="ni podatkov">?</span>':'<span class="mut">–</span>'}
 function htfCell(r){var w=$('tf').value==='W';
   return '<span title="'+(w?'1M':'1W')+(w?'':' · 1M '+(r.htfM===1?'↑':r.htfM===-1?'↓':'–'))+'">'+arrow(r.htf)+(w?'':' <span class="mut" style="font-size:11px">M'+(r.htfM===1?'↑':r.htfM===-1?'↓':'–')+'</span>')+'</span>'}
 function htfBtn(){$('htff').classList.toggle('on',htfOn)}
@@ -769,8 +771,9 @@ function btCisd(kH,kL,sigs,W,H,C3,leg){
 }
 function btStats(tr){tr=tr.slice().sort(function(a,b){return a.t-b.t});var R=0,pk=0,dd=0,w=0;
   tr.forEach(function(x){R+=x.R;if(R>pk)pk=R;if(pk-R>dd)dd=pk-R;if(x.R>0)w++});return {n:tr.length,w:tr.length?w/tr.length*100:0,R:R,avg:tr.length?R/tr.length:0,dd:dd}}
-async function btGo(){
-  var btn=$('btgo');if(btn.disabled)return;btn.disabled=true;$('btout').innerHTML='';
+async function btGo(){var btn=$('btgo');if(btn.disabled)return;btn.disabled=true;try{await btGo2()}catch(e){$('btst').textContent='Napaka: '+e.message}btn.disabled=false}
+async function btGo2(){
+  var btn=$('btgo');$('btout').innerHTML='';
   var tf=$('bttf').value,c=TFS[tf]||TFS.D,nb=+$('btn').value,piv=+$('piv').value||5;
   var per=c.agg?c.agg/(c.base||+c.api):1,pages=Math.min(30,Math.ceil((nb*per+per)/1000));
   var syms=$('btsym').value.toUpperCase().split(/[\s,;]+/).filter(Boolean).map(function(x){return /USDT$/.test(x)?x:x+'USDT'});
@@ -783,7 +786,7 @@ async function btGo(){
     done++;$('btst').textContent='Računam '+done+'/'+syms.length+' …'}
   async function worker(){while(q.length)await one(q.shift())}
   await Promise.all([worker(),worker(),worker()]);
-  btLast={res:res,tf:tf,ltf:ltf,W:W,m12:m12};btRender(res,tf);btn.disabled=false;
+  btLast={res:res,tf:tf,ltf:ltf,W:W,m12:m12};btRender(res,tf);
 }
 var btLast=null,czF=ls('jay_czf')||'vsi';
 function czRender(){var L=btLast;if(!L||!L.ltf)return '';
@@ -845,6 +848,12 @@ async function histUpdate(res,tf){
     if(ids[id]||(r.dir==='long'?e<=sl:e>=sl))return;
     var tp=r.dir==='long'?Math.max(r.tpH,e+2*(e-sl)):Math.min(r.tpH,e-2*(sl-e));
     h.push({id:id,s:r.s,tf:tf,dir:r.dir,t:sc.t,e:e,sl:sl,tp:tp,liq:!!r.liq,time:!!r.time,htf:r.htf===(r.dir==='long'?1:-1),hc:!!(r.hc3||r.hw1),chk:sc.t,res:null,R:null});ids[id]=1});
+  var leg=$('slm').value==='leg';
+  for(var sym in cache){var cc=cache[sym];(cc.sigs||[]).forEach(function(S){var g=S.g,up=S.d==='long',sc=cc.k[g.i];if(!sc)return;
+    var hx=up?g.Hx:g.lox,tH=cc.k[hx]?cc.k[hx].t:hx,id=(cc.m12?'12|':'')+sym+'|'+tf+'|'+S.d+'|'+tH+'|'+sc.t;if(ids[id])return;
+    var e=sc.c,sl=leg?(up?g.leg*0.997:g.leg*1.003):(up?g.HL*0.997:g.LH*1.003);if(up?e<=sl:e>=sl)return;
+    var tH2=up?g.H:g.lo,tp=up?Math.max(tH2,e+2*(e-sl)):Math.min(tH2,e-2*(sl-e)),hd=cc.hd||{};
+    h.push({id:id,s:sym,tf:tf,dir:S.d,t:sc.t,e:e,sl:sl,tp:tp,liq:!!g.liq,time:!!g.time,htf:hd.w===(up?1:-1),hc:!!(hd.c3&&(up?hd.c3.L:hd.c3.S))||!!(hd.w1&&(up?hd.w1.L:hd.w1.S)),chk:sc.t,res:null,R:null});ids[id]=1})}
   var extra=0;
   for(var i=0;i<h.length;i++){var x=h[i];if(x.res)continue;
     var c=x.tf===tf?cache[x.s]:null;
@@ -901,7 +910,7 @@ function coinPass(c){var m=c.sm;
   if(cf.gp&&!(m.gp&&m.gp.inn&&dirOK(m.gp.bu)))return false;
   if(cf.po&&!(m.poi&&m.poi.d<=Math.max(m.vol,0.002)&&dirOK(m.poi.bu)))return false;
   if(cf.va&&!(m.vp&&(function(){var vl=m.vol*c.price,L=c.price<=m.vp.val+vl,S=c.price>=m.vp.vah-vl;return side==='long'?L:side==='short'?S:(L||S)})()))return false;
-  if(htfOn&&!(side==='all'?!!c.htf:c.htf===(side==='long'?1:-1)))return false;
+  if(htfOn&&c.htf!=null&&!(side==='all'?!!c.htf:c.htf===(side==='long'?1:-1)))return false;
   if(hcOn&&!(side==='all'?(c.c3.L||c.c3.S||c.w1.L||c.w1.S):side==='long'?(c.c3.L||c.w1.L):(c.c3.S||c.w1.S)))return false;
   return true}
 function ago(a){return a===0?'zdaj':a+' sv.'}
@@ -1267,6 +1276,7 @@ document.querySelectorAll('[data-side]').forEach(function(b){b.addEventListener(
 document.querySelectorAll('[data-st]').forEach(function(b){b.addEventListener('click',function(){stf=b.getAttribute('data-st');document.querySelectorAll('[data-st]').forEach(function(x){x.classList.toggle('on',x===b)});render()})});
 $('setb').addEventListener('click',function(){$('set').classList.toggle('show')});
 $('scan').addEventListener('click',scan);
+['tf','piv','model'].forEach(function(id){$(id).addEventListener('change',function(){open=null;rows=[];coins=[];cache={};render();scan()})});
 ['acct','rpct'].forEach(function(id){$(id).addEventListener('input',render)});
 $('langb').addEventListener('click',function(){LANG=LANG==='en'?'sl':'en';ls('jay_lang',LANG);langBtn();
   if(LANG==='en')i18nNode(document.body);else i18nRestore(document.body);
