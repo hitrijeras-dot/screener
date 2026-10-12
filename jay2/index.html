@@ -86,7 +86,7 @@ th:first-child,td:first-child{padding-left:14px}
 .sortbar .chip{padding:6px 11px;font-size:12px}
 th[data-sort]{cursor:pointer;user-select:none}th[data-sort]:hover{color:var(--ink)}th.son{color:var(--acc)}
 .sar{font-size:9px;margin-left:3px}
-@media (max-width:820px){.sortbar{display:flex}}
+@media (max-width:820px){body.cards .sortbar{display:flex}}
 .rsi-top{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--sh);margin:14px 0 12px}
 .lovm{display:flex;flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin:0!important;padding-bottom:2px}.lovm::-webkit-scrollbar{display:none}.lovm .chip{flex:none}
 .rsi-top h2{margin:0 0 2px;font-size:18px}.rsi-top .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
@@ -109,16 +109,20 @@ th[data-sort]{cursor:pointer;user-select:none}th[data-sort]:hover{color:var(--in
 .rsi-ch{grid-column:1/-1;margin-top:8px;cursor:default;min-width:0}.rsi-ch .det{grid-template-columns:1fr}.rsi-ch svg{width:100%;height:auto;display:block}.rsi-r.rsi-open{background:color-mix(in srgb,var(--acc) 4%,transparent)}
 .rsi-e{padding:28px 14px;text-align:center;color:var(--mut)}
 .empty{padding:48px 20px;text-align:center;color:var(--mut);white-space:normal!important}
-/* telefon: vrstice kot kartice */
+/* telefon: privzeto tabela s stolpci (klik na stolpec razvrsti), po izbiri kartice (body.cards) */
 @media (max-width:820px){
-  .card{background:none;border:0;box-shadow:none;overflow:visible}
-  #v-scan table thead{display:none}
-  #out tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--sh)}
-  #out tr:not(.rw){display:block}
-  #out td{padding:0;border:0;text-align:left;white-space:normal;min-width:0;font-size:13px}
-  #out tr.rw td:first-child{grid-column:1/-1;font-size:16px;display:flex;align-items:center;gap:2px;padding:0 0 6px;border-bottom:1px solid var(--line);margin-bottom:2px}
-  #out tr.rw td[data-l]::before{content:attr(data-l);display:block;color:var(--mut);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px;font-family:-apple-system,system-ui,sans-serif}
-  #out tr.rw:active{transform:scale(.99)}
+  body.cards .card{background:none;border:0;box-shadow:none;overflow:visible}
+  body.cards #v-scan table thead{display:none}
+  body.cards #out tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--sh)}
+  body.cards #out tr:not(.rw){display:block}
+  body.cards #out td{padding:0;border:0;text-align:left;white-space:normal;min-width:0;font-size:13px}
+  body.cards #out tr.rw td:first-child{grid-column:1/-1;font-size:16px;display:flex;align-items:center;gap:2px;padding:0 0 6px;border-bottom:1px solid var(--line);margin-bottom:2px}
+  body.cards #out tr.rw td[data-l]::before{content:attr(data-l);display:block;color:var(--mut);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px;font-family:-apple-system,system-ui,sans-serif}
+  body.cards #out tr.rw:active{transform:scale(.99)}
+  body:not(.cards) #v-scan th,body:not(.cards) #v-scan td{padding:9px 7px;font-size:13px}
+  body:not(.cards) #v-scan th:first-child,body:not(.cards) #v-scan td:first-child{position:sticky;left:0;z-index:2;background:var(--card);box-shadow:1px 0 0 var(--line)}
+  body:not(.cards) #v-scan th:first-child{background:var(--card2)}
+  body:not(.cards) #v-scan .rw:hover td:first-child{background:var(--card)}
 }
 /* okenca */
 .modal{position:fixed;inset:0;z-index:60;background:rgba(8,10,16,.5);display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
@@ -272,7 +276,7 @@ a.ib:focus-visible,button:focus-visible,.rw:focus-visible,.icb:focus-visible{out
 
 <div class="modal" id="m-filt"><div class="sheet sm">
   <div class="sh-h"><div class="sh-t"><h2>Filtri</h2></div><button class="icb" data-mclose type="button" title="Zapri"><svg class="i" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
-  <div class="sec"><h3>Pogled</h3><div class="chips"><button class="chip" data-cv="coin" type="button" title="Ena vrstica na kovanec z oznakami (volatilnost, sweep, div, FVG, HTF)">Kovanci</button><button class="chip" data-cv="lov" type="button" title="Ena vrstica na kovanec: RSI, HTF RSI, sweep, div, FVG, do GP (iz že naloženih sveč)">Lov</button><button class="chip" data-cv="setup" type="button" title="Seznam setupov (L-LL-HL / 1-2)">Setupi</button></div></div>
+  <div class="sec"><h3>Pogled</h3><div class="chips"><button class="chip" data-cv="coin" type="button" title="Ena vrstica na kovanec z oznakami (volatilnost, sweep, div, FVG, HTF)">Kovanci</button><button class="chip" data-cv="lov" type="button" title="Ena vrstica na kovanec: RSI, HTF RSI, sweep, div, FVG, do GP (iz že naloženih sveč)">Lov</button><button class="chip" data-cv="setup" type="button" title="Seznam setupov (L-LL-HL / 1-2)">Setupi</button></div><div class="chips" style="margin-top:8px"><span class="lbl">Na telefonu:</span><button class="chip" data-lay="t" type="button">Tabela</button><button class="chip" data-lay="k" type="button">Kartice</button></div></div>
   <div class="cvonly"><div class="sec"><h3>Oznake</h3><div class="chips">
     <button class="chip" data-cf="sw" type="button" title="Sweep v zadnjih 5 svečah">Sweep</button>
     <button class="chip" data-cf="dv" type="button" title="RSI divergenca v zadnjih 10 svečah">Div</button>
@@ -516,7 +520,7 @@ function ls(k,v){k=String(k).replace(/^jay_/,'jay2_');try{if(v===undefined)retur
 try{if(!localStorage.getItem('jay2_mig')){for(var mi=0;mi<localStorage.length;mi++){var mk0=localStorage.key(mi);if(/^jay_/.test(mk0)&&localStorage.getItem('jay2_'+mk0.slice(4))==null)localStorage.setItem('jay2_'+mk0.slice(4),localStorage.getItem(mk0))}localStorage.setItem('jay2_mig','1')}}catch(e){}
 /* ---------- Jezik (SL / EN): prevod prikazanega besedila ---------- */
 /* EX = celotno besedilo vozlišča, PH = fraze znotraj besedila (najdaljše najprej), RX = pravila s številkami. */
-var I18N_EX={'$':'$','Orodja':'Tools','Ujemanje':'Agreement','Najnovejši':'Newest','Lov (pogled v Screenerju)':'Hunt (Screener view)','Gain/Lose':'Gain/Lose','Pripravljeni':'Ready','CISD zdaj':'CISD now','Gainers / Losers 24h':'Gainers / Losers 24h','Gainers 24h':'Gainers 24h','Losers 24h':'Losers 24h','točk':'points','Oznake':'Marks','5m CISD':'5m CISD','CISD v smeri':'CISD in direction','CISD':'CISD','FVG okvir':'FVG timeframe','HTF FVG okvir':'HTF FVG timeframe','okvir skeniranja':'scan timeframe','samodejno':'automatic','Do GP največ (%)':'Max to GP (%)','TV layout id':'TV layout id','HTF RSI':'HTF RSI','Lov':'Hunt','Funding/OI':'Funding/OI','Sweep zdaj':'Sweep now','Deviation (lažni preboj)':'Deviation (false breakout)','Ob HTF coni':'At HTF zone','Skok volumna':'Volume spike','Funding in Open Interest':'Funding and Open Interest','HTF cona':'HTF zone','Volumen':'Volume','RSI ekstremi':'RSI extremes','Okvir:':'Timeframe:','Kovanci:':'Coins:','Preveri':'Check','RSI':'RSI','Razvrsti:':'Sort:','VP histogram':'VP histogram','NOVO':'NEW','Stolpci':'Columns','Višji okvir':'Higher timeframe','Filtri':'Filters','Pogled':'View','Oznake':'Marks','Samodejno':'Auto','Samodejno skeniranje':'Auto scan','Za Clauda':'For Claude','Povezave':'Links','Pravila':'Rules','Svetla / temna tema':'Light / dark theme','Zapri':'Close','pod':'below','nad':'above','vsi':'all','Vse':'All','vse':'all','Kot':'As','Od':'From','pikice':'dots','najboljša':'best','Zdaj':'Now','Izklop':'Off',
+var I18N_EX={'Na telefonu:':'On phone:','Tabela':'Table','Kartice':'Cards','$':'$','Orodja':'Tools','Ujemanje':'Agreement','Najnovejši':'Newest','Lov (pogled v Screenerju)':'Hunt (Screener view)','Gain/Lose':'Gain/Lose','Pripravljeni':'Ready','CISD zdaj':'CISD now','Gainers / Losers 24h':'Gainers / Losers 24h','Gainers 24h':'Gainers 24h','Losers 24h':'Losers 24h','točk':'points','Oznake':'Marks','5m CISD':'5m CISD','CISD v smeri':'CISD in direction','CISD':'CISD','FVG okvir':'FVG timeframe','HTF FVG okvir':'HTF FVG timeframe','okvir skeniranja':'scan timeframe','samodejno':'automatic','Do GP največ (%)':'Max to GP (%)','TV layout id':'TV layout id','HTF RSI':'HTF RSI','Lov':'Hunt','Funding/OI':'Funding/OI','Sweep zdaj':'Sweep now','Deviation (lažni preboj)':'Deviation (false breakout)','Ob HTF coni':'At HTF zone','Skok volumna':'Volume spike','Funding in Open Interest':'Funding and Open Interest','HTF cona':'HTF zone','Volumen':'Volume','RSI ekstremi':'RSI extremes','Okvir:':'Timeframe:','Kovanci:':'Coins:','Preveri':'Check','RSI':'RSI','Razvrsti:':'Sort:','VP histogram':'VP histogram','NOVO':'NEW','Stolpci':'Columns','Višji okvir':'Higher timeframe','Filtri':'Filters','Pogled':'View','Oznake':'Marks','Samodejno':'Auto','Samodejno skeniranje':'Auto scan','Za Clauda':'For Claude','Povezave':'Links','Pravila':'Rules','Svetla / temna tema':'Light / dark theme','Zapri':'Close','pod':'below','nad':'above','vsi':'all','Vse':'All','vse':'all','Kot':'As','Od':'From','pikice':'dots','najboljša':'best','Zdaj':'Now','Izklop':'Off',
  'Cena':'Price','Smer':'Side','Stanje':'Status','Stanje:':'Status:','Vstop':'Entry','Velikost':'Size','Kovanec':'Coin','Kovanci':'Coins','Setupi':'Setups','Okvir':'Timeframe',
  'Izid':'Result','Zgodovina':'History','Promet':'Turnover','Volatilnost':'Volatility','Struktura':'Structure','Konfluenca':'Confluence','Upravljanje':'Management',
  'Ekstenzije':'Extensions','Divergenca':'Divergence','Tradeov':'Trades','Zadetih':'Win rate','Skupaj R':'Total R','Na trade':'Per trade','Varianta':'Variant',
@@ -1298,7 +1302,10 @@ function rid(r){return r.s+'|'+r.dir+(r.state===4?'|sw':'')}
 function size(r){var a=+$('acct').value,p=+$('rpct').value;if(!(a>0&&p>0))return '–';var risk=a*p/100,q=risk/Math.abs(r.entry-r.sl);
   return '<span title="tveganje '+risk.toFixed(0)+' $">'+(q*r.entry>=1000?(q*r.entry/1000).toFixed(1)+'k $':(q*r.entry).toFixed(0)+' $')+'</span>'}
 var THS=null,cf={};try{cf=JSON.parse(ls('jay_cf')||'{}')||{}}catch(e){}
-function cvBtns(){document.body.classList.toggle('cv',cview);document.querySelectorAll('[data-cv]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-cv')===(lview?'lov':cview?'coin':'setup'))});
+var LAY=ls('jay_lay')==='k'?'k':'t';
+function layApply(){document.body.classList.toggle('cards',LAY==='k');document.querySelectorAll('[data-lay]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-lay')===LAY)})}
+document.addEventListener('click',function(e){var b=e.target.closest('[data-lay]');if(!b)return;LAY=b.getAttribute('data-lay');ls('jay_lay',LAY);layApply();render()});
+function cvBtns(){layApply();document.body.classList.toggle('cv',cview);document.querySelectorAll('[data-cv]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-cv')===(lview?'lov':cview?'coin':'setup'))});
   document.querySelectorAll('[data-cf]').forEach(function(b){b.classList.toggle('on',!!cf[b.getAttribute('data-cf')])})}
 function dirOK(bu){return side==='all'||(side==='long')===bu}
 var FAV={},NOTES={},favOn=ls('jay_favf')==='1';try{FAV=JSON.parse(ls('jay_fav')||'{}')||{}}catch(e){}try{NOTES=JSON.parse(ls('jay_notes')||'{}')||{}}catch(e){}
