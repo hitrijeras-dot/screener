@@ -87,3 +87,11 @@ Meje: dnevna izguba 400 $, skupna 1.000 $ (ne pod 9.000 $). Cilja: faza 1 +8 %, 
 - `cft.py` – simulacija CFT challenga. `decode.py` – dekodiranje podatkov, prenesenih iz brskalnika.
 - Podatki niso v repu (prevelik). Pridobitev: Bybit `v5/market/kline` (5m, 90 dni na kos) – iz brskalnika, ker okolje do Bybita nima dostopa.
 - `rezultati/` – CSV-ji in seznam vseh 483 poslov (`posli-1D-EQ.csv`).
+
+## Različica 2 (13. 10. 2026 zvečer) – kaj je novo in kje je stara
+- **Stara različica (v1) je shranjena** v `sweep-v1/` (https://hitrijeras-dot.github.io/screener/sweep-v1/). Jure: "če ne bo ok, si zapomni to serijo" → če v2 ne ustreza, se vrneva na v1 (kopiraj `sweep-v1/` nazaj v `sweep/`, dodaj nazaj `sw.js`).
+- **Backtest biasa** (`koda/bias_bt.py`, `koda/bias_eval.py`; bias izračunan iz 20 testiranih kovancev po isti formuli kot v aplikaciji, po urah):
+  - Kot **filter** bias ne pomaga: posli proti biasu (tot@open < −20) so imeli +0,32 R/posel, v smeri (> +20) +0,42 R, a samo 88 poslov – preveč izgubljenih poslov in ni stabilno po obdobjih.
+  - Kot **velikost rizika** pomaga: pol rizika, ko je bias zadnje seje ob odprtju dneva (= včeraj NY) proti smeri (sess·smer < −20): +127,7 R, maxDD 17,3 R (vs +146 R, DD 23,5 R; razmerje dobiček/DD 7,4 vs 6,2).
+  - Long +0,34 R/posel, short +0,26 R/posel → obe smeri ostaneta.
+- **Aplikacija v2:** prvi zaslon je **Danes** (Sweep 1D limiti, bias trga + včeraj NY, riziko ½ proti biasu seje – nastavljivo "½ proti biasu / Vedno poln", riziko 50/75/100 $, količina = riziko / razdalja do SL, smer Oba/Long/Short, veljavni setupi na vrhu, 🔔 obvestila v brskalniku ob novem setupu, ko je aplikacija odprta). Screener: privzeto "V smeri biasa" (pri neodločenem obe smeri) in "Do SL ≤ 3 %" (vse/5/3/2 %).

@@ -110,6 +110,8 @@ table.t tr.rw{cursor:pointer}table.t tr.rw:hover td{background:var(--s2)}table.t
 .stbl th:first-child,.stbl td:first-child{text-align:left}
 .stbl th{color:var(--mut);font-weight:600;font-size:12px;border-top:0}
 /* limiti / log */
+.tw table.t td:last-child,.tw table.t th:last-child{padding-right:14px}
+.today-bias{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}.today-bias b{font:700 22px/1.1 var(--hd)}.today-bias b.bear{color:var(--short)}.today-bias b.bull{color:var(--long)}.today-bias b.mid{color:var(--buoy)}
 .kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px}
 .k{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);padding:10px 12px}
 .k b{display:block;font:700 22px/1.1 var(--hd);font-variant-numeric:tabular-nums}.k span{color:var(--mut);font-size:12px}
@@ -143,7 +145,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
 <main>
   <div class="alert" id="alert"></div>
 
-  <section class="view on" id="v-screener">
+  <section class="view" id="v-screener">
     <h2>Kovanci na točki</h2>
     <p class="lead">Sweep Model: višja sveča je posweepala prejšnji high ali low. Tukaj so kovanci, kjer je cena zdaj v FVG, na fibu, v 1-2 coni ali na drugi točki indikatorja. Tapni kovanec za graf.</p>
     <div class="ctl">
@@ -152,9 +154,10 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
       <select id="smMin"><option value="0">Ocena 0+</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5/5</option></select>
       <div class="seg" id="smSide"><button class="on" data-side="all">Oba</button><button data-side="long">Long</button><button data-side="short">Short</button></div>
       <div class="seg" id="smView"><button data-view="card">Kartice</button><button data-view="table">Tabela</button></div>
+      <select id="smNear" title="Največja razdalja do SL"><option value="99">Do SL: vse</option><option value="5">Do SL ≤ 5 %</option><option value="3" selected>Do SL ≤ 3 %</option><option value="2">Do SL ≤ 2 %</option></select>
       <button class="btn" id="smGo">Skeniraj</button>
     </div>
-    <div class="pts" id="smPts"><button class="pt tog on" id="smOnly">Samo na točki</button></div>
+    <div class="pts" id="smPts"><button class="pt tog on" id="smBias" title="Pokaži samo smer, ki jo kaže bias trga (pri neodločenem obe)">V smeri biasa</button><button class="pt tog on" id="smOnly">Samo na točki</button></div>
     <p class="sum" id="smSum"></p>
     <div class="list" id="smList"><div class="empty">Skeniram trg…</div></div>
   </section>
@@ -166,11 +169,19 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
   </section>
 
   <section class="view" id="v-limits">
-    <h2>Limiti Sweep 1D</h2>
-    <p class="lead">Strategija iz backtesta: dnevni sweep, zaprtje nazaj, limit na posweepan nivo. Setupi iz včerajšnje dnevne sveče veljajo do 2:00.</p>
-    <div class="ctl"><select id="uni"><option value="test">20 testiranih kovancev</option><option value="top30">Top 30 kripto</option></select><button class="btn" id="go">Osveži</button></div>
-    <div class="kp"><div class="k"><b id="kToday">–</b><span>veljavnih limitov danes</span></div></div>
-    <div class="tw"><h3>Aktivni limiti</h3><p>Status se sproti posodablja iz Bybit podatkov.</p><div id="todayTbl"><div class="empty">Nalagam…</div></div></div>
+    <h2>Danes</h2>
+    <p class="lead">Sweep 1D – strategija iz backtesta. Setupi iz včerajšnje dnevne sveče, limit velja do 2:00. Pri vsakem poslu je že izračunan riziko in količina.</p>
+    <div class="panel today-bias" id="tBias"><div class="mut">Računam bias…</div></div>
+    <div class="ctl">
+      <div class="seg" id="tSide"><button class="on" data-side="all">Oba</button><button data-side="long">Long</button><button data-side="short">Short</button></div>
+      <label class="mut" for="riskT">Riziko $</label><select id="riskT"><option>50</option><option selected>75</option><option>100</option></select>
+      <div class="seg" id="tHalf"><button class="on" data-half="1">½ proti biasu</button><button data-half="0">Vedno poln</button></div>
+      <select id="uni"><option value="test">20 testiranih kovancev</option><option value="top30">Top 30 kripto</option></select>
+      <button class="btn" id="go">Osveži</button>
+      <button class="ib" id="bell" title="Obvestila ob novem setupu">🔔</button>
+    </div>
+    <div class="kp"><div class="k"><b id="kToday">–</b><span>veljavnih limitov danes</span></div><div class="k"><b id="kRisk">–</b><span>skupni riziko veljavnih</span></div></div>
+    <div class="tw"><h3>Aktivni limiti</h3><p>Status se sproti posodablja iz Bybit podatkov. Riziko ½ pomeni, da je bila zadnja seja (včeraj NY) proti smeri posla.</p><div id="todayTbl"><div class="empty">Nalagam…</div></div></div>
     <div class="tw"><h3>Možni ob naslednjem zaprtju</h3><p>Današnja sveča je posweepala včerajšnji nivo in je zdaj nazaj v rangu. Velja, če tako zapre ob 2:00.</p><div id="nextTbl"><div class="empty">Nalagam…</div></div></div>
   </section>
 
@@ -198,6 +209,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
         <li>SL za ekstremom sweep sveče + 0,1 × ATR(14) na 1h. Razdalja 0,4–3 %, sicer preskoči.</li>
         <li>TP na sredini včerajšnje sveče (EQ). Če je manj kot 1:1, preskoči.</li>
         <li>Po 48 urah zapri. Največ 3 posli v isto smer na dan.</li>
+        <li>Če je zadnja seja (včeraj NY) proti smeri posla (pod −20 za long, nad +20 za short), vzemi pol rizika. V backtestu: +128 R namesto +146 R, največji padec 17 R namesto 24 R.</li>
       </ol>
       <h3>Crypto Fund Trader 10k (2-step)</h3>
       <ul>
@@ -209,6 +221,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
       <p>Setup: višja sveča (6H ali 1D) posweepa low ali high prejšnje. Po ekstremu iščem točke indikatorja Sweep Model: FVG, IFVG, VI, CISD, 1-2 cona, HTF fib pivoti, GP, OTE, posweepan nivo in odprtje HTF sveče. Ocena x/5: divergenca, FVG, retest, CISD, 1-2. Backtest je pokazal, da ti signali sami niso imeli roba, zato so za iskanje kandidatov.</p>
       <h3>Bias trga</h3>
       <p>Top 100 kripto kovancev na Bybitu. Za mesec, teden in dan: koliko kovancev je nad, v ali pod pivot območjem (CPR) prejšnjega obdobja. Za vsako sejo (Azija, London, New York) seštejem tri stvari: kje je cena glede na dnevni pivot (50 %), ali je seja zaprla višje ali nižje od odprtja (30 %) in ali je posweepala low ali high prejšnje seje in zaprla nazaj (20 %). Rezultat od −100 do +100. Skupni bias je povprečje višjih okvirjev in trenutne seje: pod −20 iščem predvsem shorte, nad +20 predvsem longe.</p>
+      <p>Backtest (180 dni, 20 kovancev): kot filter bias ne pomaga – posli proti biasu so bili še vedno v plusu. Pomaga pa pri velikosti rizika (pravilo zgoraj). Long +0,34 R in short +0,26 R na posel, zato ostaneta obe smeri.</p>
       <p class="mut">Ni finančni nasvet. Backtest ni zagotovilo za prihodnost.</p>
     </div>
   </section>
@@ -216,9 +229,9 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
 </main>
 
 <nav class="tabs" aria-label="Zasloni">
-  <button class="on" data-v="screener"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>Screener</button>
+  <button class="on" data-v="limits"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Danes</button>
+  <button data-v="screener"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>Screener</button>
   <button data-v="bias"><svg viewBox="0 0 24 24"><path d="M2 15c2.5 0 3.5-3 6-3s3.5 3 6 3 3.5-3 6-3"/><path d="M2 20c2.5 0 3.5-3 6-3s3.5 3 6 3 3.5-3 6-3"/><path d="M12 3v6"/></svg>Bias</button>
-  <button data-v="limits"><svg viewBox="0 0 24 24"><path d="M3 8h18M3 16h18"/><path d="M8 4v16"/></svg>Limiti</button>
   <button data-v="log"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h6"/></svg>Log</button>
   <button data-v="rules"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>Pravila</button>
 </nav>
@@ -407,8 +420,8 @@ async function tickers(){if(TK&&Date.now()-TKT<60000)return TK;TK=(await jget(AP
 async function topCrypto(n){var cs=await cryptoSet(),tk=await tickers();return tk.filter(function(x){return cs[x.symbol]&&+x.lastPrice>0}).sort(function(a,b){return +b.turnover24h-(+a.turnover24h)}).slice(0,n).map(function(x){return x.symbol.replace(/USDT$/,'')})}
 
 // ---------- navigacija (vsak zaslon je svoje "okno", tudi z gumbom nazaj)
-var VIEWS=['screener','bias','limits','log','rules'],started={};
-function show(v){if(VIEWS.indexOf(v)<0)v='screener';
+var VIEWS=['limits','screener','bias','log','rules'],started={};
+function show(v){if(VIEWS.indexOf(v)<0)v='limits';
   VIEWS.forEach(function(x){$('v-'+x).classList.toggle('on',x===v)});
   document.querySelectorAll('.tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});
   if(!started[v]){started[v]=1;if(v==='limits'||v==='log')run();}
@@ -420,7 +433,7 @@ window.addEventListener('hashchange',function(){show(location.hash.slice(1))});
 $('theme').onclick=function(){var c=document.documentElement.dataset.theme,dark=c?c==='dark':true,n=dark?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem(k,n)}catch(e){};document.querySelectorAll('.chart').forEach(function(el){if(el._redraw)el._redraw()})}})();
 
 // ================= SCREENER =================
-var SMLAST=null,smSide='all',smOnly=true,smSel={},smOpen={},KC={},smView='card';
+var smBiasOn=true,SMLAST=null,smSide='all',smOnly=true,smSel={},smOpen={},KC={},smView='card';
 try{smView=localStorage.getItem('sweep_view')||'card'}catch(e){}
 document.querySelectorAll('#smView button').forEach(function(b){b.classList.toggle('on',b.dataset.view===smView);b.onclick=function(){smView=b.dataset.view;try{localStorage.setItem('sweep_view',smView)}catch(e){}document.querySelectorAll('#smView button').forEach(function(x){x.classList.toggle('on',x===b)});smRender()}});
 var PTNAME={SWEEP:'Sweep nivo',OPEN:'Open HTF'};
@@ -451,7 +464,8 @@ function smMatch(x){return x.points.filter(function(p){return smSel[p.k]})}
 function ptLabel(p){return p.lab||PTNAME[p.k]||p.k}
 function smRender(){
   if(!SMLAST)return;
-  var minS=+$('smMin').value||0,all=SMLAST.rows.filter(function(x){return x.score>=minS}),rows=all;
+  var minS=+$('smMin').value||0,near=+$('smNear').value||99,all=SMLAST.rows.filter(function(x){return x.score>=minS&&((x.px-x.ext)/x.px*100*(x.side==='long'?1:-1))<=near}),rows=all;
+  var bd=(smBiasOn&&BIAS)?(BIAS.tot<=-20?'short':BIAS.tot>=20?'long':null):null;if(bd)rows=rows.filter(function(x){return x.side===bd});
   if(smSide!=='all')rows=rows.filter(function(x){return x.side===smSide});
   var hits=rows.filter(function(x){return smMatch(x).length});
   if(smOnly)rows=hits;
@@ -548,6 +562,7 @@ function smChart(el,x,all,dt){
     else o+='<text x="'+(tx+4)+'" y="'+(tg.ty+4)+'" fill="'+tg.c+'" font-weight="600">'+esc(tg.t)+'</text>'});
   o+='</svg>';el.innerHTML=o;
 }
+$('smBias').onclick=function(){smBiasOn=!smBiasOn;this.classList.toggle('on',smBiasOn);smRender()};$('smNear').onchange=smRender;
 $('smGo').onclick=smRun;$('smTf').onchange=function(){smOpen={};smRun()};$('smUni').onchange=smRun;$('smMin').onchange=smRender;
 setInterval(function(){if($('v-screener').classList.contains('on'))smRun()},2*60*1000);
 
@@ -612,6 +627,7 @@ function biasRender(){
     '<div class="panel"><h3>Višji okvirji</h3><p>Koliko kovancev je nad (zeleno), v (sivo) ali pod (rdeče) pivot območjem prejšnjega meseca, tedna in dneva. Številka desno je neto razlika.</p><div class="htf">'+htf+'</div></div>'+
     '<p class="foot">'+B.n+' kripto kovancev z največjim prometom na Bybitu · osveženo '+fmtH(B.now)+' · samodejno vsakih 10 minut. Časi so po našem času.</p>';
 }
+var _br=biasRender;biasRender=function(){_br();todayBias();if(LAST)render();if(SMLAST)smRender()};
 biasRun();setInterval(biasRun,10*60*1000);
 var rsT=null;window.addEventListener('resize',function(){clearTimeout(rsT);rsT=setTimeout(function(){biasRender();document.querySelectorAll('.chart').forEach(function(el){if(el._redraw)el._redraw()})},200)});
 
@@ -631,21 +647,40 @@ async function run(){
   }catch(e){alertMsg('Limiti se niso naložili: '+e.message)}
   $('go').disabled=false;
 }
+var tSide='all',tHalf=true;
+try{tHalf=localStorage.getItem('sweep_half')!=='0';var rv=localStorage.getItem('sweep_risk');if(rv){$('riskT').value=rv;$('risk').value=rv}}catch(e){}
+document.querySelectorAll('#tSide button').forEach(function(b){b.onclick=function(){tSide=b.dataset.side;document.querySelectorAll('#tSide button').forEach(function(x){x.classList.toggle('on',x===b)});render()}});
+document.querySelectorAll('#tHalf button').forEach(function(b){b.classList.toggle('on',(b.dataset.half==='1')===tHalf);b.onclick=function(){tHalf=b.dataset.half==='1';try{localStorage.setItem('sweep_half',tHalf?'1':'0')}catch(e){}document.querySelectorAll('#tHalf button').forEach(function(x){x.classList.toggle('on',x===b)});render()}});
+$('riskT').onchange=function(){$('risk').value=$('riskT').value;try{localStorage.setItem('sweep_risk',$('riskT').value)}catch(e){}render()};
+function todayBias(){var B=BIAS,el=$('tBias');if(!B){el.innerHTML='<div class="mut">Računam bias…</div>';return}
+  var L=biasLabel(B.tot),ny=B.sess[0]?B.sess[0].score:null,dir=ny==null?'':ny<-20?'short':ny>20?'long':'';
+  el.innerHTML='<span class="mut">Bias trga</span> <b class="'+L[1]+'">'+L[0]+' '+(B.tot>0?'+':'')+Math.round(B.tot)+'</b><span class="mut">Včeraj NY</span> <b class="'+(ny<-20?'bear':ny>20?'bull':'mid')+'">'+(ny==null?'–':(ny>0?'+':'')+Math.round(ny))+'</b><span class="mut">'+(dir?(dir==='short'?'Longi danes s polovičnim rizikom.':'Shorti danes s polovičnim rizikom.'):'Danes poln riziko v obe smeri.')+'</span>'}
+function notifyNew(vt){try{var key='sweep_seen',seen=JSON.parse(localStorage.getItem(key)||'{}'),fresh=vt.filter(function(x){return !seen[x.sym+x.side+x.day]});
+  vt.forEach(function(x){seen[x.sym+x.side+x.day]=1});localStorage.setItem(key,JSON.stringify(seen));
+  if(fresh.length&&window.Notification&&Notification.permission==='granted'&&Object.keys(seen).length>fresh.length)new Notification('Sweep: '+fresh.length+' nov'+(fresh.length===1?' setup':'ih setupov'),{body:fresh.map(function(x){return x.sym+' '+(x.side==='long'?'LONG':'SHORT')+' @ '+fmtP(x.level)}).join(', '),icon:'icon-192.png'})}catch(e){}}
+$('bell').onclick=function(){if(!window.Notification){alertMsg('Ta brskalnik ne podpira obvestil.');return}Notification.requestPermission().then(function(p){$('bell').textContent=p==='granted'?'🔔':'🔕';if(p==='granted')new Notification('Sweep',{body:'Obvestila so vklopljena. Javim, ko se pojavi nov setup (ko je aplikacija odprta).',icon:'icon-192.png'})})};
+if(window.Notification&&Notification.permission==='denied')$('bell').textContent='🔕';
 function render(){
-  if(!LAST)return;var now=LAST.now,risk=+$('risk').value||75,bySym={};
+  if(!LAST)return;var now=LAST.now,risk=+$('risk').value||75,riskT=+$('riskT').value||75,bySym={};
+  var sB=BIAS&&BIAS.sess[0]?BIAS.sess[0].score:null;
+  var rk=function(x){var sg=x.side==='long'?1:-1;return (tHalf&&sB!=null&&sB*sg<-20)?riskT/2:riskT};
   LAST.data.forEach(function(d){if(d&&!d.err)bySym[d.s]=d});
   var yday=Math.floor(now/DAY)*DAY-DAY,today=[];
   LAST.syms.forEach(function(s){var d=bySym[s];if(!d)return;sweepSetups(s,d.d1,d.h1,now,yday).forEach(function(x){if(x.day===yday){x.px=d.px;today.push(x)}})});
   applyCap(today);
+  if(tSide!=='all')today=today.filter(function(x){return x.side===tSide});
   today.sort(function(a,b){var o={open:0,wait:1};return ((o[a.status]!=null?o[a.status]:2)-(o[b.status]!=null?o[b.status]:2))||a.sym.localeCompare(b.sym)});
   var calc=function(x){var d=bySym[x.sym],A=atr1h(d.h1),a=A[A.length-1],sg=x.side==='long'?1:-1,sl=x.sl!=null?x.sl:x.ext-sg*CFG.slBufAtr*a,en=x.entry!=null?x.entry:x.level;return {sl:sl,rp:(en-sl)*sg/en,rr:(x.tp-en)*sg/((en-sl)*sg)}};
   var valid=function(x){if(x.status!=='wait')return false;var c=calc(x);return c.rp>=CFG.minRisk&&c.rp<=CFG.maxRisk&&c.rr>=CFG.minRR};
-  $('kToday').textContent=today.filter(valid).length;
-  $('todayTbl').innerHTML=today.length?tbl(['Kovanec','Smer','Limit','SL','TP (EQ)','RR','Cena','Do limita','Status'],today.map(function(x){var c=calc(x),dist=x.px!=null?(x.px-x.level)/x.level*100:null;
-    return ['<b>'+esc(x.sym)+'</b>',sidePill(x.side),fmtP(x.level),fmtP(c.sl)+' <span class="mut">'+(c.rp*100).toFixed(2)+' %</span>',fmtP(x.tp),c.rr.toFixed(2),fmtP(x.px),dist==null?'–':(dist>0?'+':'')+dist.toFixed(2)+' %',stHtml(x)+(x.status==='wait'&&!valid(x)?' <span class="mut">bo preskočen</span>':'')]})):'<div class="empty">Danes ni setupov. Včerajšnja dnevna sveča ni nikjer posweepala in zaprla nazaj.</div>';
+  today.sort(function(a,b){var k=function(x){return x.status==='open'?0:valid(x)?1:x.status==='wait'?3:2};return k(a)-k(b)||a.sym.localeCompare(b.sym)});
+  var vt=today.filter(valid);$('kToday').textContent=vt.length;$('kRisk').textContent=vt.length?Math.round(vt.reduce(function(a,x){return a+rk(x)},0))+' $':'–';
+  notifyNew(vt);
+  $('todayTbl').innerHTML=today.length?tbl(['Kovanec','Smer','Limit','SL','TP (EQ)','RR','Riziko','Količina','Cena','Do limita','Status'],today.map(function(x){var c=calc(x),dist=x.px!=null?(x.px-x.level)/x.level*100:null,r=rk(x),en=x.entry!=null?x.entry:x.level,qty=r/Math.abs(en-c.sl);
+    return ['<b>'+esc(x.sym)+'</b>',sidePill(x.side),fmtP(x.level),fmtP(c.sl)+' <span class="mut">'+(c.rp*100).toFixed(2)+' %</span>',fmtP(x.tp),c.rr.toFixed(2),(r<riskT?'<span class="st wait">½</span> ':'')+Math.round(r)+' $',(qty>=100?Math.round(qty):qty>=1?qty.toFixed(2):qty.toPrecision(3))+' <span class="mut">'+esc(x.sym)+'</span>',fmtP(x.px),dist==null?'–':(dist>0?'+':'')+dist.toFixed(2)+' %',(x.status==='wait'&&!valid(x)?'<span class="st" style="opacity:.6">preskoči ('+(calc(x).rr<CFG.minRR?'RR':'SL')+')</span>':stHtml(x))]})):'<div class="empty">Danes ni setupov. Včerajšnja dnevna sveča ni nikjer posweepala in zaprla nazaj.</div>';
   var next=[];LAST.syms.forEach(function(s){var d=bySym[s];if(!d||d.d1.length<2)return;var S=d.d1[d.d1.length-1],P=d.d1[d.d1.length-2];if(S.t+DAY<=now)return;
     if(S.l<P.l&&d.px>P.l)next.push({sym:s,side:'long',level:P.l,ext:S.l,tp:(P.h+P.l)/2,px:d.px});
     if(S.h>P.h&&d.px<P.h)next.push({sym:s,side:'short',level:P.h,ext:S.h,tp:(P.h+P.l)/2,px:d.px})});
+  if(tSide!=='all')next=next.filter(function(x){return x.side===tSide});
   $('nextTbl').innerHTML=next.length?tbl(['Kovanec','Smer','Bodoči limit','Ekstrem','TP (EQ)','Cena'],next.map(function(x){return ['<b>'+esc(x.sym)+'</b>',sidePill(x.side),fmtP(x.level),fmtP(x.ext),fmtP(x.tp),fmtP(x.px)]})):'<div class="empty">Trenutno nič.</div>';
   var log=[];TESTED.forEach(function(s){var d=bySym[s];if(!d)return;sweepSetups(s,d.d1,d.h1,now,LOG_START).forEach(function(x){log.push(x)})});
   applyCap(log);
@@ -663,7 +698,7 @@ setInterval(function(){if(started.limits||started.log)run()},5*60*1000);
 
 // ================= JEZIK (slovensko / angleško) =================
 // Besedila v aplikaciji so slovenska; v angleškem načinu jih prevajalnik sproti zamenja (tudi v grafih in tabelah).
-var EN={"FVG – nepokrit bull/bear FVG po sweepu":"FVG – uncovered FVG after the sweep","IFVG – obrnjen FVG iz poteze v sweep":"IFVG – inverted FVG from the move into the sweep","Volume imbalance po sweepu":"Volume imbalance after the sweep","Retest CISD nivoja (po potrditvi)":"Retest of the CISD level (after confirmation)","1-2 cona (0,618–0,786 impulza po CISD)":"1-2 zone (0.618–0.786 of the impulse after CISD)","HTF fib pivot (0,5 … 2,618)":"HTF fib pivot (0.5 … 2.618)","Golden pocket HTF sveče (0,618–0,65)":"Golden pocket of the HTF candle (0.618–0.65)","OTE cona (0,618–0,786 noge v sweep)":"OTE zone (0.618–0.786 of the leg into the sweep)","Retest posweepanega nivoja":"Retest of the swept level","Odprtje HTF sveče (opening line)":"HTF candle open (opening line)",
+var EN={"Danes":"Today","preskoči (RR)":"skip (RR)","preskoči (SL)":"skip (SL)","Sweep 1D – strategija iz backtesta. Setupi iz včerajšnje dnevne sveče, limit velja do 2:00. Pri vsakem poslu je že izračunan riziko in količina.":"Sweep 1D – the backtested strategy. Setups from yesterday’s daily candle, the limit is valid until 2:00. Risk and size are already calculated for every trade.","½ proti biasu":"½ against bias","Vedno poln":"Always full","Riziko $":"Risk $","skupni riziko veljavnih":"total risk of valid setups","Status se sproti posodablja iz Bybit podatkov. Riziko ½ pomeni, da je bila zadnja seja (včeraj NY) proti smeri posla.":"Status updates live from Bybit data. Risk ½ means the last session (yesterday NY) went against the trade direction.","Riziko":"Risk","Količina":"Size","Bias trga":"Market bias","Včeraj NY":"Yesterday NY","Longi danes s polovičnim rizikom.":"Longs today with half risk.","Shorti danes s polovičnim rizikom.":"Shorts today with half risk.","Danes poln riziko v obe smeri.":"Full risk in both directions today.","V smeri biasa":"With the bias","Do SL: vse":"To SL: all","Do SL ≤ 5 %":"To SL ≤ 5 %","Do SL ≤ 3 %":"To SL ≤ 3 %","Do SL ≤ 2 %":"To SL ≤ 2 %","Pokaži samo smer, ki jo kaže bias trga (pri neodločenem obe)":"Show only the direction of the market bias (both when undecided)","Največja razdalja do SL":"Maximum distance to SL","Obvestila ob novem setupu":"Notifications for new setups","Če je zadnja seja (včeraj NY) proti smeri posla (pod −20 za long, nad +20 za short), vzemi pol rizika. V backtestu: +128 R namesto +146 R, največji padec 17 R namesto 24 R.":"If the last session (yesterday NY) is against the trade (below −20 for a long, above +20 for a short), take half risk. In the backtest: +128 R instead of +146 R, max drawdown 17 R instead of 24 R.","Backtest (180 dni, 20 kovancev): kot filter bias ne pomaga – posli proti biasu so bili še vedno v plusu. Pomaga pa pri velikosti rizika (pravilo zgoraj). Long +0,34 R in short +0,26 R na posel, zato ostaneta obe smeri.":"Backtest (180 days, 20 coins): as a filter the bias does not help – trades against it were still profitable. It does help with position size (rule above). Long +0.34 R and short +0.26 R per trade, so both directions stay.","Ta brskalnik ne podpira obvestil.":"This browser does not support notifications.","FVG – nepokrit bull/bear FVG po sweepu":"FVG – uncovered FVG after the sweep","IFVG – obrnjen FVG iz poteze v sweep":"IFVG – inverted FVG from the move into the sweep","Volume imbalance po sweepu":"Volume imbalance after the sweep","Retest CISD nivoja (po potrditvi)":"Retest of the CISD level (after confirmation)","1-2 cona (0,618–0,786 impulza po CISD)":"1-2 zone (0.618–0.786 of the impulse after CISD)","HTF fib pivot (0,5 … 2,618)":"HTF fib pivot (0.5 … 2.618)","Golden pocket HTF sveče (0,618–0,65)":"Golden pocket of the HTF candle (0.618–0.65)","OTE cona (0,618–0,786 noge v sweep)":"OTE zone (0.618–0.786 of the leg into the sweep)","Retest posweepanega nivoja":"Retest of the swept level","Odprtje HTF sveče (opening line)":"HTF candle open (opening line)",
 'Bias …':'Bias …','Kovanci na točki':'Coins at a point',
 'Sweep Model: višja sveča je posweepala prejšnji high ali low. Tukaj so kovanci, kjer je cena zdaj v FVG, na fibu, v 1-2 coni ali na drugi točki indikatorja. Tapni kovanec za graf.':'Sweep Model: a higher-timeframe candle swept the previous high or low. These are the coins where price is now in an FVG, on a fib, in the 1-2 zone or at another point of the indicator. Tap a coin for its chart.',
 'Top 50 kripto':'Top 50 crypto','Top 100 kripto':'Top 100 crypto','Top 30 kripto':'Top 30 crypto','20 testiranih':'20 tested','20 testiranih kovancev':'20 tested coins',
@@ -747,7 +782,7 @@ $('lang').title=LANG==='en'?'Slovenščina':'English';
 $('lang').onclick=function(){try{localStorage.setItem('sweep_lang',LANG==='en'?'sl':'en')}catch(e){}location.reload()};
 
 // ---------- zagon
-show(location.hash.slice(1)||'screener');smRun();
+show(location.hash.slice(1)||'limits');smRun();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(function(reg){reg.update()}).catch(function(){});
 
 </script>
