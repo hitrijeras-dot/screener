@@ -6,6 +6,7 @@ Repo je objavljen na https://hitrijeras-dot.github.io/screener/ (vsak push na `m
 - `index.html` – **Moj Screener** (CISD sistem). Ne spreminjaj, razen če Jure izrecno reče.
 - `jay/` – samo preusmeritev na `jay2/` (stari Jay HL Screener izbrisan 11. 10. 2026). Ne dodajaj ničesar.
 - `jay2/` – **Jay App**: Jay sistem (OnlyWicks "time × value"), videz aplikacije (okenca, ikone, spodnja navigacija). **Vse nove nadgradnje Jay stila delamo tukaj.** Shranjuje v `jay2_*` (ob prvem zagonu prevzame stare `jay_*`).
+- `sweep/` – **Sweep 1D** (strategija iz OnlyWicks Sweep Model backtesta, 13. 10. 2026): aktivni limiti + paper log. Vse o njej v `claude-notes/sweep-1d/README.md`. Logika med `/*CORE*/` in `/*CORE-END*/` mora ostati enaka kot `claude-notes/sweep-1d/koda/engine.py` (končna različica).
 - `kader/`, `plonkic/`, `zanka/`, `lamela/`, `elastika/`, `pobarvanka/`, `pravljica/` – druge Juretove aplikacije, ne spreminjaj.
 - `claude-notes/` – zapiski za Claude. **Vse o Jay sistemu je v `claude-notes/jay/`** (začni z README.md, pravila.md).
 

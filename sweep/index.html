@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sweep 1D">
+<meta name="theme-color" content="#0f1217">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230f1217'/%3E%3Cpath d='M15 40 H85 M30 40 V78 M30 78 L48 52 L66 60 L84 22' stroke='%233fd1b3' stroke-width='7' fill='none'/%3E%3C/svg%3E">
+<title>Sweep 1D</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#667085;--line:#e3e6eb;--long:#0b8a74;--longbg:#dff5ef;--short:#c4452f;--shortbg:#fbe6e1;--acc:#1f4fd8;--warn:#b7791f;--warnbg:#fdf3dc}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--mut:#8a93a3;--line:#262c36;--long:#3fd1b3;--longbg:#12342d;--short:#ff7b63;--shortbg:#3a1d18;--acc:#7a9bff;--warn:#e8b04a;--warnbg:#33290f}}
+:root[data-theme=dark]{--bg:#0f1217;--card:#171b22;--ink:#e8ebf0;--mut:#8a93a3;--line:#262c36;--long:#3fd1b3;--longbg:#12342d;--short:#ff7b63;--shortbg:#3a1d18;--acc:#7a9bff;--warn:#e8b04a;--warnbg:#33290f}
+:root[data-theme=light]{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#667085;--line:#e3e6eb;--long:#0b8a74;--longbg:#dff5ef;--short:#c4452f;--shortbg:#fbe6e1;--acc:#1f4fd8;--warn:#b7791f;--warnbg:#fdf3dc}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.w{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.ib{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px}
+.k{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}.k .n{font-size:22px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}.k .t{color:var(--mut);font-size:12px;margin-top:2px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;font:inherit}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn{border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:600;font:inherit}
+.btn:disabled{opacity:.6}
+input,select{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:7px 10px;font:inherit}
+input{width:90px}
+.lbl{color:var(--mut);font-size:12px}
+.alert{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:9px 12px;margin-bottom:12px;display:none}.alert.show{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow-x:auto;margin-bottom:12px}
+.card h3{margin:0;padding:10px 12px 0;font-size:14px}
+.card .cn{color:var(--mut);font-size:12px;padding:2px 12px 8px}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+th{font-weight:500;color:var(--mut);font-size:12px}
+th:first-child,td:first-child,.tl{text-align:left}
+.pill{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
+.pill.long{background:var(--longbg);color:var(--long)}.pill.short{background:var(--shortbg);color:var(--short)}
+.st{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;border:1px solid var(--line)}
+.st.tp{color:var(--long);border-color:var(--long)}.st.sl{color:var(--short);border-color:var(--short)}.st.wait{color:var(--warn);border-color:var(--warn)}.st.open{color:var(--acc);border-color:var(--acc)}
+.up{color:var(--long)}.dn{color:var(--short)}.mut{color:var(--mut)}
+.empty{padding:28px;text-align:center;color:var(--mut)}
+.pane{display:none}.pane.on{display:block}
+.rules{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;line-height:1.55}
+.rules h3{margin:12px 0 4px;font-size:15px}.rules ol,.rules ul{margin:4px 0;padding-left:20px}
+.note{color:var(--mut);font-size:12px;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="hd">
+    <div>
+      <h1>Sweep 1D</h1>
+      <div class="sub">OnlyWicks Sweep Model na dnevnih svečah: sweep včerajšnjega high/low → zaprtje nazaj → limit na posweepan nivo. Časi so po našem času.</div>
+    </div>
+    <button class="ib" id="theme" title="Tema">◐</button>
+  </div>
+
+  <div class="alert" id="alert"></div>
+
+  <div class="kp">
+    <div class="k"><div class="n" id="kToday">–</div><div class="t">limitov danes</div></div>
+    <div class="k"><div class="n" id="kTrades">–</div><div class="t">poslov v paper logu</div></div>
+    <div class="k"><div class="n" id="kR">–</div><div class="t">paper log skupaj (R)</div></div>
+    <div class="k"><div class="n" id="kUsd">–</div><div class="t">paper log v $</div></div>
+    <div class="k"><div class="n" id="kWin">–</div><div class="t">win rate</div></div>
+  </div>
+
+  <div class="bar">
+    <button class="chip on" data-tab="today">Danes</button>
+    <button class="chip" data-tab="log">Paper log</button>
+    <button class="chip" data-tab="rules">Pravila</button>
+    <span style="flex:1"></span>
+    <span class="lbl">Riziko $</span><input id="risk" type="number" min="1" step="5" value="75">
+    <select id="uni">
+      <option value="test">20 testiranih kovancev</option>
+      <option value="top30">Top 30 po prometu</option>
+    </select>
+    <button class="btn" id="go">Osveži</button>
+  </div>
+
+  <div class="pane on" id="p-today">
+    <div class="card">
+      <h3>Aktivni limiti</h3>
+      <div class="cn" id="todayNote">Setupi iz včerajšnje dnevne sveče. Limit velja do 2:00 naslednjega jutra.</div>
+      <div id="todayTbl"><div class="empty">Nalagam…</div></div>
+    </div>
+    <div class="card">
+      <h3>Možni setupi ob naslednjem zaprtju</h3>
+      <div class="cn">Današnja sveča je že posweepala včerajšnji nivo in je trenutno nazaj v rangu. Velja šele, če tako tudi zapre (ob 2:00).</div>
+      <div id="nextTbl"><div class="empty">Nalagam…</div></div>
+    </div>
+  </div>
+
+  <div class="pane" id="p-log">
+    <div class="card">
+      <h3>Paper log</h3>
+      <div class="cn" id="logNote">Vsi setupi od dnevne sveče 13. 10. 2026 naprej, izračunani iz Bybit podatkov po istih pravilih kot backtest (s provizijami). Največ 3 posli v isto smer na dan.</div>
+      <div id="logTbl"><div class="empty">Nalagam…</div></div>
+    </div>
+  </div>
+
+  <div class="pane" id="p-rules">
+    <div class="rules">
+      <h3>Pravila</h3>
+      <ol>
+        <li><b>Setup:</b> dnevna sveča (UTC, pri nas zapre ob 2:00) posweepa včerajšnji <b>low</b> (long) ali <b>high</b> (short).</li>
+        <li><b>Potrditev:</b> sveča se zapre <b>nazaj</b> nad včerajšnjim lowom (long) oz. pod highom (short).</li>
+        <li><b>Vstop:</b> naslednji dan <b>limit (Post-Only)</b> točno na posweepan nivo. Velja 24 ur. Če cena pred vstopom preseže ekstrem sweep sveče, setup odpade.</li>
+        <li><b>SL:</b> za ekstremom sweep sveče + 0,1 × ATR(14) na 1h. Razdalja SL mora biti 0,4 %–3 %, sicer preskoči.</li>
+        <li><b>TP:</b> sredina (EQ) včerajšnje sveče. Če je to manj kot 1:1, preskoči.</li>
+        <li><b>Izhod po času:</b> po 48 urah zapri po trenutni ceni.</li>
+        <li><b>Omejitev:</b> največ 3 posli v isto smer na dan.</li>
+      </ol>
+      <h3>Crypto Fund Trader 10k (2-step)</h3>
+      <ul>
+        <li>Riziko 75 $ na posel, blizu cilja 50 $.</li>
+        <li>Nov posel samo, če <i>današnja izguba + riziko odprtih + nov posel ≤ 350 $</i> (meja 400 $).</li>
+        <li>Nov posel samo, če <i>stanje − odprti riziko − nov posel ≥ 9.050 $</i> (meja 9.000 $).</li>
+      </ul>
+      <h3>Backtest (16. 4.–13. 10. 2026, 20 kovancev)</h3>
+      <p>483 poslov, 44,5 % win, +0,30 R na posel po provizijah, največji padec 23,5 R. Pozitivno v vseh treh obdobjih in vsakem mesecu. Ocena x/5 indikatorja ni pomagala. Podrobnosti: <span class="mut">claude-notes/sweep-1d/</span>.</p>
+      <p class="mut">Ni finančni nasvet. Backtest ni zagotovilo za prihodnost.</p>
+    </div>
+  </div>
+
+  <div class="note" id="upd"></div>
+</div>
+
+<script>
+var API='https://api.bybit.com/v5/market/';
+var TESTED=['AAVE','ADA','ARB','AVAX','BNB','BTC','DOGE','DOT','ENA','ETH','HYPE','LINK','LTC','NEAR','SOL','SUI','TAO','TRX','WIF','XRP'];
+var LOG_START=Date.UTC(2026,9,13); // dnevna sveča 13. 10. 2026 (UTC)
+var DAY=86400000,HOUR=3600000;
+var qs=new URLSearchParams(location.search);
+if(qs.get('od')){var p=qs.get('od').split('-');LOG_START=Date.UTC(+p[0],+p[1]-1,+p[2])}
+
+/*CORE*/
+// Ista pravila kot backtest (claude-notes/sweep-1d/engine.py, htf=1D, ltf=1h, plevel_limit, tp=prev_eq).
+var CFG={life:24,maxHold:48,slBufAtr:0.1,minRisk:0.004,maxRisk:0.03,minRR:1,feeMaker:0.0002,feeTaker:0.00055,slip:0.0002,cap:3};
+function atr1h(h1){var a=[],n=14;for(var i=0;i<h1.length;i++){var b=h1[i],pc=i?h1[i-1].c:b.c;var tr=Math.max(b.h-b.l,Math.abs(b.h-pc),Math.abs(b.l-pc));a.push(i?a[i-1]+(tr-a[i-1])/n:tr)}return a}
+// d1 in h1: naraščajoče [{t,o,h,l,c}] (t v ms, začetek sveče). now: trenutni čas (ms).
+function sweepSetups(sym,d1,h1,now,fromT){
+  var A=atr1h(h1),out=[];
+  var idx={};for(var i=0;i<h1.length;i++)idx[h1[i].t]=i;
+  for(var k=1;k<d1.length;k++){
+    var P=d1[k-1],S=d1[k];
+    if(S.t<fromT)continue;
+    if(S.t+DAY>now)continue;                         // sweep sveča mora biti zaprta
+    [1,-1].forEach(function(sg){
+      var lev=sg>0?P.l:P.h, ext=sg>0?S.l:S.h, swept=sg>0?S.l<P.l:S.h>P.h, back=sg>0?S.c>P.l:S.c<P.h;
+      if(!swept||!back)return;
+      var tp=(P.h+P.l)/2, st={sym:sym,side:sg>0?'long':'short',day:S.t,level:lev,ext:ext,tp:tp,status:'wait'};
+      var start=S.t+DAY,exp=start+CFG.life*HOUR,i0=idx[start];
+      if(i0===undefined){ if(now<exp){st.status='wait'} else st.status='nodata'; out.push(st); return; }
+      var fill=-1;
+      for(var i=i0;i<h1.length&&h1[i].t<exp;i++){
+        var b=h1[i];
+        if(sg>0?b.l<ext:b.h>ext){st.status='inval';st.tEnd=b.t;break}
+        if(sg>0?b.l<=lev:b.h>=lev){fill=i;break}
+      }
+      if(fill<0){ if(st.status!=='inval') st.status=(h1.length&&h1[h1.length-1].t+HOUR>=exp)||now>=exp?'nofill':'wait'; out.push(st); return; }
+      var b=h1[fill],entry=sg>0?Math.min(lev,b.o):Math.max(lev,b.o);
+      var sl=sg>0?ext-CFG.slBufAtr*A[fill]:ext+CFG.slBufAtr*A[fill];
+      var risk=(entry-sl)*sg,rp=risk/entry,rr=(tp-entry)*sg/risk;
+      st.entry=entry;st.sl=sl;st.rp=rp;st.rr=rr;st.tFill=b.t;
+      if(risk<=0||rp<CFG.minRisk||rp>CFG.maxRisk){st.status='skipSL';out.push(st);return}
+      if(rr<CFG.minRR){st.status='skipRR';out.push(st);return}
+      var ex=null,how=null,j=fill;
+      if(sg>0?b.l<=sl:b.h>=sl){ex=sl;how='sl'}
+      else for(j=fill+1;j<h1.length;j++){var c=h1[j];
+        if(sg>0?c.l<=sl:c.h>=sl){ex=sg>0?Math.min(sl,c.o):Math.max(sl,c.o);how='sl';break}
+        if(sg>0?c.h>=tp:c.l<=tp){ex=sg>0?(c.o>tp?Math.max(tp,c.o):tp):(c.o<tp?Math.min(tp,c.o):tp);how='tp';break}
+        if(j-fill>=CFG.maxHold){ex=c.c;how='time';break}
+      }
+      if(how){
+        var gross=(ex-entry)*sg/risk,fin=CFG.feeMaker,fout=how==='tp'?CFG.feeMaker:CFG.feeTaker+CFG.slip;
+        st.exit=ex;st.how=how;st.R=gross-(fin+fout)/rp;st.status=how;st.tEnd=h1[j].t;
+      } else {
+        var last=h1[h1.length-1];st.status='open';st.last=last.c;st.R=(last.c-entry)*sg/risk;
+      }
+      out.push(st);
+    });
+  }
+  return out;
+}
+// največ CFG.cap poslov v isto smer na dan (po času vstopa, UTC dan)
+function applyCap(list){
+  var filled=list.filter(function(s){return s.tFill!==undefined&&['tp','sl','time','open'].indexOf(s.status)>=0}).sort(function(a,b){return a.tFill-b.tFill||(a.sym<b.sym?-1:1)});
+  var cnt={};filled.forEach(function(s){var k=Math.floor(s.tFill/DAY)+s.side;cnt[k]=(cnt[k]||0)+1;if(cnt[k]>CFG.cap){s.capped=true}});
+  return list;
+}
+/*CORE-END*/
+
+async function jget(u){var r=await fetch(u);if(!r.ok)throw new Error(r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
+function mapK(l){return l.map(function(x){return {t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4]}}).reverse()}
+async function kRange(sym,iv,from,to){
+  var out={},end=to;
+  for(var g=0;g<20;g++){
+    var r=await jget(API+'kline?category=linear&symbol='+sym+'USDT&interval='+iv+'&limit=1000&start='+from+'&end='+end);
+    var l=mapK(r.list);if(!l.length)break;
+    l.forEach(function(b){out[b.t]=b});
+    if(l[0].t<=from||l.length<1000)break;end=l[0].t-1;
+  }
+  return Object.keys(out).map(Number).sort(function(a,b){return a-b}).map(function(t){return out[t]});
+}
+async function pool(items,n,fn){var res=[],i=0;async function w(){while(i<items.length){var k=i++;try{res[k]=await fn(items[k])}catch(e){res[k]={err:e}}}}var ws=[];for(var j=0;j<n;j++)ws.push(w());await Promise.all(ws);return res}
+
+var fmtP=function(v){if(v==null||v!==v)return '–';var a=Math.abs(v),d=a>=1000?1:a>=100?2:a>=1?3:a>=0.1?4:a>=0.01?5:6;return v.toFixed(d)};
+var fmtT=function(t){var d=new Date(t);return d.toLocaleString('sl-SI',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})};
+var fmtD=function(t){var d=new Date(t);return d.getUTCDate()+'. '+(d.getUTCMonth()+1)+'.'};
+var fR=function(v){return v==null||v!==v?'–':(v>0?'+':'')+v.toFixed(2)+' R'};
+var fUsd=function(v){return (v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleString('sl-SI',{maximumFractionDigits:0})+' $'};
+var STAT={wait:['čaka na vstop','wait'],nofill:['ni bilo vstopa',''],inval:['odpadel (preboj ekstrema)',''],skipSL:['preskočen (SL razdalja)',''],skipRR:['preskočen (RR < 1)',''],tp:['TP','tp'],sl:['SL','sl'],time:['zaprt po 48 h',''],open:['odprt','open'],nodata:['ni podatkov','']};
+function stHtml(s){var x=STAT[s.status]||[s.status,''];var t=x[0];if(s.capped)t+=' · čez limit 3';return '<span class="st '+x[1]+'">'+t+'</span>'}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+var LAST=null;
+async function universe(){
+  if($('uni').value==='test')return TESTED.slice();
+  var tk=await jget(API+'tickers?category=linear');
+  return tk.list.filter(function(x){return /USDT$/.test(x.symbol)}).sort(function(a,b){return +b.turnover24h-(+a.turnover24h)}).slice(0,30).map(function(x){return x.symbol.replace(/USDT$/,'')});
+}
+function $(i){return document.getElementById(i)}
+async function run(){
+  $('go').disabled=true;$('alert').classList.remove('show');
+  try{
+    var now=Date.now(),syms=await universe();
+    var logSyms=TESTED; var all=Array.from(new Set(syms.concat(logSyms)));
+    var todayStart=Math.floor(now/DAY)*DAY, from=Math.min(LOG_START,todayStart-2*DAY);
+    var data=await pool(all,4,async function(s){
+      var d1=await kRange(s,'D',from-2*DAY,now);
+      var h1=await kRange(s,'60',from-6*DAY,now);
+      var px=h1.length?h1[h1.length-1].c:null;
+      return {s:s,d1:d1,h1:h1,px:px};
+    });
+    var errs=data.filter(function(d){return !d||d.err}).length;
+    LAST={now:now,syms:syms,data:data};
+    render();
+    if(errs)showAlert('Za '+errs+' kovancev ni bilo podatkov z Bybita.');
+    $('upd').textContent='Osveženo: '+new Date(now).toLocaleString('sl-SI')+' · Podatki: Bybit USDT perpetual (javni API).';
+  }catch(e){showAlert('Napaka pri nalaganju: '+e.message)}
+  $('go').disabled=false;
+}
+function showAlert(m){$('alert').textContent=m;$('alert').classList.add('show')}
+function render(){
+  if(!LAST)return;var now=LAST.now,risk=+$('risk').value||75;
+  var bySym={};LAST.data.forEach(function(d){if(d&&!d.err)bySym[d.s]=d});
+  var yday=Math.floor(now/DAY)*DAY-DAY;
+  // --- danes
+  var today=[];LAST.syms.forEach(function(s){var d=bySym[s];if(!d)return;sweepSetups(s,d.d1,d.h1,now,yday).forEach(function(x){if(x.day===yday){x.px=d.px;today.push(x)}})});
+  applyCap(today);
+  today.sort(function(a,b){var o={open:0,wait:1,tp:2,sl:2,time:2};return (o[a.status]??3)-(o[b.status]??3)||a.sym.localeCompare(b.sym)});
+  var validWait=function(x){if(x.status!=='wait')return false;var d=bySym[x.sym],A=atr1h(d.h1),a=A[A.length-1],sg=x.side==='long'?1:-1,sl=x.ext-sg*CFG.slBufAtr*a,rp=(x.level-sl)*sg/x.level,rr=(x.tp-x.level)*sg/((x.level-sl)*sg);return rp>=CFG.minRisk&&rp<=CFG.maxRisk&&rr>=CFG.minRR};
+  $('kToday').textContent=today.filter(validWait).length;
+  $('todayTbl').innerHTML=today.length?tbl(['Kovanec','Smer','Limit','SL (ocena)','TP (EQ)','RR','Cena','Do limita','Status'],today.map(function(x){
+    var d=bySym[x.sym],A=atr1h(d.h1),a=A[A.length-1],sg=x.side==='long'?1:-1;
+    var sl=x.sl!=null?x.sl:(x.ext-sg*CFG.slBufAtr*a), entry=x.entry!=null?x.entry:x.level, rr=(x.tp-entry)*sg/((entry-sl)*sg), rp=(entry-sl)*sg/entry;
+    var dist=x.px!=null?((x.px-x.level)/x.level*100):null;
+    var warn=x.status==='wait'&&(rp<CFG.minRisk||rp>CFG.maxRisk||rr<CFG.minRR)?' <span class="mut">(bo preskočen)</span>':'';
+    return ['<b>'+esc(x.sym)+'</b>','<span class="pill '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>',fmtP(x.level),fmtP(sl)+' <span class="mut">'+(rp*100).toFixed(2)+' %</span>',fmtP(x.tp),rr.toFixed(2),fmtP(x.px),dist==null?'–':(dist>0?'+':'')+dist.toFixed(2)+' %',stHtml(x)+warn];
+  })):'<div class="empty">Danes ni setupov – včerajšnja dnevna sveča ni nikjer posweepala in zaprla nazaj.</div>';
+  // --- možni ob naslednjem zaprtju
+  var next=[];LAST.syms.forEach(function(s){var d=bySym[s];if(!d||d.d1.length<2)return;var S=d.d1[d.d1.length-1],P=d.d1[d.d1.length-2];if(S.t+DAY<=now)return;
+    if(S.l<P.l&&d.px>P.l)next.push({sym:s,side:'long',level:P.l,ext:S.l,tp:(P.h+P.l)/2,px:d.px});
+    if(S.h>P.h&&d.px<P.h)next.push({sym:s,side:'short',level:P.h,ext:S.h,tp:(P.h+P.l)/2,px:d.px});});
+  $('nextTbl').innerHTML=next.length?tbl(['Kovanec','Smer','Bodoči limit','Ekstrem sweepa','TP (EQ)','Cena'],next.map(function(x){return ['<b>'+esc(x.sym)+'</b>','<span class="pill '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>',fmtP(x.level),fmtP(x.ext),fmtP(x.tp),fmtP(x.px)]})):'<div class="empty">Trenutno nič.</div>';
+  // --- paper log (vedno 20 testiranih)
+  var log=[];TESTED.forEach(function(s){var d=bySym[s];if(!d)return;sweepSetups(s,d.d1,d.h1,now,LOG_START).forEach(function(x){log.push(x)})});
+  applyCap(log);
+  var trades=log.filter(function(x){return x.tFill!==undefined&&['tp','sl','time','open'].indexOf(x.status)>=0&&!x.capped});
+  var closed=trades.filter(function(x){return x.status!=='open'});
+  var totR=closed.reduce(function(a,x){return a+x.R},0);
+  $('kTrades').textContent=trades.length;
+  $('kR').innerHTML='<span class="'+(totR>=0?'up':'dn')+'">'+fR(totR)+'</span>';
+  $('kUsd').innerHTML='<span class="'+(totR>=0?'up':'dn')+'">'+fUsd(totR*risk)+'</span>';
+  $('kWin').textContent=closed.length?Math.round(closed.filter(function(x){return x.R>0}).length/closed.length*100)+' %':'–';
+  log.sort(function(a,b){return (b.tFill||b.day+DAY)-(a.tFill||a.day+DAY)});
+  var shown=log.filter(function(x){return x.status!=='wait'||x.day<yday});
+  $('logTbl').innerHTML=shown.length?tbl(['Kovanec','Smer','Sweep dan','Vstop','Cena vstopa','SL','TP','Izhod','R','$','Status'],shown.map(function(x){
+    var r=x.R!=null&&!x.capped?x.R:null;
+    return ['<b>'+esc(x.sym)+'</b>','<span class="pill '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>',fmtD(x.day),x.tFill?fmtT(x.tFill):'–',x.entry!=null?fmtP(x.entry):fmtP(x.level),x.sl!=null?fmtP(x.sl):'–',fmtP(x.tp),x.exit!=null?fmtP(x.exit):(x.status==='open'?fmtP(x.last)+' <span class="mut">zdaj</span>':'–'),r==null?'–':'<span class="'+(r>=0?'up':'dn')+'">'+fR(r)+'</span>',r==null?'–':'<span class="'+(r>=0?'up':'dn')+'">'+fUsd(r*risk)+'</span>',stHtml(x)];
+  })):'<div class="empty">Paper log se začne z dnevno svečo 13. 10. 2026 (zapre ob 2:00 14. 10.). Prvi vstopi so možni od takrat naprej.</div>';
+}
+function tbl(h,rows){return '<table><thead><tr>'+h.map(function(x,i){return '<th'+(i<2?' class="tl"':'')+'>'+x+'</th>'}).join('')+'</tr></thead><tbody>'+rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+(i<2?' class="tl"':'')+'>'+c+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table>'}
+
+document.querySelectorAll('[data-tab]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-tab]').forEach(function(x){x.classList.toggle('on',x===b)});document.querySelectorAll('.pane').forEach(function(p){p.classList.toggle('on',p.id==='p-'+b.dataset.tab)})}});
+$('go').onclick=run;$('uni').onchange=run;$('risk').oninput=render;
+(function(){var k='sweep1d_theme';try{var t=localStorage.getItem(k);if(t)document.documentElement.dataset.theme=t}catch(e){}
+$('theme').onclick=function(){var c=document.documentElement.dataset.theme,dark=c?c==='dark':matchMedia('(prefers-color-scheme: dark)').matches,n=dark?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem(k,n)}catch(e){}}})();
+try{var rv=localStorage.getItem('sweep1d_risk');if(rv)$('risk').value=rv}catch(e){}
+$('risk').addEventListener('change',function(){try{localStorage.setItem('sweep1d_risk',$('risk').value)}catch(e){}});
+run();setInterval(run,5*60*1000);
+</script>
+</body>
+</html>

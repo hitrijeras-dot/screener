@@ -1,0 +1,14 @@
+varianta,povpR
+TP 2R,0.209
+TP 1.5R,0.188
+TP 3R,0.122
+TP 4R,0.16
+TP = EQ (sredina),0.302
+TP = nasprotni ekstrem,0.151
+SL brez bufferja,0.249
+SL +0.5 ATR,0.056
+veljavnost 12h,0.187
+veljavnost 48h,0.239
+limit mora iti 0.05% čez,0.142
+min SL 0.6%,0.148
+izvedba na 15m,0.126
