@@ -12,6 +12,11 @@ Ločeno od Sistem EAX, CISD sistema in Jay HL – pravil ne mešati.
 - Samo kripto: Bybit `instruments-info`, `symbolType` prazen ali `innovation` (izločeni `stock`, `ETF`, `commodity`, `forex`).
 - Filtri za vse točke indikatorja (gumbi, več hkrati): **FVG**, **IFVG** (bear FVG iz poteze v sweep, ki ga je close obrnil), **VI** (volume imbalance po sweepu), **CISD** (retest potrjenega CISD nivoja), **1-2** cona, **FIB** pivoti, **GP** (0,618–0,65 prejšnje HTF sveče), **OTE** (0,618–0,786 noge od najvišjega high od referenčne sveče do ekstrema), **Sweep nivo** (retest posweepanega nivoja), **Open HTF**. Plus min. ocena x/5 in smer.
 - Klik na vrstico odpre **graf** (SVG, zadnjih 140 LTF sveč) z narisanimi conami (FVG, IFVG, VI, 1-2, GP, OTE), črtami (posweepan nivo, ekstrem/SL, CISD, FIB, Open HTF), začetkom sweep sveče, ▲/▼ na ekstremu in kratkim opisom.
+### Bias trga (vrh aplikacije, dodano 13. 10. 2026 na Juretovo željo "bias glede na EAX Scanner X")
+- Scanner X je na portal.easyalgotools.com/scanner-x (iframe scannerx.easyalgotools.com z osebnim žetonom – žetona NIKOLI ne dajaj v repo). Aplikacija ga zato ne bere, ampak bias izračuna po isti metodi iz priročnika: CPR pivot (P=(H+L+C)/3, BC=(H+L)/2, TC=2P−BC) prejšnjega dne/tedna/meseca; kovanec je "nad" nad TC/BC, "pod" pod njima, sicer "vmes".
+- Top 100 kripto po prometu na Bybitu. M/W/D: % nad / vmes / pod. Seje (UTC): Azija 0–8, London 8–13:30, NY 13:30–21; vrednost = neto % (nad − pod) glede na dnevni pivot ob zaprtju seje (trenutna seja = LIVE), plus sprememba od prejšnje seje.
+- Oznaka: povprečje neto M/W/D ≤ −20 → Bearish, ≥ +20 → Bullish, sicer Neodločen. Osvežitev na 10 min.
+- Primerjava 13. 10. 2026 18:40: Scanner X je kazal Bearish, M 61 % pod, W 75 % pod, D 70 % pod, Azija −23 %, London −54,3 %, NY −54,2 % (LIVE).
   - **Pozor:** backtest je pokazal, da ti signali sami (6H, vstop ob CISD) nimajo roba. Screener je za iskanje kandidatov, odločitev o vstopu ostane po pravilih.
 - **Logika v aplikaciji** (`/*CORE*/ … /*CORE-END*/`) je preverjena proti Python backtestu: 476 poslov se ujema 1:1, rezultat +0,311 R/posel (JS) proti +0,302 R (Python). Če spremeniš pravila, spremeni oboje.
 - `?od=2026-09-13` v URL-ju začne paper log na drug datum (za preverjanje).
