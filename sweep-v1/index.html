@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sweep">
+<meta name="theme-color" content="#060608">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Sweep v1</title>
+<style>
+/* Tema "Repsol": črna prevladuje, neon oranžna kot poudarek (barva dirkalnega dresa), neon zelena za long, neon rdeča za short. */
+:root{--bg:#060608;--s1:#0f0f13;--s2:#17171d;--line:#26262f;--ink:#f3f3f6;--mut:#8e8e9c;--long:#2dff8f;--longbg:rgba(45,255,143,.12);--short:#ff2d55;--shortbg:rgba(255,45,85,.13);--buoy:#ff7a00;--buoybg:rgba(255,122,0,.14);--grid:rgba(255,255,255,.06);--glow:0 0 14px rgba(255,122,0,.55);--btnink:#120700;
+  --hd:"Chakra Petch",ui-sans-serif,system-ui,sans-serif;--bd:"Figtree",ui-sans-serif,system-ui,-apple-system,sans-serif;--r1:12px;--r2:8px}
+:root[data-theme=light]{--bg:#f4f4f6;--s1:#ffffff;--s2:#f7f7f9;--line:#e0e0e6;--ink:#0d0d12;--mut:#5f5f6c;--long:#00a85a;--longbg:rgba(0,168,90,.1);--short:#e0002a;--shortbg:rgba(224,0,42,.09);--buoy:#e86400;--buoybg:rgba(232,100,0,.12);--grid:rgba(0,0,0,.06);--glow:none;--btnink:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--bd);-webkit-font-smoothing:antialiased}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--buoy);outline-offset:2px}
+.top{position:sticky;top:0;z-index:20;box-shadow:inset 0 3px 0 var(--buoy);display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font:700 22px/1 var(--hd);letter-spacing:.01em;text-transform:none}.brand b{color:var(--buoy);text-shadow:var(--glow)}
+.brand svg{width:26px;height:26px}
+.top .sp{flex:1}
+.bpill{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--s1);border-radius:999px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:13px}
+.bpill i{width:9px;height:9px;border-radius:50%;background:var(--mut)}
+.bpill.bear i{background:var(--short)}.bpill.bull i{background:var(--long)}
+.ib{border:1px solid var(--line);background:var(--s1);border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:12px;font-weight:700}
+main{max-width:1000px;margin:0 auto;padding:14px 14px calc(92px + env(safe-area-inset-bottom))}
+.view{display:none}.view.on{display:block}
+h2{font:700 28px/1.1 var(--hd);letter-spacing:0;margin:4px 0 4px}
+.lead{color:var(--mut);margin:0 0 14px;max-width:62ch}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);background:var(--s1);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+.tabs button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 2px;cursor:pointer;color:var(--mut);font-size:11.5px;font-weight:600}
+.tabs button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabs button.on{color:var(--ink)}.tabs button.on svg{stroke:var(--buoy);filter:drop-shadow(0 0 6px rgba(255,122,0,.7))}
+@media (min-width:900px){
+  .top{padding-left:24px;padding-right:24px}
+  .tabs{top:57px;bottom:0;right:auto;width:92px;grid-template-columns:1fr;grid-auto-rows:min-content;gap:6px;padding:16px 6px;border-top:0;border-right:1px solid var(--line)}
+  .tabs button{padding:10px 2px;border-radius:10px}.tabs button.on{background:var(--buoybg)}
+  main{max-width:none;margin:0 0 0 92px;padding:22px 32px 32px}
+  .lead{max-width:90ch}
+  .cards{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  .bgrid{flex-basis:520px}
+}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+select{border:1px solid var(--line);background:var(--s1);border-radius:var(--r2);padding:8px 10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;background:var(--s1)}
+.seg button{border:0;background:none;padding:8px 12px;cursor:pointer;font-weight:600;font-size:13px;color:var(--mut)}
+.seg button.on{background:var(--buoy);color:var(--btnink)}
+.pts{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none}
+.pt{flex:0 0 auto;border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer}
+.pt.on{background:var(--buoybg);border-color:var(--buoy);color:var(--ink)}
+.pt.tog.on{background:var(--buoy);border-color:var(--buoy);color:var(--btnink)}
+.btn{border:0;background:var(--buoy);color:var(--btnink);box-shadow:var(--glow);border-radius:var(--r2);padding:8px 14px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.6}
+.sum{color:var(--mut);font-size:13px;margin:0 0 8px}
+.list{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);overflow:hidden}
+.row{display:grid;grid-template-columns:minmax(92px,1.1fr) 2fr 70px minmax(92px,1fr);gap:10px;align-items:center;padding:11px 14px;border-top:1px solid var(--line);cursor:pointer}
+.row:first-child{border-top:0}
+.row:hover{background:var(--s2)}
+.coin{font:700 16px/1.1 var(--hd)}
+.side{display:inline-block;margin-top:4px;font-size:11px;font-weight:700;border-radius:5px;padding:1px 7px}
+.side.long{background:var(--longbg);color:var(--long)}.side.short{background:var(--shortbg);color:var(--short)}
+.hit{display:inline-block;margin:2px 4px 2px 0;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;background:var(--buoybg);color:var(--ink);border:1px solid var(--buoy)}
+.none{color:var(--mut);font-size:12.5px}
+.score{font-weight:700;font-variant-numeric:tabular-nums}.score small{display:block;font-weight:500;color:var(--mut);font-size:11px;letter-spacing:.02em}
+.px{text-align:right;font-variant-numeric:tabular-nums}.px small{display:block;color:var(--mut);font-size:11.5px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.card{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.card:hover{border-color:var(--mut)}.card.open{border-color:var(--buoy);box-shadow:var(--glow)}
+.card .ch{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card .cf{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut)}
+.cards .det{grid-column:1/-1;border:1px solid var(--buoy);border-radius:var(--r1)}
+.list.tbl{overflow-x:auto}
+table.t tr.rw{cursor:pointer}table.t tr.rw:hover td{background:var(--s2)}table.t tr.dr td{padding:0;white-space:normal;text-align:left}
+.det{padding:4px 14px 14px;border-top:1px dashed var(--line);background:var(--s2);cursor:default}
+.tfs{display:flex;gap:4px;margin:10px 0 6px;flex-wrap:wrap}
+.tfs button{border:1px solid var(--line);background:var(--s1);border-radius:7px;padding:4px 10px;font-size:12.5px;font-weight:700;color:var(--mut);cursor:pointer}
+.tfs button.on{border-color:var(--buoy);color:var(--ink);background:var(--buoybg)}
+.tfs a{margin-left:auto;align-self:center;color:var(--mut);font-size:12.5px;text-decoration:none;font-weight:600}
+.chart{width:100%;min-height:240px;border-radius:var(--r2);background:var(--s1);border:1px solid var(--line)}
+.chart svg{display:block;width:100%;height:auto}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px 16px;margin-top:10px;font-size:13px}
+.facts div span{display:block;color:var(--mut);font-size:11.5px}
+.story{margin:10px 0 0;font-size:13.5px}
+.empty{padding:28px 16px;text-align:center;color:var(--mut)}
+.alert{display:none;border:1px solid var(--short);color:var(--short);border-radius:var(--r2);padding:9px 12px;margin-bottom:12px}.alert.on{display:block}
+.up{color:var(--long)}.dn{color:var(--short)}.mut{color:var(--mut)}
+/* bias */
+.bhero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 18px;margin:6px 0 14px}
+.bword{font:700 56px/.95 var(--hd);letter-spacing:0}
+.bword.bear{color:var(--short);text-shadow:0 0 22px rgba(255,45,85,.45)}.bword.bull{color:var(--long);text-shadow:0 0 22px rgba(45,255,143,.4)}.bword.mid{color:var(--buoy);text-shadow:var(--glow)}
+.bnote{color:var(--mut);max-width:44ch}
+.panel{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);padding:14px;margin-bottom:12px}
+.panel h3{margin:0 0 2px;font:700 17px/1.2 var(--hd)}
+.panel p{margin:0 0 10px;color:var(--mut);font-size:13px}
+.htf{display:grid;gap:9px}
+.hrow{display:grid;grid-template-columns:76px 1fr 64px;gap:10px;align-items:center;font-size:13px}
+.stack{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--s2)}
+.stack i{display:block;height:100%}
+.sess{width:100%;display:block}
+.stbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.stbl th,.stbl td{padding:7px 6px;text-align:right;border-top:1px solid var(--line)}
+.stbl th:first-child,.stbl td:first-child{text-align:left}
+.stbl th{color:var(--mut);font-weight:600;font-size:12px;border-top:0}
+/* limiti / log */
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px}
+.k{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);padding:10px 12px}
+.k b{display:block;font:700 22px/1.1 var(--hd);font-variant-numeric:tabular-nums}.k span{color:var(--mut);font-size:12px}
+.tw{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);overflow-x:auto;margin-bottom:12px}
+.tw h3{margin:0;padding:12px 14px 0;font:700 16px/1.2 var(--hd)}.tw p{margin:2px 14px 8px;color:var(--mut);font-size:12.5px}
+table.t{border-collapse:collapse;width:100%;min-width:720px;font-size:13px;font-variant-numeric:tabular-nums}
+table.t th,table.t td{padding:8px 10px;text-align:right;border-top:1px solid var(--line);white-space:nowrap}
+table.t th{color:var(--mut);font-weight:600;font-size:12px}
+table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
+.st{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;border:1px solid var(--line)}
+.st.tp{color:var(--long);border-color:var(--long)}.st.sl{color:var(--short);border-color:var(--short)}.st.wait{color:var(--buoy);border-color:var(--buoy)}.st.open{color:var(--ink);border-color:var(--ink)}
+.rules{max-width:70ch}.rules h3{font:700 18px/1.2 var(--hd);margin:18px 0 6px}.rules li{margin-bottom:6px}
+.foot{color:var(--mut);font-size:12px;margin-top:10px}
+@media (max-width:640px){
+  .row{grid-template-columns:1fr auto;grid-template-areas:"c p" "h h" "s s";row-gap:6px}
+  .row .c{grid-area:c}.row .px{grid-area:p}.row .h{grid-area:h}.row .score{grid-area:s;display:flex;gap:8px;align-items:baseline}.row .score small{display:inline}
+  .bword{font-size:44px}
+}
+@media (prefers-reduced-motion:no-preference){.det{animation:op .18s ease-out}@keyframes op{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#000"/><path d="M5 22l6-7 5 4 6-9 5 5" stroke="#ff7a00" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 26h22" stroke="#ff2d55" stroke-width="2" stroke-linecap="round"/></svg><span>Sweep<b>.</b></span></div>
+  <span class="sp"></span>
+  <button class="bpill" id="biasPill" title="Odpri bias trga"><i></i><span>Bias …</span></button>
+  <button class="ib" id="lang" title="English">EN</button>
+  <button class="ib" id="theme" title="Svetla / temna tema">◐</button>
+</header>
+
+<main>
+  <div class="alert" id="alert"></div>
+
+  <section class="view on" id="v-screener">
+    <h2>Kovanci na točki</h2>
+    <p class="lead">Sweep Model: višja sveča je posweepala prejšnji high ali low. Tukaj so kovanci, kjer je cena zdaj v FVG, na fibu, v 1-2 coni ali na drugi točki indikatorja. Tapni kovanec za graf.</p>
+    <div class="ctl">
+      <select id="smTf" title="Setup timeframe"><option value="360">Setup 6H</option><option value="D">Setup 1D</option></select>
+      <select id="smUni"><option value="top50">Top 50 kripto</option><option value="top100">Top 100 kripto</option><option value="test">20 testiranih</option></select>
+      <select id="smMin"><option value="0">Ocena 0+</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5/5</option></select>
+      <div class="seg" id="smSide"><button class="on" data-side="all">Oba</button><button data-side="long">Long</button><button data-side="short">Short</button></div>
+      <div class="seg" id="smView"><button data-view="card">Kartice</button><button data-view="table">Tabela</button></div>
+      <button class="btn" id="smGo">Skeniraj</button>
+    </div>
+    <div class="pts" id="smPts"><button class="pt tog on" id="smOnly">Samo na točki</button></div>
+    <p class="sum" id="smSum"></p>
+    <div class="list" id="smList"><div class="empty">Skeniram trg…</div></div>
+  </section>
+
+  <section class="view" id="v-bias">
+    <h2>Bias trga</h2>
+    <p class="lead">Naš lasten izračun iz Bybit podatkov, neodvisen od EAX. Gleda, kje so kovanci glede na pivote (mesec, teden, dan) in kako se je trg obnašal v vsaki seji.</p>
+    <div id="biasBody"><div class="empty">Računam bias…</div></div>
+  </section>
+
+  <section class="view" id="v-limits">
+    <h2>Limiti Sweep 1D</h2>
+    <p class="lead">Strategija iz backtesta: dnevni sweep, zaprtje nazaj, limit na posweepan nivo. Setupi iz včerajšnje dnevne sveče veljajo do 2:00.</p>
+    <div class="ctl"><select id="uni"><option value="test">20 testiranih kovancev</option><option value="top30">Top 30 kripto</option></select><button class="btn" id="go">Osveži</button></div>
+    <div class="kp"><div class="k"><b id="kToday">–</b><span>veljavnih limitov danes</span></div></div>
+    <div class="tw"><h3>Aktivni limiti</h3><p>Status se sproti posodablja iz Bybit podatkov.</p><div id="todayTbl"><div class="empty">Nalagam…</div></div></div>
+    <div class="tw"><h3>Možni ob naslednjem zaprtju</h3><p>Današnja sveča je posweepala včerajšnji nivo in je zdaj nazaj v rangu. Velja, če tako zapre ob 2:00.</p><div id="nextTbl"><div class="empty">Nalagam…</div></div></div>
+  </section>
+
+  <section class="view" id="v-log">
+    <h2>Paper log</h2>
+    <p class="lead">Kaj bi bilo, če bi trgovala Sweep 1D od 13. 10. 2026 naprej. Izračunano po istih pravilih kot backtest, s provizijami, največ 3 posli v isto smer na dan.</p>
+    <div class="ctl"><label class="mut" for="risk">Riziko na posel $</label><select id="risk"><option>50</option><option selected>75</option><option>100</option></select></div>
+    <div class="kp">
+      <div class="k"><b id="kTrades">–</b><span>poslov</span></div>
+      <div class="k"><b id="kR">–</b><span>skupaj R</span></div>
+      <div class="k"><b id="kUsd">–</b><span>skupaj $</span></div>
+      <div class="k"><b id="kWin">–</b><span>win rate</span></div>
+    </div>
+    <div class="tw"><div id="logTbl"><div class="empty">Nalagam…</div></div></div>
+  </section>
+
+  <section class="view" id="v-rules">
+    <div class="rules">
+      <h2>Pravila</h2>
+      <h3>Sweep 1D (strategija iz backtesta)</h3>
+      <ol>
+        <li>Dnevna sveča (pri nas zapre ob 2:00) posweepa včerajšnji low (long) ali high (short).</li>
+        <li>Sveča se zapre nazaj nad včerajšnjim lowom oziroma pod highom.</li>
+        <li>Naslednji dan limit (Post-Only) točno na posweepan nivo, velja 24 ur. Če cena pred vstopom preseže ekstrem sweep sveče, setup odpade.</li>
+        <li>SL za ekstremom sweep sveče + 0,1 × ATR(14) na 1h. Razdalja 0,4–3 %, sicer preskoči.</li>
+        <li>TP na sredini včerajšnje sveče (EQ). Če je manj kot 1:1, preskoči.</li>
+        <li>Po 48 urah zapri. Največ 3 posli v isto smer na dan.</li>
+      </ol>
+      <h3>Crypto Fund Trader 10k (2-step)</h3>
+      <ul>
+        <li>Riziko 75 $ na posel, blizu cilja 50 $.</li>
+        <li>Nov posel samo, če je današnja izguba + riziko odprtih + nov posel največ 350 $ (meja 400 $).</li>
+        <li>Nov posel samo, če stanje − odprti riziko − nov posel ostane vsaj 9.050 $ (meja 9.000 $).</li>
+      </ul>
+      <h3>Screener</h3>
+      <p>Setup: višja sveča (6H ali 1D) posweepa low ali high prejšnje. Po ekstremu iščem točke indikatorja Sweep Model: FVG, IFVG, VI, CISD, 1-2 cona, HTF fib pivoti, GP, OTE, posweepan nivo in odprtje HTF sveče. Ocena x/5: divergenca, FVG, retest, CISD, 1-2. Backtest je pokazal, da ti signali sami niso imeli roba, zato so za iskanje kandidatov.</p>
+      <h3>Bias trga</h3>
+      <p>Top 100 kripto kovancev na Bybitu. Za mesec, teden in dan: koliko kovancev je nad, v ali pod pivot območjem (CPR) prejšnjega obdobja. Za vsako sejo (Azija, London, New York) seštejem tri stvari: kje je cena glede na dnevni pivot (50 %), ali je seja zaprla višje ali nižje od odprtja (30 %) in ali je posweepala low ali high prejšnje seje in zaprla nazaj (20 %). Rezultat od −100 do +100. Skupni bias je povprečje višjih okvirjev in trenutne seje: pod −20 iščem predvsem shorte, nad +20 predvsem longe.</p>
+      <p class="mut">Ni finančni nasvet. Backtest ni zagotovilo za prihodnost.</p>
+    </div>
+  </section>
+  <p class="foot" id="upd"></p>
+</main>
+
+<nav class="tabs" aria-label="Zasloni">
+  <button class="on" data-v="screener"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>Screener</button>
+  <button data-v="bias"><svg viewBox="0 0 24 24"><path d="M2 15c2.5 0 3.5-3 6-3s3.5 3 6 3 3.5-3 6-3"/><path d="M2 20c2.5 0 3.5-3 6-3s3.5 3 6 3 3.5-3 6-3"/><path d="M12 3v6"/></svg>Bias</button>
+  <button data-v="limits"><svg viewBox="0 0 24 24"><path d="M3 8h18M3 16h18"/><path d="M8 4v16"/></svg>Limiti</button>
+  <button data-v="log"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h6"/></svg>Log</button>
+  <button data-v="rules"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>Pravila</button>
+</nav>
+<script>
+var LANG='sl';try{LANG=localStorage.getItem('sweep_lang')||'sl'}catch(e){}
+var LOC=LANG==='en'?'en-GB':'sl-SI';
+var API='https://api.bybit.com/v5/market/';
+var TESTED=['AAVE','ADA','ARB','AVAX','BNB','BTC','DOGE','DOT','ENA','ETH','HYPE','LINK','LTC','NEAR','SOL','SUI','TAO','TRX','WIF','XRP'];
+var LOG_START=Date.UTC(2026,9,13); // dnevna sveča 13. 10. 2026 (UTC)
+var DAY=86400000,HOUR=3600000;
+var qs=new URLSearchParams(location.search);
+if(qs.get('od')){var qp=qs.get('od').split('-');LOG_START=Date.UTC(+qp[0],+qp[1]-1,+qp[2])}
+function $(i){return document.getElementById(i)}
+
+/*CORE*/
+// Ista pravila kot backtest (claude-notes/sweep-1d/engine.py, htf=1D, ltf=1h, plevel_limit, tp=prev_eq).
+var CFG={life:24,maxHold:48,slBufAtr:0.1,minRisk:0.004,maxRisk:0.03,minRR:1,feeMaker:0.0002,feeTaker:0.00055,slip:0.0002,cap:3};
+function atr1h(h1){var a=[],n=14;for(var i=0;i<h1.length;i++){var b=h1[i],pc=i?h1[i-1].c:b.c;var tr=Math.max(b.h-b.l,Math.abs(b.h-pc),Math.abs(b.l-pc));a.push(i?a[i-1]+(tr-a[i-1])/n:tr)}return a}
+// d1 in h1: naraščajoče [{t,o,h,l,c}] (t v ms, začetek sveče). now: trenutni čas (ms).
+function sweepSetups(sym,d1,h1,now,fromT){
+  var A=atr1h(h1),out=[];
+  var idx={};for(var i=0;i<h1.length;i++)idx[h1[i].t]=i;
+  for(var k=1;k<d1.length;k++){
+    var P=d1[k-1],S=d1[k];
+    if(S.t<fromT)continue;
+    if(S.t+DAY>now)continue;                         // sweep sveča mora biti zaprta
+    [1,-1].forEach(function(sg){
+      var lev=sg>0?P.l:P.h, ext=sg>0?S.l:S.h, swept=sg>0?S.l<P.l:S.h>P.h, back=sg>0?S.c>P.l:S.c<P.h;
+      if(!swept||!back)return;
+      var tp=(P.h+P.l)/2, st={sym:sym,side:sg>0?'long':'short',day:S.t,level:lev,ext:ext,tp:tp,status:'wait'};
+      var start=S.t+DAY,exp=start+CFG.life*HOUR,i0=idx[start];
+      if(i0===undefined){ if(now<exp){st.status='wait'} else st.status='nodata'; out.push(st); return; }
+      var fill=-1;
+      for(var i=i0;i<h1.length&&h1[i].t<exp;i++){
+        var b=h1[i];
+        if(sg>0?b.l<ext:b.h>ext){st.status='inval';st.tEnd=b.t;break}
+        if(sg>0?b.l<=lev:b.h>=lev){fill=i;break}
+      }
+      if(fill<0){ if(st.status!=='inval') st.status=(h1.length&&h1[h1.length-1].t+HOUR>=exp)||now>=exp?'nofill':'wait'; out.push(st); return; }
+      var b=h1[fill],entry=sg>0?Math.min(lev,b.o):Math.max(lev,b.o);
+      var sl=sg>0?ext-CFG.slBufAtr*A[fill]:ext+CFG.slBufAtr*A[fill];
+      var risk=(entry-sl)*sg,rp=risk/entry,rr=(tp-entry)*sg/risk;
+      st.entry=entry;st.sl=sl;st.rp=rp;st.rr=rr;st.tFill=b.t;
+      if(risk<=0||rp<CFG.minRisk||rp>CFG.maxRisk){st.status='skipSL';out.push(st);return}
+      if(rr<CFG.minRR){st.status='skipRR';out.push(st);return}
+      var ex=null,how=null,j=fill;
+      if(sg>0?b.l<=sl:b.h>=sl){ex=sl;how='sl'}
+      else for(j=fill+1;j<h1.length;j++){var c=h1[j];
+        if(sg>0?c.l<=sl:c.h>=sl){ex=sg>0?Math.min(sl,c.o):Math.max(sl,c.o);how='sl';break}
+        if(sg>0?c.h>=tp:c.l<=tp){ex=sg>0?(c.o>tp?Math.max(tp,c.o):tp):(c.o<tp?Math.min(tp,c.o):tp);how='tp';break}
+        if(j-fill>=CFG.maxHold){ex=c.c;how='time';break}
+      }
+      if(how){
+        var gross=(ex-entry)*sg/risk,fin=CFG.feeMaker,fout=how==='tp'?CFG.feeMaker:CFG.feeTaker+CFG.slip;
+        st.exit=ex;st.how=how;st.R=gross-(fin+fout)/rp;st.status=how;st.tEnd=h1[j].t;
+      } else {
+        var last=h1[h1.length-1];st.status='open';st.last=last.c;st.R=(last.c-entry)*sg/risk;
+      }
+      out.push(st);
+    });
+  }
+  return out;
+}
+// največ CFG.cap poslov v isto smer na dan (po času vstopa, UTC dan)
+function applyCap(list){
+  var filled=list.filter(function(s){return s.tFill!==undefined&&['tp','sl','time','open'].indexOf(s.status)>=0}).sort(function(a,b){return a.tFill-b.tFill||(a.sym<b.sym?-1:1)});
+  var cnt={};filled.forEach(function(s){var k=Math.floor(s.tFill/DAY)+s.side;cnt[k]=(cnt[k]||0)+1;if(cnt[k]>CFG.cap){s.capped=true}});
+  return list;
+}
+/*CORE-END*/
+
+/*SM*/
+// Sweep Model screener (ista replikacija kot backtest engine.py, run_side): HTF sweep + LTF potrditve + vse točke indikatorja.
+var SM={minDelivery:2,fvgAtr:0.3,zone:[0.618,0.786],fibs:[0.5,0.618,0.786,1,1.618,2.618],tolAtr:0.25,gp:[0.618,0.65],ote:[0.618,0.786]};
+var SM_PTS=[['FVG','FVG – nepokrit bull/bear FVG po sweepu'],['IFVG','IFVG – obrnjen FVG iz poteze v sweep'],['VI','Volume imbalance po sweepu'],['CISD','Retest CISD nivoja (po potrditvi)'],['1-2','1-2 cona (0,618–0,786 impulza po CISD)'],['FIB','HTF fib pivot (0,5 … 2,618)'],['GP','Golden pocket HTF sveče (0,618–0,65)'],['OTE','OTE cona (0,618–0,786 noge v sweep)'],['SWEEP','Retest posweepanega nivoja'],['OPEN','Odprtje HTF sveče (opening line)']];
+function smAtr(b){var a=[];for(var i=0;i<b.length;i++){var pc=i?b[i-1].c:b[i].c,tr=Math.max(b[i].h-b[i].l,Math.abs(b[i].h-pc),Math.abs(b[i].l-pc));a.push(i?a[i-1]+(tr-a[i-1])/14:tr)}return a}
+function smRsi(b){var r=[],au=1e-12,ad=1e-12;for(var i=0;i<b.length;i++){var d=i?b[i].c-b[i-1].c:0;au+=((d>0?d:0)-au)/14;ad+=((d<0?-d:0)-ad)/14;r.push(100-100/(1+au/Math.max(ad,1e-12)))}return r}
+function smMirror(b){return b.map(function(x){return {t:x.t,o:-x.o,h:-x.l,l:-x.h,c:-x.c}})}
+// bull logika; za short pokliči z zrcaljenimi svečami. htf: HTF sveče (zadnja je lahko odprta), ltf: LTF sveče, htfMs: dolžina HTF sveče.
+function smBull(htf,ltf,htfMs,now){
+  var A=smAtr(ltf),R=smRsi(ltf),best=null;
+  for(var k=htf.length-1;k>=Math.max(1,htf.length-2);k--){
+    var P=htf[k-1],S=htf[k],sEnd=S.t+htfMs,closed=sEnd<=now;
+    if(closed&&now>=sEnd+htfMs)continue;                       // setup živi še eno HTF svečo po zaprtju
+    var i0=-1;for(var i=0;i<ltf.length;i++){if(ltf[i].t>=S.t&&ltf[i].t<sEnd&&ltf[i].l<P.l){i0=i;break}}
+    if(i0<0)continue;
+    var st=null,ext=Infinity,extI=-1,inval=false;
+    var reset=function(ei){
+      var s={lvl:null,cisd:false,cisdI:-1,fvgs:[],vis:[],retest:false,zone:false,div:false,hi:-Infinity,cisdRet:false};
+      var j=ltf[ei].c<ltf[ei].o?ei:ei-1,lim=Math.max(0,ei-12);
+      while(j>=lim){ if(ltf[j].c<ltf[j].o){var r0=j;while(r0-1>=lim&&ltf[r0-1].c<ltf[r0-1].o)r0--; if(j-r0+1>=SM.minDelivery){s.lvl=ltf[r0].o;s.lvlT=ltf[r0].t;break} j=r0-1}else j--; }
+      for(var q=ei-6;q>Math.max(5,ei-60);q--){var mn=Infinity;for(var z=q-5;z<=q+5&&z<ltf.length;z++)mn=Math.min(mn,ltf[z].l);if(ltf[q].l===mn){if(ltf[ei].l<ltf[q].l&&R[ei]>R[q])s.div=true;break}}
+      return s};
+    for(var i=i0;i<ltf.length;i++){
+      var b=ltf[i];
+      if(b.l<ext){ if(b.t<sEnd){ext=b.l;extI=i;st=reset(i)} else {inval=true;break} }
+      if(i<=extI)continue;
+      if(st.lvl!==null&&!st.cisd&&b.c>st.lvl){st.cisd=true;st.cisdI=i}
+      if(i-2>=extI&&b.l>ltf[i-2].h&&(b.l-ltf[i-2].h)>=SM.fvgAtr*A[i])st.fvgs.push({bot:ltf[i-2].h,top:b.l,i:i,dead:false});
+      var pv=ltf[i-1];
+      if(i-1>extI&&b.c>b.o&&pv.c>pv.o&&b.o>pv.c&&b.l<=pv.h)st.vis.push({bot:pv.c,top:b.o,i:i,dead:false});
+      st.fvgs.forEach(function(f){ if(f.dead||i<=f.i)return; if(b.l<=f.top)st.retest=true; if(b.c<f.bot)f.dead=true; });
+      st.vis.forEach(function(f){ if(!f.dead&&i>f.i&&b.c<f.bot)f.dead=true; });
+      st.hi=Math.max(st.hi,b.h);
+      if(st.cisd&&i>st.cisdI&&!st.zone){var rg=st.hi-ext;if(rg>0&&b.l<=st.hi-SM.zone[0]*rg)st.zone=true}
+    }
+    if(inval||!st)continue;
+    var px=ltf[ltf.length-1].c,a=A[A.length-1],tol=SM.tolAtr*a,last=ltf[ltf.length-1];
+    var near=function(L){return Math.abs(px-L)<=tol}, inside=function(lo,hi){return px>=lo-tol&&px<=hi+tol};
+    // referenčna sveča: najnižji posweepan low med zadnjimi 4 HTF svečami (tako ravna indikator)
+    var Rf=P,rfK=k-1;for(var q=k-1;q>=Math.max(0,k-4);q--){if(htf[q].l>ext&&htf[q].l<Rf.l){Rf=htf[q];rfK=q}}
+    var piv=(Rf.h+Rf.l+Rf.c)/3,rg=Rf.h-Rf.l,pts=[],dr={boxes:[],lines:[]};
+    var BX=function(k,lo,hi,t0){dr.boxes.push({k:k,lo:lo,hi:hi,t0:t0})},LN=function(k,y,t0){dr.lines.push({k:k,y:y,t0:t0})};
+    // FVG (bull, nepokrit)
+    st.fvgs.forEach(function(f){if(f.dead)return;BX('FVG',f.bot,f.top,ltf[f.i-1].t);if(inside(f.bot,f.top))pts.push({k:'FVG',lvl:f.top,lo:f.bot,hi:f.top})});
+    // IFVG: bear FVG v potezi v sweep (od začetka referenčne sveče do ekstrema), ki ga je close prebil navzgor in ni bil spet prebit navzdol
+    var legStart=0;for(var z=0;z<ltf.length;z++){if(ltf[z].t>=htf[rfK].t){legStart=z;break}}
+    for(var z=Math.max(2,legStart);z<=extI;z++){var top=ltf[z-2].l,bot=ltf[z].h;if(top>bot&&(top-bot)>=SM.fvgAtr*A[z]){var inv=-1,dead=false;for(var y=z+1;y<ltf.length;y++){if(inv<0){if(ltf[y].c>top)inv=y}else if(ltf[y].c<bot){dead=true;break}}if(inv>=0&&!dead){BX('IFVG',bot,top,ltf[z-1].t);if(inside(bot,top))pts.push({k:'IFVG',lvl:top,lo:bot,hi:top})}}}
+    // VI
+    st.vis.forEach(function(f){if(f.dead)return;BX('VI',f.bot,f.top,ltf[f.i].t);if(inside(f.bot,f.top))pts.push({k:'VI',lvl:f.top,lo:f.bot,hi:f.top})});
+    // CISD retest
+    if(st.lvl!=null)LN(st.cisd?'CISD':'CISD ?',st.lvl,st.lvlT);
+    if(st.cisd&&near(st.lvl))pts.push({k:'CISD',lvl:st.lvl});
+    // 1-2 cona
+    var r2=st.hi-ext;
+    if(st.cisd&&r2>0){var zt=st.hi-SM.zone[0]*r2,zb=st.hi-SM.zone[1]*r2;st.zt=zt;st.zb=zb;BX('1-2',zb,zt,ltf[st.cisdI].t);if(inside(zb,zt)&&px>ext)pts.push({k:'1-2',lvl:zt,lo:zb,hi:zt})}
+    // HTF fib pivoti
+    SM.fibs.forEach(function(f){var L=piv-f*rg;if(L>ext-3*rg*0.5)LN('FIB '+f,L,htf[rfK].t);if(near(L))pts.push({k:'FIB',lab:'FIB '+f,lvl:L})});
+    // golden pocket prejšnje HTF sveče (od high navzdol, če je bila bear, sicer od low navzgor)
+    var gA=P.c<P.o?P.h-SM.gp[0]*(P.h-P.l):P.l+SM.gp[0]*(P.h-P.l),gB=P.c<P.o?P.h-SM.gp[1]*(P.h-P.l):P.l+SM.gp[1]*(P.h-P.l);
+    BX('GP',Math.min(gA,gB),Math.max(gA,gB),P.t);
+    if(inside(Math.min(gA,gB),Math.max(gA,gB)))pts.push({k:'GP',lvl:gA,lo:Math.min(gA,gB),hi:Math.max(gA,gB)});
+    // OTE: 0,618–0,786 noge od najvišjega high od referenčne sveče do ekstrema
+    var LH=-Infinity;for(var z=legStart;z<=extI;z++)LH=Math.max(LH,ltf[z].h);
+    if(LH>ext){var oA=ext+SM.ote[0]*(LH-ext),oB=ext+SM.ote[1]*(LH-ext);BX('OTE',oA,oB,ltf[extI].t);if(inside(oA,oB))pts.push({k:'OTE',lvl:oA,lo:oA,hi:oB})}
+    // retest posweepanega nivoja
+    LN('Posweepan nivo',Rf.l,Rf.t);LN('Ekstrem (SL)',ext,ltf[extI].t);
+    if(near(Rf.l)&&px>ext)pts.push({k:'SWEEP',lvl:Rf.l});
+    // opening line trenutne HTF sveče
+    var cur=htf[htf.length-1];if(cur.t+htfMs>now)LN('Open HTF',cur.o,cur.t);if(cur.t+htfMs>now&&near(cur.o))pts.push({k:'OPEN',lvl:cur.o});
+    var score=st.div+(st.fvgs.length>0)+st.retest+st.cisd+st.zone;
+    var res={sweptLvl:Rf.l,ext:ext,extT:ltf[extI].t,sT:S.t,closed:closed,closedBack:closed?S.c>P.l:null,lvl:st.lvl,cisd:st.cisd,div:st.div,fvg:st.fvgs.length>0,retest:st.retest,zone:st.zone,score:score,points:pts,px:px,atr:a,pivot:piv,eq:(P.h+P.l)/2,opp:P.h,hi:st.hi,zt:st.zt,zb:st.zb,draw:dr,extI:extI};
+    if(!best)best=res; // najprej najnovejša (odprta) sveča
+  }
+  return best;
+}
+function smScan(htf,ltf,htfMs,now){
+  var out=[],L=smBull(htf,ltf,htfMs,now);if(L){L.side='long';out.push(L)}
+  var S=smBull(smMirror(htf),smMirror(ltf),htfMs,now);
+  if(S){['sweptLvl','ext','lvl','px','pivot','eq','opp','hi','zt','zb'].forEach(function(k){if(S[k]!=null)S[k]=-S[k]});S.points.forEach(function(p){['lvl','lo','hi'].forEach(function(k){if(p[k]!=null)p[k]=-p[k]})});S.draw.boxes.forEach(function(b){var lo=-b.hi;b.hi=-b.lo;b.lo=lo});S.draw.lines.forEach(function(l){l.y=-l.y});S.side='short';out.push(S)}
+  return out;
+}
+/*SM-END*/
+
+// ---------- pomožno
+async function jget(u){var r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);var j=await r.json();if(j.retCode!==0)throw new Error(j.retMsg);return j.result}
+function mapK(l){return l.map(function(x){return {t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4]}}).reverse()}
+async function kRange(sym,iv,from,to){
+  var out={},end=to;
+  for(var g=0;g<20;g++){
+    var r=await jget(API+'kline?category=linear&symbol='+sym+'USDT&interval='+iv+'&limit=1000&start='+from+'&end='+end);
+    var l=mapK(r.list);if(!l.length)break;
+    l.forEach(function(b){out[b.t]=b});
+    if(l[0].t<=from||l.length<1000)break;end=l[0].t-1;
+  }
+  return Object.keys(out).map(Number).sort(function(a,b){return a-b}).map(function(t){return out[t]});
+}
+async function pool(items,n,fn){var res=[],i=0;async function w(){while(i<items.length){var k=i++;try{res[k]=await fn(items[k])}catch(e){res[k]={err:e}}}}var ws=[];for(var j=0;j<n;j++)ws.push(w());await Promise.all(ws);return res}
+var fmtP=function(v){if(v==null||v!==v)return '–';var a=Math.abs(v),d=a>=1000?1:a>=100?2:a>=1?3:a>=0.1?4:a>=0.01?5:6;return v.toFixed(d)};
+var fmtT=function(t){return new Date(t).toLocaleString(LOC,{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})};
+var fmtH=function(t){return new Date(t).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'})};
+var fmtD=function(t){var d=new Date(t);return d.getUTCDate()+'. '+(d.getUTCMonth()+1)+'.'};
+var fR=function(v){return v==null||v!==v?'–':(v>0?'+':'')+v.toFixed(2)+' R'};
+var fUsd=function(v){return (v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleString(LOC,{maximumFractionDigits:0})+' $'};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function alertMsg(m){var a=$('alert');if(!m){a.classList.remove('on');return}a.textContent=m;a.classList.add('on')}
+var CRYPTO=null;
+async function cryptoSet(){
+  if(CRYPTO)return CRYPTO;
+  var r=await jget(API+'instruments-info?category=linear&limit=1000'),set={};
+  r.list.forEach(function(x){if(x.contractType==='LinearPerpetual'&&x.status==='Trading'&&/USDT$/.test(x.symbol)&&(!x.symbolType||x.symbolType==='innovation'))set[x.symbol]=1});
+  CRYPTO=set;return set;
+}
+var TK=null,TKT=0;
+async function tickers(){if(TK&&Date.now()-TKT<60000)return TK;TK=(await jget(API+'tickers?category=linear')).list;TKT=Date.now();return TK}
+async function topCrypto(n){var cs=await cryptoSet(),tk=await tickers();return tk.filter(function(x){return cs[x.symbol]&&+x.lastPrice>0}).sort(function(a,b){return +b.turnover24h-(+a.turnover24h)}).slice(0,n).map(function(x){return x.symbol.replace(/USDT$/,'')})}
+
+// ---------- navigacija (vsak zaslon je svoje "okno", tudi z gumbom nazaj)
+var VIEWS=['screener','bias','limits','log','rules'],started={};
+function show(v){if(VIEWS.indexOf(v)<0)v='screener';
+  VIEWS.forEach(function(x){$('v-'+x).classList.toggle('on',x===v)});
+  document.querySelectorAll('.tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});
+  if(!started[v]){started[v]=1;if(v==='limits'||v==='log')run();}
+  window.scrollTo(0,0);}
+document.querySelectorAll('.tabs button').forEach(function(b){b.onclick=function(){location.hash=b.dataset.v}});
+$('biasPill').onclick=function(){location.hash='bias'};
+window.addEventListener('hashchange',function(){show(location.hash.slice(1))});
+(function(){var k='sweep_theme';try{var t=localStorage.getItem(k);if(t)document.documentElement.dataset.theme=t}catch(e){}
+$('theme').onclick=function(){var c=document.documentElement.dataset.theme,dark=c?c==='dark':true,n=dark?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem(k,n)}catch(e){};document.querySelectorAll('.chart').forEach(function(el){if(el._redraw)el._redraw()})}})();
+
+// ================= SCREENER =================
+var SMLAST=null,smSide='all',smOnly=true,smSel={},smOpen={},KC={},smView='card';
+try{smView=localStorage.getItem('sweep_view')||'card'}catch(e){}
+document.querySelectorAll('#smView button').forEach(function(b){b.classList.toggle('on',b.dataset.view===smView);b.onclick=function(){smView=b.dataset.view;try{localStorage.setItem('sweep_view',smView)}catch(e){}document.querySelectorAll('#smView button').forEach(function(x){x.classList.toggle('on',x===b)});smRender()}});
+var PTNAME={SWEEP:'Sweep nivo',OPEN:'Open HTF'};
+SM_PTS.forEach(function(p){smSel[p[0]]=true;var b=document.createElement('button');b.className='pt on';b.title=p[1];b.textContent=PTNAME[p[0]]||p[0];b.onclick=function(){smSel[p[0]]=!smSel[p[0]];b.classList.toggle('on',smSel[p[0]]);smRender()};$('smPts').appendChild(b)});
+$('smOnly').onclick=function(){smOnly=!smOnly;this.classList.toggle('on',smOnly);smRender()};
+document.querySelectorAll('#smSide button').forEach(function(b){b.onclick=function(){smSide=b.dataset.side;document.querySelectorAll('#smSide button').forEach(function(x){x.classList.toggle('on',x===b)});smRender()}});
+async function smRun(){
+  var btn=$('smGo');btn.disabled=true;
+  try{
+    var now=Date.now(),tf=$('smTf').value,htfMs=tf==='D'?DAY:6*HOUR,ltfIv=tf==='D'?'15':'5',u=$('smUni').value;
+    var syms=u==='test'?TESTED.slice():await topCrypto(u==='top100'?100:50);
+    if(!SMLAST)$('smList').innerHTML='<div class="empty">Skeniram '+syms.length+' kovancev…</div>';
+    var bars={};
+    var res=await pool(syms,5,async function(s){
+      var h=mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval='+tf+'&limit=6')).list);
+      var l=mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval='+ltfIv+'&limit=300')).list);
+      if(h.length<3||l.length<50)return [];
+      bars[s]={h:h,l:l};
+      return smScan(h,l,htfMs,now).map(function(x){x.sym=s;return x});
+    });
+    var rows=[];res.forEach(function(r){if(Array.isArray(r))rows=rows.concat(r)});
+    SMLAST={now:now,rows:rows,tf:tf,htfMs:htfMs,ltfIv:ltfIv,n:syms.length,bars:bars};KC={};
+    smRender();alertMsg('');
+  }catch(e){alertMsg('Skeniranje ni uspelo: '+e.message+'. Preveri povezavo in tapni Skeniraj.')}
+  btn.disabled=false;
+}
+function smMatch(x){return x.points.filter(function(p){return smSel[p.k]})}
+function ptLabel(p){return p.lab||PTNAME[p.k]||p.k}
+function smRender(){
+  if(!SMLAST)return;
+  var minS=+$('smMin').value||0,all=SMLAST.rows.filter(function(x){return x.score>=minS}),rows=all;
+  if(smSide!=='all')rows=rows.filter(function(x){return x.side===smSide});
+  var hits=rows.filter(function(x){return smMatch(x).length});
+  if(smOnly)rows=hits;
+  rows.sort(function(a,b){return (smMatch(b).length>0)-(smMatch(a).length>0)||b.score-a.score||a.sym.localeCompare(b.sym)});
+  var tfl=SMLAST.tf==='D'?'1D':'6H';
+  $('smSum').textContent=hits.length+' na točki od '+SMLAST.rows.length+' aktivnih '+tfl+' setupov · '+SMLAST.n+' kovancev · '+fmtH(SMLAST.now);
+  if(!rows.length){$('smList').className='list';$('smList').innerHTML='<div class="empty">'+(smOnly?'Noben kovanec ni na izbranih točkah. Izberi več točk ali izklopi "Samo na točki".':'Ni aktivnih sweep setupov.')+'</div>';return}
+  var dots=function(x){return [['D',x.div],['F',x.fvg],['R',x.retest],['C',x.cisd],['1',x.zone]].map(function(c){return '<span style="opacity:'+(c[1]?1:.28)+'">'+c[0]+'</span>'}).join(' ')};
+  var html='',mode=smView,hitsH=function(m){return m.length?m.map(function(p){return '<span class="hit">'+esc(ptLabel(p))+'</span>'}).join(''):'<span class="none">ni na točki</span>'};
+  if(mode==='table'){
+    html='<table class="t"><thead><tr><th>Kovanec</th><th class="tl">Smer</th><th class="tl">Na točki</th><th>Ocena</th><th>Cena</th><th>Do SL</th><th>CISD</th><th>Sweep</th></tr></thead><tbody>';
+    rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
+      html+='<tr class="rw" data-id="'+id+'"><td><b>'+esc(x.sym)+'</b></td><td class="tl"><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span></td><td class="tl">'+hitsH(smMatch(x))+'</td><td>'+x.score+'/5 <span class="mut" style="font-size:11px">'+dots(x)+'</span></td><td>'+fmtP(x.px)+'</td><td>'+dist.toFixed(2)+' %</td><td>'+(x.lvl==null?'–':fmtP(x.lvl)+(x.cisd?' <span class="up">✓</span>':' <span class="mut">čaka</span>'))+'</td><td>'+fmtT(x.extT)+'</td></tr>';
+      if(smOpen[id])html+='<tr class="dr"><td colspan="8"><div class="det" id="d_'+id+'"></div></td></tr>'});
+    html+='</tbody></table>';
+    $('smList').className='list tbl';$('smList').innerHTML=html;
+    $('smList').querySelectorAll('tr.rw').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
+  } else {
+    rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
+      html+='<div class="card'+(smOpen[id]?' open':'')+'" data-id="'+id+'"><div class="ch"><div><div class="coin">'+esc(x.sym)+'</div><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span></div><div class="px">'+fmtP(x.px)+'<small>'+dist.toFixed(2)+' % do SL</small></div></div>'+
+        '<div>'+hitsH(smMatch(x))+'</div><div class="cf"><span><b style="color:var(--ink)">'+x.score+'/5</b> '+dots(x)+'</span><span>CISD '+(x.lvl==null?'–':(x.cisd?'potrjen':'čaka'))+'</span></div></div>';
+      if(smOpen[id])html+='<div class="det" id="d_'+id+'"></div>'});
+    $('smList').className='cards';$('smList').innerHTML=html;
+    $('smList').querySelectorAll('.card').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
+  }
+  rows.forEach(function(x){var id=x.sym+'_'+x.side;if(smOpen[id])smDetail($('d_'+id),x)});
+}
+var TFS=[['1','1m',60000],['5','5m',300000],['15','15m',900000],['60','1H',HOUR],['240','4H',4*HOUR],['D','1D',DAY]];
+function smDetail(el,x){
+  var def=SMLAST.ltfIv,tv='https://www.tradingview.com/chart/?symbol=BYBIT:'+x.sym+'USDT.P';
+  el.innerHTML='<div class="tfs">'+TFS.map(function(t){return '<button data-tf="'+t[0]+'"'+(t[0]===(el._tf||def)?' class="on"':'')+'>'+t[1]+'</button>'}).join('')+'<a href="'+tv+'" target="_blank" rel="noopener">TradingView ↗</a></div><div class="chart"></div>'+smFacts(x);
+  var ch=el.querySelector('.chart');
+  var load=async function(tf){
+    el._tf=tf;el.querySelectorAll('.tfs button').forEach(function(b){b.classList.toggle('on',b.dataset.tf===tf)});
+    var key=x.sym+'|'+tf,bars=tf===def?SMLAST.bars[x.sym].l:KC[key];
+    if(!bars){ch.innerHTML='<div class="empty">Nalagam '+tf+'…</div>';try{bars=mapK((await jget(API+'kline?category=linear&symbol='+x.sym+'USDT&interval='+tf+'&limit=200')).list);KC[key]=bars}catch(e){ch.innerHTML='<div class="empty">Graf se ni naložil: '+esc(e.message)+'</div>';return}}
+    ch._redraw=function(){smChart(ch,x,bars,TFS.filter(function(t){return t[0]===tf})[0][2])};ch._redraw();
+  };
+  el.querySelectorAll('.tfs button').forEach(function(b){b.onclick=function(ev){ev.stopPropagation();load(b.dataset.tf)}});
+  load(el._tf||def);
+}
+function smFacts(x){
+  var m=smMatch(x).map(ptLabel).join(', '),tfl=SMLAST.tf==='D'?'1D':'6H',sg=x.side==='long'?1:-1;
+  var f=[['Posweepan nivo',fmtP(x.sweptLvl)],['Ekstrem sweepa (SL)',fmtP(x.ext)],['Do SL',((x.px-x.ext)/x.px*100*sg).toFixed(2)+' %'],['CISD',x.lvl==null?'–':fmtP(x.lvl)+(x.cisd?' potrjen':' še čaka')],['Sweep',fmtT(x.extT)],[tfl+' sveča',x.closed?(x.closedBack?'zaprta nazaj':'ni zaprta nazaj'):'še odprta']];
+  return '<div class="facts">'+f.map(function(a){return '<div><span>'+a[0]+'</span>'+a[1]+'</div>'}).join('')+'</div><p class="story">'+(m?'Cena je zdaj na: <b>'+esc(m)+'</b>. ':'Cena trenutno ni na nobeni izbrani točki. ')+'Ocena '+x.score+'/5.</p>';
+}
+// --- graf: pregleden, oznake v desnem robu brez prekrivanja
+var ZCOL={'FVG':'#00d9ff','IFVG':'#b56bff','VI':'#9a9aa8','1-2':'#ff7a00','GP':'#ffd400','OTE':'#ff3df0'};
+function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function smChart(el,x,all,dt){
+  var W=Math.max(320,Math.round(el.clientWidth||800)),H=Math.round(W>=900?Math.min(560,W*0.4):Math.min(440,Math.max(250,W*0.52))),gut=Math.min(118,Math.max(92,W*0.13)),pb=22,pt=10,right=12;
+  var n=Math.min(all.length,Math.max(60,Math.round((W-gut)/7))),bars=all.slice(-n),cw=(W-gut)/(n+right);
+  var C={ink:cssv('--ink'),mut:cssv('--mut'),long:cssv('--long'),short:cssv('--short'),buoy:cssv('--buoy'),grid:cssv('--grid'),line:cssv('--line'),s1:cssv('--s1')};
+  var lo=Infinity,hi=-Infinity;bars.forEach(function(b){lo=Math.min(lo,b.l);hi=Math.max(hi,b.h)});
+  [x.ext,x.sweptLvl,x.px].forEach(function(v){if(v!=null){lo=Math.min(lo,v);hi=Math.max(hi,v)}});
+  var pad=(hi-lo)*0.07;lo-=pad;hi+=pad;
+  var Y=function(v){return pt+(hi-v)/(hi-lo)*(H-pt-pb)},t0=bars[0].t,X=function(t){return (t-t0)/dt*cw},plotR=W-gut;
+  var inR=function(v){return v>=lo&&v<=hi};
+  var o='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" font-family="Figtree,system-ui,sans-serif" font-size="11">';
+  // mreža (cene levo, majhno)
+  for(var g=1;g<=4;g++){var gv=lo+(hi-lo)*g/5,gy=Y(gv);o+='<line x1="0" x2="'+plotR+'" y1="'+gy+'" y2="'+gy+'" stroke="'+C.grid+'"/>'}
+  // čas
+  var step=Math.max(1,Math.ceil(70/cw));for(var q=Math.ceil(step/2);q<n;q+=step){var d=new Date(bars[q].t),lab=dt>=DAY?d.getDate()+'. '+(d.getMonth()+1)+'.':fmtH(bars[q].t);o+='<text x="'+(q*cw+cw/2)+'" y="'+(H-6)+'" fill="'+C.mut+'" font-size="10" text-anchor="middle">'+lab+'</text>'}
+  // začetek sweep sveče
+  var sx=X(x.sT);if(sx>0&&sx<plotR)o+='<line x1="'+sx+'" x2="'+sx+'" y1="'+pt+'" y2="'+(H-pb)+'" stroke="'+C.mut+'" stroke-dasharray="2 4" stroke-opacity=".7"/>';
+  // cone: točke, kjer je cena, so polne; ostale le rahlo
+  var hitK={};smMatch(x).forEach(function(p){hitK[p.k]=1});
+  var tags=[];
+  x.draw.boxes.forEach(function(b){if(b.hi<lo||b.lo>hi)return;var on=!!hitK[b.k],c=ZCOL[b.k]||C.buoy,xs=Math.max(0,X(b.t0)),y1=Y(Math.min(hi,b.hi)),y2=Y(Math.max(lo,b.lo));
+    o+='<rect x="'+xs+'" y="'+y1+'" width="'+Math.max(2,plotR-xs)+'" height="'+Math.max(1.5,y2-y1)+'" fill="'+c+'" fill-opacity="'+(on?.22:.07)+'"'+(on?' stroke="'+c+'" stroke-opacity=".8" stroke-width="1"':'')+'/>';
+    if(on)tags.push({y:(y1+y2)/2,t:b.k,c:c})});
+  // sveče
+  bars.forEach(function(b,i){var up=b.c>=b.o,c=up?C.long:C.short,cx=i*cw+cw/2,yo=Y(b.o),yc=Y(b.c);
+    o+='<line x1="'+cx+'" x2="'+cx+'" y1="'+Y(b.h)+'" y2="'+Y(b.l)+'" stroke="'+c+'"/><rect x="'+(i*cw+cw*.18)+'" y="'+Math.min(yo,yc)+'" width="'+Math.max(1,cw*.64)+'" height="'+Math.max(1,Math.abs(yc-yo))+'" fill="'+c+'" rx="'+(cw>6?1:0)+'"/>'});
+  // črte: ključne tri vedno, fib le dva najbližja ceni, open le če je točka
+  var fibs=x.draw.lines.filter(function(l){return /^FIB/.test(l.k)&&inR(l.y)}).sort(function(a,b){return Math.abs(a.y-x.px)-Math.abs(b.y-x.px)}).slice(0,2);
+  var key=x.draw.lines.filter(function(l){return /Posweepan|Ekstrem|CISD/.test(l.k)||(l.k==='Open HTF'&&hitK.OPEN)}).concat(fibs);
+  key.forEach(function(l){if(!inR(l.y))return;var c=/Ekstrem/.test(l.k)?(x.side==='long'?C.short:C.long):/CISD/.test(l.k)?'#00d9ff':/Posweepan/.test(l.k)?C.buoy:C.mut,xs=Math.max(0,X(l.t0)),y=Y(l.y);
+    o+='<line x1="'+xs+'" x2="'+plotR+'" y1="'+y+'" y2="'+y+'" stroke="'+c+'" stroke-width="'+(/Posweepan|Ekstrem/.test(l.k)?1.4:1)+'" stroke-dasharray="'+(/FIB|Open/.test(l.k)?'2 3':'6 4')+'"/>';
+    var nm=/Ekstrem/.test(l.k)?'SL':/Posweepan/.test(l.k)?'Sweep':l.k==='Open HTF'?'Open':l.k.replace('FIB ','Fib ');
+    tags.push({y:y,t:nm+' '+fmtP(l.y),c:c})});
+  // ekstrem marker
+  var ei=-1;for(var i=0;i<bars.length;i++){if(bars[i].t<=x.extT&&bars[i].t+dt>x.extT){ei=i;break}}
+  if(ei>=0){var ey=x.side==='long'?Y(bars[ei].l)+12:Y(bars[ei].h)-5;o+='<text x="'+(ei*cw+cw/2)+'" y="'+ey+'" text-anchor="middle" fill="'+C.buoy+'" font-size="12">'+(x.side==='long'?'▲':'▼')+'</text>'}
+  // trenutna cena
+  var py=Y(x.px);o+='<line x1="0" x2="'+plotR+'" y1="'+py+'" y2="'+py+'" stroke="'+C.ink+'" stroke-opacity=".45" stroke-dasharray="1 3"/>';
+  tags.push({y:py,t:fmtP(x.px),c:C.ink,price:1});
+  // razporedi oznake v desnem robu, da se ne prekrivajo
+  tags.sort(function(a,b){return a.y-b.y});var gap=15,top=pt+7,bot=H-pb-7;
+  for(var k=0;k<tags.length;k++){tags[k].ty=Math.max(tags[k].y,k?tags[k-1].ty+gap:top)}
+  for(k=tags.length-1;k>=0;k--){var lim=k===tags.length-1?bot:tags[k+1].ty-gap;if(tags[k].ty>lim)tags[k].ty=lim}
+  tags.forEach(function(tg){var tx=plotR+6;o+='<line x1="'+plotR+'" x2="'+tx+'" y1="'+tg.y+'" y2="'+tg.ty+'" stroke="'+tg.c+'" stroke-opacity=".6"/>';
+    if(tg.price)o+='<rect x="'+tx+'" y="'+(tg.ty-8)+'" width="'+(gut-10)+'" height="16" rx="4" fill="'+C.ink+'"/><text x="'+(tx+5)+'" y="'+(tg.ty+4)+'" fill="'+C.s1+'" font-weight="700">'+tg.t+'</text>';
+    else o+='<text x="'+(tx+4)+'" y="'+(tg.ty+4)+'" fill="'+tg.c+'" font-weight="600">'+esc(tg.t)+'</text>'});
+  o+='</svg>';el.innerHTML=o;
+}
+$('smGo').onclick=smRun;$('smTf').onchange=function(){smOpen={};smRun()};$('smUni').onchange=smRun;$('smMin').onchange=smRender;
+setInterval(function(){if($('v-screener').classList.contains('on'))smRun()},2*60*1000);
+
+// ================= BIAS (naš lasten izračun) =================
+// Seje v UTC (1h sveče): Azija 0–8, London 8–13, New York 13–21.
+var SESS=[['Azija',0,8],['London',8,13],['New York',13,21]];
+function cprPos(px,H,L,C){var P=(H+L+C)/3,BC=(H+L)/2,TC=2*P-BC;return px>Math.max(TC,BC)?1:px<Math.min(TC,BC)?-1:0}
+function agg(b,from,to){var o=null;for(var i=0;i<b.length;i++){var x=b[i];if(x.t>=from&&x.t<to){if(!o)o={o:x.o,h:x.h,l:x.l,c:x.c};else{o.h=Math.max(o.h,x.h);o.l=Math.min(o.l,x.l);o.c=x.c}}}return o}
+var BIAS=null;
+async function biasRun(){
+  try{
+    var now=Date.now(),syms=await topCrypto(100);
+    var d0=Math.floor(now/DAY)*DAY,w0=d0-((new Date(d0).getUTCDay()+6)%7)*DAY;
+    var data=await pool(syms,6,async function(s){
+      return {h:mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval=60&limit=400')).list),m:mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval=M&limit=3')).list)};
+    });
+    var tf={M:[0,0,0],W:[0,0,0],D:[0,0,0]},n=0;
+    // seje: prejšnja (NY včeraj) + današnje tri
+    var sw=[[d0-DAY+SESS[2][1]*HOUR,d0-DAY+SESS[2][2]*HOUR]].concat(SESS.map(function(s){return [d0+s[1]*HOUR,d0+s[2]*HOUR]}));
+    var acc=sw.map(function(){return {piv:0,flow:0,swp:0,n:0}});
+    data.forEach(function(d){
+      if(!d||d.err||d.h.length<48||d.m.length<2)return;n++;
+      var px=d.h[d.h.length-1].c,pd=agg(d.h,d0-DAY,d0),pw=agg(d.h,w0-7*DAY,w0),pm=d.m[d.m.length-2],pdd=agg(d.h,d0-2*DAY,d0-DAY);
+      if(pd)tf.D[cprPos(px,pd.h,pd.l,pd.c)+1]++;if(pw)tf.W[cprPos(px,pw.h,pw.l,pw.c)+1]++;tf.M[cprPos(px,pm.h,pm.l,pm.c)+1]++;
+      sw.forEach(function(w,i){if(now<w[0])return;var s=agg(d.h,w[0],Math.min(w[1],now+1)),piv=i===0?pdd:pd;if(!s||!piv)return;
+        var pw2=i===0?agg(d.h,w[0]-5*HOUR,w[0]):agg(d.h,sw[i-1][0],sw[i-1][1]);
+        var a=acc[i];a.n++;a.piv+=cprPos(s.c,piv.h,piv.l,piv.c);a.flow+=s.c>s.o?1:s.c<s.o?-1:0;
+        if(pw2){var bu=s.l<pw2.l&&s.c>pw2.l,be=s.h>pw2.h&&s.c<pw2.h;a.swp+=(bu&&!be)?1:(be&&!bu)?-1:0}});
+    });
+    var net=function(a){var t=a[0]+a[1]+a[2];return t?(a[2]-a[0])/t*100:0};
+    var sess=acc.map(function(a,i){if(!a.n)return null;var p=a.piv/a.n*100,f=a.flow/a.n*100,s=a.swp/a.n*100;return {piv:p,flow:f,swp:s,score:.5*p+.3*f+.2*s}});
+    var cur=-1;sw.forEach(function(w,i){if(i&&now>=w[0]&&now<w[1])cur=i});
+    var last=cur>0?cur:(function(){for(var i=sw.length-1;i>=0;i--)if(sess[i])return i;return 0})();
+    var htf=(net(tf.M)+net(tf.W)+net(tf.D))/3,tot=.5*htf+.5*(sess[last]?sess[last].score:0);
+    BIAS={now:now,n:n,tf:tf,htf:htf,sess:sess,sw:sw,cur:cur,last:last,tot:tot};
+    biasRender();
+  }catch(e){$('biasBody').innerHTML='<div class="empty">Bias se ni izračunal: '+esc(e.message)+'. Poskusim znova čez 10 minut.</div>'}
+}
+function biasLabel(v){return v<=-20?['Bearish','bear','Večina trga je pod pivoti in seje tečejo navzdol. Iščem predvsem shorte.']:v>=20?['Bullish','bull','Večina trga je nad pivoti in seje tečejo navzgor. Iščem predvsem longe.']:['Neodločen','mid','Trg je razdeljen. Obe smeri, z manjšim rizikom.']}
+function biasRender(){
+  var B=BIAS;if(!B)return;var L=biasLabel(B.tot),cs=getComputedStyle(document.documentElement);
+  var pill=$('biasPill');pill.className='bpill '+(L[1]==='bear'?'bear':L[1]==='bull'?'bull':'');pill.querySelector('span').textContent=L[0]+' '+(B.tot>0?'+':'')+Math.round(B.tot);
+  var pct=function(a,i){var t=a[0]+a[1]+a[2];return t?a[i]/t*100:0};
+  var htf=[['Mesec','M'],['Teden','W'],['Dan','D']].map(function(r){var a=B.tf[r[1]],up=pct(a,2),mid=pct(a,1),dn=pct(a,0),nt=up-dn;
+    return '<div class="hrow"><div>'+r[0]+'</div><div class="stack" title="nad '+Math.round(up)+' %, vmes '+Math.round(mid)+' %, pod '+Math.round(dn)+' %"><i style="width:'+up+'%;background:var(--long)"></i><i style="width:'+mid+'%;background:var(--mut);opacity:.45"></i><i style="width:'+dn+'%;background:var(--short)"></i></div><div class="'+(nt<0?'dn':'up')+'" style="text-align:right;font-weight:700">'+(nt>0?'+':'')+Math.round(nt)+'</div></div>'}).join('');
+  // plimni trak: 24 h, seje kot stolpci od sredinske črte
+  var cwB=($('biasBody').clientWidth||(innerWidth-(innerWidth>=900?156:28)))-30,W=cwB<560?440:Math.min(1600,Math.round(cwB)),H=W<500?210:200,mid=H/2+4,sc=(H/2-26)/100,x0=0,X=function(h){return 20+h/24*(W-40)};
+  var svg='<svg class="sess" viewBox="0 0 '+W+' '+H+'" font-family="Figtree,system-ui,sans-serif" font-size="12">';
+  svg+='<line x1="20" x2="'+(W-20)+'" y1="'+mid+'" y2="'+mid+'" stroke="var(--line)" stroke-width="1.5"/>';
+  for(var hh=0;hh<=24;hh+=3){var lx=X(hh);svg+='<text x="'+lx+'" y="'+(H-4)+'" text-anchor="middle" fill="var(--mut)" font-size="10.5">'+fmtH(Math.floor(B.now/DAY)*DAY+hh*HOUR).replace(/:00$/,'')+'</text>'}
+  SESS.forEach(function(s,j){var i=j+1,v=B.sess[i],xa=X(s[1])+3,xb=X(s[2])-3;
+    svg+='<rect x="'+xa+'" y="'+(mid-100*sc)+'" width="'+(xb-xa)+'" height="'+(200*sc)+'" fill="var(--s2)" rx="6"/>';
+    if(v){var hgt=Math.max(2,Math.abs(v.score)*sc);svg+='<rect x="'+(xa+8)+'" y="'+(v.score>=0?mid-hgt:mid)+'" width="'+(xb-xa-16)+'" height="'+hgt+'" fill="'+(v.score>=0?'var(--long)':'var(--short)')+'" rx="4" fill-opacity="'+(i===B.cur?1:.75)+'"/>';
+      svg+='<text x="'+((xa+xb)/2)+'" y="'+(v.score>=0?mid+18:mid-8)+'" text-anchor="middle" fill="var(--ink)" font-weight="700" font-size="14">'+(v.score>0?'+':'')+Math.round(v.score)+'</text>'}
+    svg+='<text x="'+(xa+8)+'" y="'+(mid-100*sc+15)+'" fill="var(--mut)" font-weight="600">'+s[0]+(i===B.cur?' · v teku':'')+'</text>'});
+  var nowH=(B.now%DAY)/HOUR;svg+='<line x1="'+X(nowH)+'" x2="'+X(nowH)+'" y1="14" y2="'+(H-18)+'" stroke="var(--buoy)" stroke-width="1.5" stroke-dasharray="3 3"/><text x="'+X(nowH)+'" y="11" text-anchor="middle" fill="var(--buoy)" font-size="10.5" font-weight="700">zdaj</text>';
+  svg+='</svg>';svg=svg.replace(/(fill|stroke)="var\((--[a-z0-9]+)\)"/g,'style="$1:var($2)"');
+  var rows=[['Včeraj NY',0]].concat(SESS.map(function(s,j){return [s[0],j+1]})).map(function(r){var v=B.sess[r[1]];if(!v)return '<tr><td>'+r[0]+'</td><td colspan="4" class="mut">še ni začela</td></tr>';var f=function(z){return '<span class="'+(z<0?'dn':z>0?'up':'mut')+'">'+(z>0?'+':'')+Math.round(z)+'</span>'};return '<tr><td>'+r[0]+(r[1]===B.cur?' <b class="up">●</b>':'')+'</td><td>'+f(v.piv)+'</td><td>'+f(v.flow)+'</td><td>'+f(v.swp)+'</td><td><b>'+f(v.score)+'</b></td></tr>'}).join('');
+  $('biasBody').innerHTML='<div class="bhero"><div class="bword '+L[1]+'">'+L[0]+'</div><div class="bnote">'+L[2]+' Skupaj '+(B.tot>0?'+':'')+Math.round(B.tot)+' od ±100.</div></div>'+
+    '<div class="panel"><h3>Seje danes</h3><p>Stolpec gor pomeni bikovsko sejo, dol medvedjo. Rezultat je mešanica: položaj glede na dnevni pivot, smer seje in sweep prejšnje seje.</p>'+svg+
+    '<table class="stbl"><thead><tr><th>Seja</th><th>Pivot</th><th>Smer</th><th>Sweep</th><th>Skupaj</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="panel"><h3>Višji okvirji</h3><p>Koliko kovancev je nad (zeleno), v (sivo) ali pod (rdeče) pivot območjem prejšnjega meseca, tedna in dneva. Številka desno je neto razlika.</p><div class="htf">'+htf+'</div></div>'+
+    '<p class="foot">'+B.n+' kripto kovancev z največjim prometom na Bybitu · osveženo '+fmtH(B.now)+' · samodejno vsakih 10 minut. Časi so po našem času.</p>';
+}
+biasRun();setInterval(biasRun,10*60*1000);
+var rsT=null;window.addEventListener('resize',function(){clearTimeout(rsT);rsT=setTimeout(function(){biasRender();document.querySelectorAll('.chart').forEach(function(el){if(el._redraw)el._redraw()})},200)});
+
+// ================= LIMITI + PAPER LOG (Sweep 1D) =================
+var LAST=null;
+var STAT={wait:['čaka na vstop','wait'],nofill:['ni bilo vstopa',''],inval:['odpadel',''],skipSL:['preskočen (SL)',''],skipRR:['preskočen (RR < 1)',''],tp:['TP','tp'],sl:['SL','sl'],time:['zaprt po 48 h',''],open:['odprt','open'],nodata:['ni podatkov','']};
+function stHtml(s){var x=STAT[s.status]||[s.status,''];return '<span class="st '+x[1]+'">'+x[0]+(s.capped?' · čez limit 3':'')+'</span>'}
+function tbl(h,rows){return '<table class="t"><thead><tr>'+h.map(function(x,i){return '<th'+(i<2?' class="tl"':'')+'>'+x+'</th>'}).join('')+'</tr></thead><tbody>'+rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+(i<2?' class="tl"':'')+'>'+c+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table>'}
+function sidePill(s){return '<span class="side '+s+'">'+(s==='long'?'LONG':'SHORT')+'</span>'}
+async function run(){
+  $('go').disabled=true;
+  try{
+    var now=Date.now(),syms=$('uni').value==='test'?TESTED.slice():await topCrypto(30);
+    var all=Array.from(new Set(syms.concat(TESTED))),todayStart=Math.floor(now/DAY)*DAY,from=Math.min(LOG_START,todayStart-2*DAY);
+    var data=await pool(all,4,async function(s){var d1=await kRange(s,'D',from-2*DAY,now),h1=await kRange(s,'60',from-6*DAY,now);return {s:s,d1:d1,h1:h1,px:h1.length?h1[h1.length-1].c:null}});
+    LAST={now:now,syms:syms,data:data};render();
+  }catch(e){alertMsg('Limiti se niso naložili: '+e.message)}
+  $('go').disabled=false;
+}
+function render(){
+  if(!LAST)return;var now=LAST.now,risk=+$('risk').value||75,bySym={};
+  LAST.data.forEach(function(d){if(d&&!d.err)bySym[d.s]=d});
+  var yday=Math.floor(now/DAY)*DAY-DAY,today=[];
+  LAST.syms.forEach(function(s){var d=bySym[s];if(!d)return;sweepSetups(s,d.d1,d.h1,now,yday).forEach(function(x){if(x.day===yday){x.px=d.px;today.push(x)}})});
+  applyCap(today);
+  today.sort(function(a,b){var o={open:0,wait:1};return ((o[a.status]!=null?o[a.status]:2)-(o[b.status]!=null?o[b.status]:2))||a.sym.localeCompare(b.sym)});
+  var calc=function(x){var d=bySym[x.sym],A=atr1h(d.h1),a=A[A.length-1],sg=x.side==='long'?1:-1,sl=x.sl!=null?x.sl:x.ext-sg*CFG.slBufAtr*a,en=x.entry!=null?x.entry:x.level;return {sl:sl,rp:(en-sl)*sg/en,rr:(x.tp-en)*sg/((en-sl)*sg)}};
+  var valid=function(x){if(x.status!=='wait')return false;var c=calc(x);return c.rp>=CFG.minRisk&&c.rp<=CFG.maxRisk&&c.rr>=CFG.minRR};
+  $('kToday').textContent=today.filter(valid).length;
+  $('todayTbl').innerHTML=today.length?tbl(['Kovanec','Smer','Limit','SL','TP (EQ)','RR','Cena','Do limita','Status'],today.map(function(x){var c=calc(x),dist=x.px!=null?(x.px-x.level)/x.level*100:null;
+    return ['<b>'+esc(x.sym)+'</b>',sidePill(x.side),fmtP(x.level),fmtP(c.sl)+' <span class="mut">'+(c.rp*100).toFixed(2)+' %</span>',fmtP(x.tp),c.rr.toFixed(2),fmtP(x.px),dist==null?'–':(dist>0?'+':'')+dist.toFixed(2)+' %',stHtml(x)+(x.status==='wait'&&!valid(x)?' <span class="mut">bo preskočen</span>':'')]})):'<div class="empty">Danes ni setupov. Včerajšnja dnevna sveča ni nikjer posweepala in zaprla nazaj.</div>';
+  var next=[];LAST.syms.forEach(function(s){var d=bySym[s];if(!d||d.d1.length<2)return;var S=d.d1[d.d1.length-1],P=d.d1[d.d1.length-2];if(S.t+DAY<=now)return;
+    if(S.l<P.l&&d.px>P.l)next.push({sym:s,side:'long',level:P.l,ext:S.l,tp:(P.h+P.l)/2,px:d.px});
+    if(S.h>P.h&&d.px<P.h)next.push({sym:s,side:'short',level:P.h,ext:S.h,tp:(P.h+P.l)/2,px:d.px})});
+  $('nextTbl').innerHTML=next.length?tbl(['Kovanec','Smer','Bodoči limit','Ekstrem','TP (EQ)','Cena'],next.map(function(x){return ['<b>'+esc(x.sym)+'</b>',sidePill(x.side),fmtP(x.level),fmtP(x.ext),fmtP(x.tp),fmtP(x.px)]})):'<div class="empty">Trenutno nič.</div>';
+  var log=[];TESTED.forEach(function(s){var d=bySym[s];if(!d)return;sweepSetups(s,d.d1,d.h1,now,LOG_START).forEach(function(x){log.push(x)})});
+  applyCap(log);
+  var trades=log.filter(function(x){return x.tFill!==undefined&&['tp','sl','time','open'].indexOf(x.status)>=0&&!x.capped}),closed=trades.filter(function(x){return x.status!=='open'}),totR=closed.reduce(function(a,x){return a+x.R},0);
+  $('kTrades').textContent=trades.length;$('kR').innerHTML='<span class="'+(totR>=0?'up':'dn')+'">'+fR(totR)+'</span>';$('kUsd').innerHTML='<span class="'+(totR>=0?'up':'dn')+'">'+fUsd(totR*risk)+'</span>';
+  $('kWin').textContent=closed.length?Math.round(closed.filter(function(x){return x.R>0}).length/closed.length*100)+' %':'–';
+  log.sort(function(a,b){return (b.tFill||b.day+DAY)-(a.tFill||a.day+DAY)});
+  var shown=log.filter(function(x){return x.status!=='wait'||x.day<yday});
+  $('logTbl').innerHTML=shown.length?tbl(['Kovanec','Smer','Sweep dan','Vstop','Cena','SL','TP','Izhod','R','$','Status'],shown.map(function(x){var r=x.R!=null&&!x.capped?x.R:null;
+    return ['<b>'+esc(x.sym)+'</b>',sidePill(x.side),fmtD(x.day),x.tFill?fmtT(x.tFill):'–',fmtP(x.entry!=null?x.entry:x.level),x.sl!=null?fmtP(x.sl):'–',fmtP(x.tp),x.exit!=null?fmtP(x.exit):(x.status==='open'?fmtP(x.last)+' <span class="mut">zdaj</span>':'–'),r==null?'–':'<span class="'+(r>=0?'up':'dn')+'">'+fR(r)+'</span>',r==null?'–':'<span class="'+(r>=0?'up':'dn')+'">'+fUsd(r*risk)+'</span>',stHtml(x)]})):'<div class="empty">Paper log se začne z dnevno svečo 13. 10. 2026, ki zapre ob 2:00 14. 10. Prvi vstopi so možni od takrat naprej.</div>';
+  $('upd').textContent='Sweep 1D osvežen '+fmtT(now)+'. Podatki: Bybit USDT perpetual.';
+}
+$('go').onclick=run;$('uni').onchange=run;$('risk').onchange=render;
+setInterval(function(){if(started.limits||started.log)run()},5*60*1000);
+
+// ================= JEZIK (slovensko / angleško) =================
+// Besedila v aplikaciji so slovenska; v angleškem načinu jih prevajalnik sproti zamenja (tudi v grafih in tabelah).
+var EN={"FVG – nepokrit bull/bear FVG po sweepu":"FVG – uncovered FVG after the sweep","IFVG – obrnjen FVG iz poteze v sweep":"IFVG – inverted FVG from the move into the sweep","Volume imbalance po sweepu":"Volume imbalance after the sweep","Retest CISD nivoja (po potrditvi)":"Retest of the CISD level (after confirmation)","1-2 cona (0,618–0,786 impulza po CISD)":"1-2 zone (0.618–0.786 of the impulse after CISD)","HTF fib pivot (0,5 … 2,618)":"HTF fib pivot (0.5 … 2.618)","Golden pocket HTF sveče (0,618–0,65)":"Golden pocket of the HTF candle (0.618–0.65)","OTE cona (0,618–0,786 noge v sweep)":"OTE zone (0.618–0.786 of the leg into the sweep)","Retest posweepanega nivoja":"Retest of the swept level","Odprtje HTF sveče (opening line)":"HTF candle open (opening line)",
+'Bias …':'Bias …','Kovanci na točki':'Coins at a point',
+'Sweep Model: višja sveča je posweepala prejšnji high ali low. Tukaj so kovanci, kjer je cena zdaj v FVG, na fibu, v 1-2 coni ali na drugi točki indikatorja. Tapni kovanec za graf.':'Sweep Model: a higher-timeframe candle swept the previous high or low. These are the coins where price is now in an FVG, on a fib, in the 1-2 zone or at another point of the indicator. Tap a coin for its chart.',
+'Top 50 kripto':'Top 50 crypto','Top 100 kripto':'Top 100 crypto','Top 30 kripto':'Top 30 crypto','20 testiranih':'20 tested','20 testiranih kovancev':'20 tested coins',
+'Ocena 0+':'Score 0+','Oba':'Both','Kartice':'Cards','Tabela':'Table','Skeniraj':'Scan','Samo na točki':'Only at a point','Skeniram trg…':'Scanning the market…',
+'Bias trga':'Market bias','Naš lasten izračun iz Bybit podatkov, neodvisen od EAX. Gleda, kje so kovanci glede na pivote (mesec, teden, dan) in kako se je trg obnašal v vsaki seji.':'Our own calculation from Bybit data, independent of EAX. It looks at where coins sit relative to their pivots (month, week, day) and how the market behaved in each session.',
+'Računam bias…':'Calculating bias…','Limiti Sweep 1D':'Sweep 1D limits',
+'Strategija iz backtesta: dnevni sweep, zaprtje nazaj, limit na posweepan nivo. Setupi iz včerajšnje dnevne sveče veljajo do 2:00.':'The backtested strategy: daily sweep, close back inside, limit at the swept level. Setups from yesterday’s daily candle are valid until 2:00.',
+'Osveži':'Refresh','veljavnih limitov danes':'valid limits today','Aktivni limiti':'Active limits','Status se sproti posodablja iz Bybit podatkov.':'Status updates live from Bybit data.','Nalagam…':'Loading…',
+'Možni ob naslednjem zaprtju':'Possible at the next close','Današnja sveča je posweepala včerajšnji nivo in je zdaj nazaj v rangu. Velja, če tako zapre ob 2:00.':'Today’s candle swept yesterday’s level and is back inside the range. Valid only if it closes that way at 2:00.',
+'Kaj bi bilo, če bi trgovala Sweep 1D od 13. 10. 2026 naprej. Izračunano po istih pravilih kot backtest, s provizijami, največ 3 posli v isto smer na dan.':'What would have happened trading Sweep 1D from 13 Oct 2026 on. Same rules as the backtest, fees included, at most 3 trades in one direction per day.',
+'Riziko na posel $':'Risk per trade $','poslov':'trades','skupaj R':'total R','skupaj $':'total $',
+'Pravila':'Rules','Limiti':'Limits','Log':'Log','Bias':'Bias','Screener':'Screener',
+'Sweep 1D (strategija iz backtesta)':'Sweep 1D (backtested strategy)',
+'Dnevna sveča (pri nas zapre ob 2:00) posweepa včerajšnji low (long) ali high (short).':'The daily candle (closes at 2:00 our time) sweeps yesterday’s low (long) or high (short).',
+'Sveča se zapre nazaj nad včerajšnjim lowom oziroma pod highom.':'The candle closes back above yesterday’s low, or below its high.',
+'Naslednji dan limit (Post-Only) točno na posweepan nivo, velja 24 ur. Če cena pred vstopom preseže ekstrem sweep sveče, setup odpade.':'Next day a Post-Only limit exactly at the swept level, valid for 24 hours. If price breaks the sweep candle’s extreme before the fill, the setup is cancelled.',
+'SL za ekstremom sweep sveče + 0,1 × ATR(14) na 1h. Razdalja 0,4–3 %, sicer preskoči.':'SL beyond the sweep candle’s extreme + 0.1 × ATR(14) on 1h. Distance 0.4–3 %, otherwise skip.',
+'TP na sredini včerajšnje sveče (EQ). Če je manj kot 1:1, preskoči.':'TP at the middle of yesterday’s candle (EQ). Skip if it is below 1:1.',
+'Po 48 urah zapri. Največ 3 posli v isto smer na dan.':'Close after 48 hours. At most 3 trades in one direction per day.',
+'Riziko 75 $ na posel, blizu cilja 50 $.':'Risk 75 $ per trade, 50 $ near the target.',
+'Nov posel samo, če je današnja izguba + riziko odprtih + nov posel največ 350 $ (meja 400 $).':'New trade only if today’s loss + open risk + the new trade is at most 350 $ (limit 400 $).',
+'Nov posel samo, če stanje − odprti riziko − nov posel ostane vsaj 9.050 $ (meja 9.000 $).':'New trade only if balance − open risk − the new trade stays at least 9,050 $ (limit 9,000 $).',
+'Setup: višja sveča (6H ali 1D) posweepa low ali high prejšnje. Po ekstremu iščem točke indikatorja Sweep Model: FVG, IFVG, VI, CISD, 1-2 cona, HTF fib pivoti, GP, OTE, posweepan nivo in odprtje HTF sveče. Ocena x/5: divergenca, FVG, retest, CISD, 1-2. Backtest je pokazal, da ti signali sami niso imeli roba, zato so za iskanje kandidatov.':'Setup: a higher candle (6H or 1D) sweeps the previous low or high. After the extreme I look for the Sweep Model points: FVG, IFVG, VI, CISD, 1-2 zone, HTF fib pivots, GP, OTE, the swept level and the HTF open. Score x/5: divergence, FVG, retest, CISD, 1-2. The backtest showed these signals alone had no edge, so they are for finding candidates.',
+'Top 100 kripto kovancev na Bybitu. Za mesec, teden in dan: koliko kovancev je nad, v ali pod pivot območjem (CPR) prejšnjega obdobja. Za vsako sejo (Azija, London, New York) seštejem tri stvari: kje je cena glede na dnevni pivot (50 %), ali je seja zaprla višje ali nižje od odprtja (30 %) in ali je posweepala low ali high prejšnje seje in zaprla nazaj (20 %). Rezultat od −100 do +100. Skupni bias je povprečje višjih okvirjev in trenutne seje: pod −20 iščem predvsem shorte, nad +20 predvsem longe.':'Top 100 crypto coins on Bybit. For month, week and day: how many coins are above, inside or below the pivot range (CPR) of the previous period. For each session (Asia, London, New York) I add three things: where price is against the daily pivot (50 %), whether the session closed higher or lower than it opened (30 %) and whether it swept the previous session’s low or high and closed back (20 %). Result from −100 to +100. Overall bias is the average of the higher timeframes and the current session: below −20 I look mainly for shorts, above +20 mainly for longs.',
+'Ni finančni nasvet. Backtest ni zagotovilo za prihodnost.':'Not financial advice. A backtest is no guarantee for the future.',
+'Kovanec':'Coin','Smer':'Direction','Na točki':'At point','Ocena':'Score','Cena':'Price','Do SL':'To SL','Sweep':'Sweep','ni na točki':'not at a point','čaka':'waiting',
+'Posweepan nivo':'Swept level','Ekstrem sweepa (SL)':'Sweep extreme (SL)','zaprta nazaj':'closed back','ni zaprta nazaj':'did not close back','še odprta':'still open',
+'Cena je zdaj na:':'Price is now at:','Sweep nivo':'Sweep level','Open HTF':'HTF open',
+'Bearish':'Bearish','Bullish':'Bullish','Neodločen':'Undecided',
+'Seje danes':'Sessions today','Stolpec gor pomeni bikovsko sejo, dol medvedjo. Rezultat je mešanica: položaj glede na dnevni pivot, smer seje in sweep prejšnje seje.':'A bar up means a bullish session, down a bearish one. The score mixes position against the daily pivot, session direction and the sweep of the previous session.',
+'Seja':'Session','Pivot':'Pivot','Skupaj':'Total','Včeraj NY':'Yesterday NY','Azija':'Asia','zdaj':'now','še ni začela':'not started yet',
+'Višji okvirji':'Higher timeframes','Koliko kovancev je nad (zeleno), v (sivo) ali pod (rdeče) pivot območjem prejšnjega meseca, tedna in dneva. Številka desno je neto razlika.':'How many coins are above (green), inside (grey) or below (coral) the pivot range of the previous month, week and day. The number on the right is the net difference.',
+'Mesec':'Month','Teden':'Week','Dan':'Day',
+'Večina trga je pod pivoti in seje tečejo navzdol. Iščem predvsem shorte.':'Most of the market is below its pivots and sessions are flowing down. Looking mainly for shorts.',
+'Večina trga je nad pivoti in seje tečejo navzgor. Iščem predvsem longe.':'Most of the market is above its pivots and sessions are flowing up. Looking mainly for longs.',
+'Trg je razdeljen. Obe smeri, z manjšim rizikom.':'The market is split. Both directions, with smaller risk.',
+'čaka na vstop':'waiting for entry','ni bilo vstopa':'no fill','odpadel':'cancelled','preskočen (SL)':'skipped (SL)','preskočen (RR < 1)':'skipped (RR < 1)','zaprt po 48 h':'closed after 48 h','odprt':'open','ni podatkov':'no data','bo preskočen':'will be skipped',
+'Limit':'Limit','TP (EQ)':'TP (EQ)','RR':'RR','Do limita':'To limit','Status':'Status','Bodoči limit':'Future limit','Ekstrem':'Extreme','Sweep dan':'Sweep day','Vstop':'Entry','Izhod':'Exit','zdaj ':'now',
+'Trenutno nič.':'Nothing right now.','Danes ni setupov. Včerajšnja dnevna sveča ni nikjer posweepala in zaprla nazaj.':'No setups today. Yesterday’s daily candle did not sweep and close back anywhere.',
+'Paper log se začne z dnevno svečo 13. 10. 2026, ki zapre ob 2:00 14. 10. Prvi vstopi so možni od takrat naprej.':'The paper log starts with the daily candle of 13 Oct 2026, which closes at 2:00 on 14 Oct. First entries are possible from then on.',
+'Noben kovanec ni na izbranih točkah. Izberi več točk ali izklopi "Samo na točki".':'No coin is at the selected points. Pick more points or turn off "Only at a point".',
+'Ni aktivnih sweep setupov.':'No active sweep setups.',
+'Odpri bias trga':'Open market bias','Svetla / temna tema':'Light / dark theme','Setup timeframe':'Setup timeframe'
+};
+var EN_RX=[
+[/^(\d+) na točki od (\d+) aktivnih (\S+) setupov · (\d+) kovancev · (.+)$/,'$1 at a point out of $2 active $3 setups · $4 coins · $5'],
+[/^Skeniram (\d+) kovancev…$/,'Scanning $1 coins…'],
+[/^(.+) % do SL$/,'$1 % to SL'],
+[/^CISD potrjen$/,'CISD confirmed'],[/^CISD čaka$/,'CISD waiting'],
+[/^(.+) potrjen$/,'$1 confirmed'],[/^(.+) še čaka$/,'$1 still waiting'],
+[/^(\S+) sveča$/,'$1 candle'],
+[/^\. Ocena (\d)\/5\.$/,'. Score $1/5.'],
+[/^Cena trenutno ni na nobeni izbrani točki\. Ocena (\d)\/5\.$/,'Price is not at any selected point right now. Score $1/5.'],
+[/^Neodločen (.+)$/,'Undecided $1'],
+[/^(.+) Skupaj (\S+) od ±100\.$/,function(m,a,b){return (EN[a]||a)+' Total '+b+' of ±100.'}],
+[/^(.+) · v teku$/,function(m,a){return (EN[a]||a)+' · live'}],
+[/^(\d+) kripto kovancev z največjim prometom na Bybitu · osveženo (.+) · samodejno vsakih 10 minut\. Časi so po našem času\.$/,'$1 crypto coins with the highest volume on Bybit · updated $2 · refreshes every 10 minutes. Times are in your local time.'],
+[/^Sweep 1D osvežen (.+)\. Podatki: Bybit USDT perpetual\.$/,'Sweep 1D updated $1. Data: Bybit USDT perpetual.'],
+[/^(.+) · čez limit 3$/,function(m,a){return (EN[a]||a)+' · over the limit of 3'}],
+[/^Nalagam (.+)…$/,'Loading $1…'],
+[/^nad (\d+) %, vmes (\d+) %, pod (\d+) %$/,'above $1 %, inside $2 %, below $3 %'],
+[/^Graf se ni naložil: (.+)$/,'Chart did not load: $1'],
+[/^Skeniranje ni uspelo: (.+)\. Preveri povezavo in tapni Skeniraj\.$/,'Scan failed: $1. Check the connection and tap Scan.'],
+[/^Bias se ni izračunal: (.+)\. Poskusim znova čez 10 minut\.$/,'Bias was not calculated: $1. Trying again in 10 minutes.'],
+[/^(\d)\+$/,'$1+']
+];
+function trText(s){var k=s.trim();if(!k)return null;if(EN[k]!=null)return s.replace(k,EN[k]);for(var i=0;i<EN_RX.length;i++){if(EN_RX[i][0].test(k))return s.replace(k,k.replace(EN_RX[i][0],EN_RX[i][1]))}return null}
+function trNode(n){
+  if(n.nodeType===3){var r=trText(n.nodeValue);if(r!=null&&r!==n.nodeValue)n.nodeValue=r;return}
+  if(n.nodeType!==1||n.tagName==='SCRIPT'||n.tagName==='STYLE')return;
+  ['title','aria-label'].forEach(function(a){var v=n.getAttribute&&n.getAttribute(a);if(v){var r=trText(v);if(r!=null)n.setAttribute(a,r)}});
+  for(var c=n.firstChild;c;c=c.nextSibling)trNode(c);
+}
+if(LANG==='en'){
+  document.documentElement.lang='en';
+  trNode(document.body);
+  new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==='characterData')trNode(m.target);else m.addedNodes.forEach(trNode)})}).observe(document.body,{subtree:true,childList:true,characterData:true});
+}
+$('lang').textContent=LANG==='en'?'SL':'EN';
+$('lang').title=LANG==='en'?'Slovenščina':'English';
+$('lang').onclick=function(){try{localStorage.setItem('sweep_lang',LANG==='en'?'sl':'en')}catch(e){}location.reload()};
+
+// ---------- zagon
+show(location.hash.slice(1)||'screener');smRun();
+if('serviceWorker' in navigator&&location.protocol==='https:')/* v1 kopija: brez service workerja */
+
+</script>
+</body>
+</html>
