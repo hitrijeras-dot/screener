@@ -94,7 +94,7 @@ def side_run(t, o, h, l, c, A, p, sym, side):
             if E == 'cisd' and confirmed: lvl = cl
             elif E == 'zone' and confirmed: lvl = hiS - 0.705 * (hiS - ext)
             elif E == 'gp': lvl = hiS - 0.635 * (hiS - ext)
-        elif E in ('cisd5', 'cisd5w'):
+        elif E in ('cisd5', 'cisd5w', 'cisdr', 'cisdrw'):
             conf = True
         if not mkt and not conf:
             if lvl is None or not (ext < lvl < C[k]): continue
@@ -121,8 +121,15 @@ def side_run(t, o, h, l, c, A, p, sym, side):
                         else: jj -= 1
                     continue
                 if cl is not None and c[j] > cl:
-                    fi = j; entry = c[j]; etype = 'taker'
-                    if E == 'cisd5': sl = LL - buf * 0.5
+                    if E in ('cisd5', 'cisd5w'):
+                        fi = j; entry = c[j]; etype = 'taker'
+                        if E == 'cisd5': sl = LL - buf * 0.5
+                        break
+                    # retest: limit na CISD nivo po potrditvi
+                    if E == 'cisdr': sl = LL - buf * 0.5
+                    for jj in range(j + 1, end):
+                        if l[jj] < sl: break
+                        if l[jj] <= cl: fi = jj; entry = min(cl, o[jj]); break
                     break
         else:
             for j in range(e, end):
@@ -153,16 +160,18 @@ def side_run(t, o, h, l, c, A, p, sym, side):
     return out
 
 _cache = {}
-def get(sym, dirs):
-    key = (sym, dirs)
+def get(sym, dirs, ltf=0):
+    key = (sym, dirs, ltf)
     if key not in _cache:
         t, o, h, l, c = load_merged(sym, dirs)
+        if ltf:
+            t, o, h, l, c, _ = resample(t, o, h, l, c, ltf)
         _cache[key] = (t, o, h, l, c, atr(h, l, c))
     return _cache[key]
 
 def run(sym, dirs=('data_old', 'data'), **kw):
     p = dict(DEF); p.update(kw)
-    t, o, h, l, c, A = get(sym, dirs)
+    t, o, h, l, c, A = get(sym, dirs, p.get('ltf', 0))
     r = side_run(t, o, h, l, c, A, p, sym, 'long')
     r += side_run(t, -o, -l, -h, -c, A, p, sym, 'short')
     return r

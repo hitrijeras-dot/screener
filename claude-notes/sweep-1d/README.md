@@ -120,3 +120,9 @@ Koda: `koda/engine2.py` (vse točke indikatorja kot vstop), `koda/grid2.py`, `ko
 
 ## Aplikacija: graf s setupom (13. 10. 2026)
 V zaslonih Danes in Log klik na vrstico odpre graf (5m/15m/1H/4H/1D): predvčerajšnja in sweep sveča (pasova), limit (oranžna), SL, TP, R/R škatli kot TV Long/Short orodje, ▲/▼ ekstrem, krogca za vstop/izhod, črta "limit poteče", spodaj podatki in opis v slovenščini.
+
+## Potrditev na nivoju (Jure: "tam bi čakal potrditev") – 13. 10. 2026
+Setup 1D ali 12H sweep → cena se dotakne posweepanega nivoja → CISD na 5m / 15m / 1H. Vstop: (a) takoj ob zaprtju potrditvene sveče (taker) ali (b) limit na retest CISD nivoja. SL pod lokalnim dnom ali pod ekstremom sweepa. `rezultati/potrditev_cisd.csv`, koda `engine2.py` (entry cisd5, cisd5w, cisdr, cisdrw; param ltf).
+- Takojšen vstop po potrditvi: **negativno** (mediana −0,15 do −0,20 R; s SL pod ekstremom −0,07 do −0,11 R).
+- Limit na retest CISD: okoli 0 do +0,1 R. Najboljše: 1H CISD + retest, TP 2–3R: +0,05 do +0,12 R na obeh skupinah kovancev, a nestabilno po obdobjih (prvi 3 meseci minus, zadnja 2 plus).
+- Zaključek: mehanska potrditev ne izboljša slepega limita. Če čakaš potrditev, vstopi z limitom na retest, ne po trgu. Juretova ročna presoja ni enaka mehanskemu CISD – to bo pokazal dnevnik setupov.
