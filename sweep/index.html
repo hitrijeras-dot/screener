@@ -7,26 +7,24 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Sweep">
-<meta name="theme-color" content="#0d2830">
+<meta name="theme-color" content="#060608">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Sweep</title>
 <style>
-/* Tema "Plima": seje kot plima okoli sveta, sweepi kot valovi, ki poberejo wicke.
-   Temno: globoka petrolejsko modra, morska pena, zelena za long, koralna za short, rumena boja za "na točki". */
-:root{--bg:#0d2830;--s1:#12343e;--s2:#17414d;--line:#24525e;--ink:#e3efec;--mut:#87aaa7;--long:#57d3a6;--longbg:rgba(87,211,166,.14);--short:#ff8566;--shortbg:rgba(255,133,102,.14);--buoy:#f3c34f;--buoybg:rgba(243,195,79,.16);--grid:rgba(135,170,167,.13);
-  --hd:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;--bd:"Figtree",ui-sans-serif,system-ui,-apple-system,sans-serif;--r1:14px;--r2:9px}
-@media (prefers-color-scheme:light){:root:not([data-theme=dark]){--bg:#e8f0ef;--s1:#ffffff;--s2:#f2f7f6;--line:#cfe0de;--ink:#0e2b33;--mut:#557476;--long:#0b8c66;--longbg:rgba(11,140,102,.1);--short:#cf4e31;--shortbg:rgba(207,78,49,.1);--buoy:#9a6f00;--buoybg:rgba(214,160,20,.16);--grid:rgba(14,43,51,.08)}}
-:root[data-theme=light]{--bg:#e8f0ef;--s1:#ffffff;--s2:#f2f7f6;--line:#cfe0de;--ink:#0e2b33;--mut:#557476;--long:#0b8c66;--longbg:rgba(11,140,102,.1);--short:#cf4e31;--shortbg:rgba(207,78,49,.1);--buoy:#9a6f00;--buoybg:rgba(214,160,20,.16);--grid:rgba(14,43,51,.08)}
+/* Tema "Repsol": črna prevladuje, neon oranžna kot poudarek (barva dirkalnega dresa), neon zelena za long, neon rdeča za short. */
+:root{--bg:#060608;--s1:#0f0f13;--s2:#17171d;--line:#26262f;--ink:#f3f3f6;--mut:#8e8e9c;--long:#2dff8f;--longbg:rgba(45,255,143,.12);--short:#ff2d55;--shortbg:rgba(255,45,85,.13);--buoy:#ff7a00;--buoybg:rgba(255,122,0,.14);--grid:rgba(255,255,255,.06);--glow:0 0 14px rgba(255,122,0,.55);--btnink:#120700;
+  --hd:"Chakra Petch",ui-sans-serif,system-ui,sans-serif;--bd:"Figtree",ui-sans-serif,system-ui,-apple-system,sans-serif;--r1:12px;--r2:8px}
+:root[data-theme=light]{--bg:#f4f4f6;--s1:#ffffff;--s2:#f7f7f9;--line:#e0e0e6;--ink:#0d0d12;--mut:#5f5f6c;--long:#00a85a;--longbg:rgba(0,168,90,.1);--short:#e0002a;--shortbg:rgba(224,0,42,.09);--buoy:#e86400;--buoybg:rgba(232,100,0,.12);--grid:rgba(0,0,0,.06);--glow:none;--btnink:#fff}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--bd);-webkit-font-smoothing:antialiased}
 button,select,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--buoy);outline-offset:2px}
-.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:9px;font:800 21px/1 var(--hd);letter-spacing:-.02em}
+.top{position:sticky;top:0;z-index:20;box-shadow:inset 0 3px 0 var(--buoy);display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font:700 22px/1 var(--hd);letter-spacing:.01em;text-transform:none}.brand b{color:var(--buoy);text-shadow:var(--glow)}
 .brand svg{width:26px;height:26px}
 .top .sp{flex:1}
 .bpill{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--s1);border-radius:999px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:13px}
@@ -35,23 +33,23 @@ button,select,input{font:inherit;color:inherit}
 .ib{border:1px solid var(--line);background:var(--s1);border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:12px;font-weight:700}
 main{max-width:1000px;margin:0 auto;padding:14px 14px calc(92px + env(safe-area-inset-bottom))}
 .view{display:none}.view.on{display:block}
-h2{font:700 26px/1.1 var(--hd);letter-spacing:-.02em;margin:4px 0 4px}
+h2{font:700 28px/1.1 var(--hd);letter-spacing:0;margin:4px 0 4px}
 .lead{color:var(--mut);margin:0 0 14px;max-width:62ch}
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);background:var(--s1);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
 .tabs button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 2px;cursor:pointer;color:var(--mut);font-size:11.5px;font-weight:600}
 .tabs button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.tabs button.on{color:var(--ink)}.tabs button.on svg{stroke:var(--buoy)}
+.tabs button.on{color:var(--ink)}.tabs button.on svg{stroke:var(--buoy);filter:drop-shadow(0 0 6px rgba(255,122,0,.7))}
 @media (min-width:900px){.tabs{max-width:560px;margin:0 auto 14px;border:1px solid var(--line);border-radius:18px;bottom:0}}
 .ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
 select{border:1px solid var(--line);background:var(--s1);border-radius:var(--r2);padding:8px 10px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r2);overflow:hidden;background:var(--s1)}
 .seg button{border:0;background:none;padding:8px 12px;cursor:pointer;font-weight:600;font-size:13px;color:var(--mut)}
-.seg button.on{background:var(--ink);color:var(--bg)}
+.seg button.on{background:var(--buoy);color:var(--btnink)}
 .pts{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none}
 .pt{flex:0 0 auto;border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer}
 .pt.on{background:var(--buoybg);border-color:var(--buoy);color:var(--ink)}
-.pt.tog.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
-.btn{border:0;background:var(--buoy);color:#1b1500;border-radius:var(--r2);padding:8px 14px;font-weight:700;cursor:pointer}
+.pt.tog.on{background:var(--buoy);border-color:var(--buoy);color:var(--btnink)}
+.btn{border:0;background:var(--buoy);color:var(--btnink);box-shadow:var(--glow);border-radius:var(--r2);padding:8px 14px;font-weight:700;cursor:pointer}
 .btn:disabled{opacity:.6}
 .sum{color:var(--mut);font-size:13px;margin:0 0 8px}
 .list{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);overflow:hidden}
@@ -67,7 +65,7 @@ select{border:1px solid var(--line);background:var(--s1);border-radius:var(--r2)
 .px{text-align:right;font-variant-numeric:tabular-nums}.px small{display:block;color:var(--mut);font-size:11.5px}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .card{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
-.card:hover{border-color:var(--mut)}.card.open{border-color:var(--buoy)}
+.card:hover{border-color:var(--mut)}.card.open{border-color:var(--buoy);box-shadow:var(--glow)}
 .card .ch{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .card .cf{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut)}
 .cards .det{grid-column:1/-1;border:1px solid var(--buoy);border-radius:var(--r1)}
@@ -88,8 +86,8 @@ table.t tr.rw{cursor:pointer}table.t tr.rw:hover td{background:var(--s2)}table.t
 .up{color:var(--long)}.dn{color:var(--short)}.mut{color:var(--mut)}
 /* bias */
 .bhero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 18px;margin:6px 0 14px}
-.bword{font:800 54px/.95 var(--hd);letter-spacing:-.03em}
-.bword.bear{color:var(--short)}.bword.bull{color:var(--long)}.bword.mid{color:var(--mut)}
+.bword{font:700 56px/.95 var(--hd);letter-spacing:0}
+.bword.bear{color:var(--short);text-shadow:0 0 22px rgba(255,45,85,.45)}.bword.bull{color:var(--long);text-shadow:0 0 22px rgba(45,255,143,.4)}.bword.mid{color:var(--buoy);text-shadow:var(--glow)}
 .bnote{color:var(--mut);max-width:44ch}
 .panel{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);padding:14px;margin-bottom:12px}
 .panel h3{margin:0 0 2px;font:700 17px/1.2 var(--hd)}
@@ -127,7 +125,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
 </head>
 <body>
 <header class="top">
-  <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#12343e"/><path d="M4 21c3 0 4.5-3 8-3s5 3 8 3 4.5-3 8-3" stroke="#57d3a6" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M16 5v15" stroke="#f3c34f" stroke-width="2.2" stroke-linecap="round"/><rect x="13" y="8" width="6" height="7" rx="1.5" fill="#f3c34f"/></svg>Sweep</div>
+  <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#000"/><path d="M5 22l6-7 5 4 6-9 5 5" stroke="#ff7a00" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 26h22" stroke="#ff2d55" stroke-width="2" stroke-linecap="round"/></svg><span>Sweep<b>.</b></span></div>
   <span class="sp"></span>
   <button class="bpill" id="biasPill" title="Odpri bias trga"><i></i><span>Bias …</span></button>
   <button class="ib" id="lang" title="English">EN</button>
@@ -411,7 +409,7 @@ document.querySelectorAll('.tabs button').forEach(function(b){b.onclick=function
 $('biasPill').onclick=function(){location.hash='bias'};
 window.addEventListener('hashchange',function(){show(location.hash.slice(1))});
 (function(){var k='sweep_theme';try{var t=localStorage.getItem(k);if(t)document.documentElement.dataset.theme=t}catch(e){}
-$('theme').onclick=function(){var c=document.documentElement.dataset.theme,dark=c?c==='dark':!matchMedia('(prefers-color-scheme: light)').matches,n=dark?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem(k,n)}catch(e){};document.querySelectorAll('.chart').forEach(function(el){if(el._redraw)el._redraw()})}})();
+$('theme').onclick=function(){var c=document.documentElement.dataset.theme,dark=c?c==='dark':true,n=dark?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem(k,n)}catch(e){};document.querySelectorAll('.chart').forEach(function(el){if(el._redraw)el._redraw()})}})();
 
 // ================= SCREENER =================
 var SMLAST=null,smSide='all',smOnly=true,smSel={},smOpen={},KC={},smView='card';
@@ -493,7 +491,7 @@ function smFacts(x){
   return '<div class="facts">'+f.map(function(a){return '<div><span>'+a[0]+'</span>'+a[1]+'</div>'}).join('')+'</div><p class="story">'+(m?'Cena je zdaj na: <b>'+esc(m)+'</b>. ':'Cena trenutno ni na nobeni izbrani točki. ')+'Ocena '+x.score+'/5.</p>';
 }
 // --- graf: pregleden, oznake v desnem robu brez prekrivanja
-var ZCOL={'FVG':'#5aa9ff','IFVG':'#b48cff','VI':'#8aa','1-2':'#f3c34f','GP':'#e0a43a','OTE':'#3cc8b4'};
+var ZCOL={'FVG':'#00d9ff','IFVG':'#b56bff','VI':'#9a9aa8','1-2':'#ff7a00','GP':'#ffd400','OTE':'#ff3df0'};
 function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
 function smChart(el,x,all,dt){
   var W=Math.max(320,Math.round(el.clientWidth||800)),H=Math.round(Math.min(440,Math.max(250,W*0.52))),gut=Math.min(118,Math.max(92,W*0.13)),pb=22,pt=10,right=12;
@@ -523,7 +521,7 @@ function smChart(el,x,all,dt){
   // črte: ključne tri vedno, fib le dva najbližja ceni, open le če je točka
   var fibs=x.draw.lines.filter(function(l){return /^FIB/.test(l.k)&&inR(l.y)}).sort(function(a,b){return Math.abs(a.y-x.px)-Math.abs(b.y-x.px)}).slice(0,2);
   var key=x.draw.lines.filter(function(l){return /Posweepan|Ekstrem|CISD/.test(l.k)||(l.k==='Open HTF'&&hitK.OPEN)}).concat(fibs);
-  key.forEach(function(l){if(!inR(l.y))return;var c=/Ekstrem/.test(l.k)?(x.side==='long'?C.short:C.long):/CISD/.test(l.k)?'#5aa9ff':/Posweepan/.test(l.k)?C.buoy:C.mut,xs=Math.max(0,X(l.t0)),y=Y(l.y);
+  key.forEach(function(l){if(!inR(l.y))return;var c=/Ekstrem/.test(l.k)?(x.side==='long'?C.short:C.long):/CISD/.test(l.k)?'#00d9ff':/Posweepan/.test(l.k)?C.buoy:C.mut,xs=Math.max(0,X(l.t0)),y=Y(l.y);
     o+='<line x1="'+xs+'" x2="'+plotR+'" y1="'+y+'" y2="'+y+'" stroke="'+c+'" stroke-width="'+(/Posweepan|Ekstrem/.test(l.k)?1.4:1)+'" stroke-dasharray="'+(/FIB|Open/.test(l.k)?'2 3':'6 4')+'"/>';
     var nm=/Ekstrem/.test(l.k)?'SL':/Posweepan/.test(l.k)?'Sweep':l.k==='Open HTF'?'Open':l.k.replace('FIB ','Fib ');
     tags.push({y:y,t:nm+' '+fmtP(l.y),c:c})});
@@ -588,7 +586,7 @@ function biasRender(){
   var htf=[['Mesec','M'],['Teden','W'],['Dan','D']].map(function(r){var a=B.tf[r[1]],up=pct(a,2),mid=pct(a,1),dn=pct(a,0),nt=up-dn;
     return '<div class="hrow"><div>'+r[0]+'</div><div class="stack" title="nad '+Math.round(up)+' %, vmes '+Math.round(mid)+' %, pod '+Math.round(dn)+' %"><i style="width:'+up+'%;background:var(--long)"></i><i style="width:'+mid+'%;background:var(--mut);opacity:.45"></i><i style="width:'+dn+'%;background:var(--short)"></i></div><div class="'+(nt<0?'dn':'up')+'" style="text-align:right;font-weight:700">'+(nt>0?'+':'')+Math.round(nt)+'</div></div>'}).join('');
   // plimni trak: 24 h, seje kot stolpci od sredinske črte
-  var W=720,H=190,mid=H/2+4,sc=(H/2-26)/100,x0=0,X=function(h){return 20+h/24*(W-40)};
+  var W=($('biasBody').clientWidth||720)<560?440:720,H=W<500?210:190,mid=H/2+4,sc=(H/2-26)/100,x0=0,X=function(h){return 20+h/24*(W-40)};
   var svg='<svg class="sess" viewBox="0 0 '+W+' '+H+'" font-family="Figtree,system-ui,sans-serif" font-size="12">';
   svg+='<line x1="20" x2="'+(W-20)+'" y1="'+mid+'" y2="'+mid+'" stroke="var(--line)" stroke-width="1.5"/>';
   for(var hh=0;hh<=24;hh+=3){var lx=X(hh);svg+='<text x="'+lx+'" y="'+(H-4)+'" text-anchor="middle" fill="var(--mut)" font-size="10.5">'+fmtH(Math.floor(B.now/DAY)*DAY+hh*HOUR).replace(/:00$/,'')+'</text>'}
@@ -603,7 +601,7 @@ function biasRender(){
   $('biasBody').innerHTML='<div class="bhero"><div class="bword '+L[1]+'">'+L[0]+'</div><div class="bnote">'+L[2]+' Skupaj '+(B.tot>0?'+':'')+Math.round(B.tot)+' od ±100.</div></div>'+
     '<div class="panel"><h3>Seje danes</h3><p>Stolpec gor pomeni bikovsko sejo, dol medvedjo. Rezultat je mešanica: položaj glede na dnevni pivot, smer seje in sweep prejšnje seje.</p>'+svg+
     '<table class="stbl"><thead><tr><th>Seja</th><th>Pivot</th><th>Smer</th><th>Sweep</th><th>Skupaj</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '<div class="panel"><h3>Višji okvirji</h3><p>Koliko kovancev je nad (zeleno), v (sivo) ali pod (koralno) pivot območjem prejšnjega meseca, tedna in dneva. Številka desno je neto razlika.</p><div class="htf">'+htf+'</div></div>'+
+    '<div class="panel"><h3>Višji okvirji</h3><p>Koliko kovancev je nad (zeleno), v (sivo) ali pod (rdeče) pivot območjem prejšnjega meseca, tedna in dneva. Številka desno je neto razlika.</p><div class="htf">'+htf+'</div></div>'+
     '<p class="foot">'+B.n+' kripto kovancev z največjim prometom na Bybitu · osveženo '+fmtH(B.now)+' · samodejno vsakih 10 minut. Časi so po našem času.</p>';
 }
 biasRun();setInterval(biasRun,10*60*1000);
@@ -688,7 +686,7 @@ var EN={"FVG – nepokrit bull/bear FVG po sweepu":"FVG – uncovered FVG after 
 'Bearish':'Bearish','Bullish':'Bullish','Neodločen':'Undecided',
 'Seje danes':'Sessions today','Stolpec gor pomeni bikovsko sejo, dol medvedjo. Rezultat je mešanica: položaj glede na dnevni pivot, smer seje in sweep prejšnje seje.':'A bar up means a bullish session, down a bearish one. The score mixes position against the daily pivot, session direction and the sweep of the previous session.',
 'Seja':'Session','Pivot':'Pivot','Skupaj':'Total','Včeraj NY':'Yesterday NY','Azija':'Asia','zdaj':'now','še ni začela':'not started yet',
-'Višji okvirji':'Higher timeframes','Koliko kovancev je nad (zeleno), v (sivo) ali pod (koralno) pivot območjem prejšnjega meseca, tedna in dneva. Številka desno je neto razlika.':'How many coins are above (green), inside (grey) or below (coral) the pivot range of the previous month, week and day. The number on the right is the net difference.',
+'Višji okvirji':'Higher timeframes','Koliko kovancev je nad (zeleno), v (sivo) ali pod (rdeče) pivot območjem prejšnjega meseca, tedna in dneva. Številka desno je neto razlika.':'How many coins are above (green), inside (grey) or below (coral) the pivot range of the previous month, week and day. The number on the right is the net difference.',
 'Mesec':'Month','Teden':'Week','Dan':'Day',
 'Večina trga je pod pivoti in seje tečejo navzdol. Iščem predvsem shorte.':'Most of the market is below its pivots and sessions are flowing down. Looking mainly for shorts.',
 'Večina trga je nad pivoti in seje tečejo navzgor. Iščem predvsem longe.':'Most of the market is above its pivots and sessions are flowing up. Looking mainly for longs.',

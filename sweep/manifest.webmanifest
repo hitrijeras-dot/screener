@@ -2,7 +2,7 @@
   "name": "Sweep", "short_name": "Sweep",
   "description": "Sweep Model screener, bias trga po sejah in Sweep 1D limiti (Bybit USDT perp).",
   "lang": "sl", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "any",
-  "background_color": "#0d2830", "theme_color": "#0d2830",
+  "background_color": "#060608", "theme_color": "#060608",
   "icons": [
     {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
     {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
