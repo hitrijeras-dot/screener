@@ -12,7 +12,12 @@ Ločeno od Sistem EAX, CISD sistema in Jay HL – pravil ne mešati.
 - Samo kripto: Bybit `instruments-info`, `symbolType` prazen ali `innovation` (izločeni `stock`, `ETF`, `commodity`, `forex`).
 - Filtri za vse točke indikatorja (gumbi, več hkrati): **FVG**, **IFVG** (bear FVG iz poteze v sweep, ki ga je close obrnil), **VI** (volume imbalance po sweepu), **CISD** (retest potrjenega CISD nivoja), **1-2** cona, **FIB** pivoti, **GP** (0,618–0,65 prejšnje HTF sveče), **OTE** (0,618–0,786 noge od najvišjega high od referenčne sveče do ekstrema), **Sweep nivo** (retest posweepanega nivoja), **Open HTF**. Plus min. ocena x/5 in smer.
 - Klik na vrstico odpre **graf** (SVG, zadnjih 140 LTF sveč) z narisanimi conami (FVG, IFVG, VI, 1-2, GP, OTE), črtami (posweepan nivo, ekstrem/SL, CISD, FIB, Open HTF), začetkom sweep sveče, ▲/▼ na ekstremu in kratkim opisom.
-### Bias trga (vrh aplikacije, dodano 13. 10. 2026 na Juretovo željo "bias glede na EAX Scanner X")
+### Aplikacija (13. 10. 2026 zvečer, na Juretovo željo: "vse kot app", pregledni grafi, drugačna tema, lasten bias)
+- PWA (`manifest.webmanifest`, `sw.js`, ikone), spodnja navigacija: Screener, Bias, Limiti, Log, Pravila (vsak zaslon ima svoj #hash, deluje tudi gumb nazaj). Pilula z biasom v glavi odpre zaslon Bias.
+- Graf: preklop TF (1m, 5m, 15m, 1H, 4H, 1D); oznake v desnem robu, razporejene brez prekrivanja; polne so le cone točk, kjer je cena, ostale rahle brez napisov; fib samo dva najbližja ceni.
+- **Lasten bias (zaslon Bias):** top 100 kripto. Višji okvirji: % nad/v/pod CPR prejšnjega M/W/D. Seje (UTC 1h sveče): Azija 0–8, London 8–13, NY 13–21; rezultat seje = 0,5 × pivot (neto položaj zaprtja vs dnevni CPR) + 0,3 × smer (neto zaprtje nad/pod odprtjem seje) + 0,2 × sweep (neto: posweepal low prejšnje seje in zaprl nad njim = +1, high in zaprl pod = −1). Skupaj = 0,5 × povprečje M/W/D + 0,5 × trenutna/zadnja seja; ≤ −20 Bearish, ≥ +20 Bullish, sicer Neodločen.
+
+### Prejšnja različica biasa (po metodi Scanner X; nadomeščena z lastnim)
 - Scanner X je na portal.easyalgotools.com/scanner-x (iframe scannerx.easyalgotools.com z osebnim žetonom – žetona NIKOLI ne dajaj v repo). Aplikacija ga zato ne bere, ampak bias izračuna po isti metodi iz priročnika: CPR pivot (P=(H+L+C)/3, BC=(H+L)/2, TC=2P−BC) prejšnjega dne/tedna/meseca; kovanec je "nad" nad TC/BC, "pod" pod njima, sicer "vmes".
 - Top 100 kripto po prometu na Bybitu. M/W/D: % nad / vmes / pod. Seje (UTC): Azija 0–8, London 8–13:30, NY 13:30–21; vrednost = neto % (nad − pod) glede na dnevni pivot ob zaprtju seje (trenutna seja = LIVE), plus sprememba od prejšnje seje.
 - Oznaka: povprečje neto M/W/D ≤ −20 → Bearish, ≥ +20 → Bullish, sicer Neodločen. Osvežitev na 10 min.
