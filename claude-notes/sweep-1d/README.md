@@ -3,7 +3,12 @@
 Jure je 13. 10. 2026 rekel: zapomni si to strategijo, kmalu začneva; zaenkrat samo beleži, kaj bi bilo (paper log); kasneje naj Claude trguje sam po teh pravilih.
 Ločeno od Sistem EAX, CISD sistema in Jay HL – pravil ne mešati.
 
-- **Aplikacija:** https://hitrijeras-dot.github.io/screener/sweep/ (`sweep/index.html`) – zavihki *Danes* (aktivni limiti), *Paper log* (od dnevne sveče 13. 10. 2026), *Pravila*.
+- **Aplikacija:** https://hitrijeras-dot.github.io/screener/sweep/ (`sweep/index.html`) – zavihki *Screener*, *Danes* (aktivni limiti Sweep 1D), *Paper log* (od dnevne sveče 13. 10. 2026), *Pravila*.
+- **Screener (zavihek 1, dodan 13. 10. 2026 na Juretovo željo):** najde kovance, ki so **zdaj na točki** po indikatorju Sweep Model – v FVG, na HTF fib pivotu ali v 1-2 coni. Setup 6H (LTF 5m, kot privzeti indikator) ali 1D (LTF 15m); Top 50/100 po prometu ali 20 testiranih. Logika med `/*SM*/` in `/*SM-END*/`:
+  - setup = HTF sveča (odprta ali zadnja zaprta, živi še eno HTF svečo) posweepa low/high prejšnje; po ekstremu iste LTF potrditve kot `engine.py` (CISD nivo = open prve sveče v nizu ≥2, FVG ≥ 0,3 ATR, retest, 1-2 cona 0,618–0,786 po CISD, RSI divergenca);
+  - FVG: vsi FVG po ekstremu, ki jih close ni prebil; fib: pivot (H+L+C)/3 ± f·(H−L) (0,5 … 2,618) od **najnižjega posweepanega lowa med zadnjimi 4 HTF svečami** (tako dela indikator – preverjeno na HYPE 13. 10.: FIB 0,5/0,618/0,786 = 80,409/80,057/79,557); toleranca "na točki" = 0,25 × ATR(LTF).
+  - Preverjeno z indikatorjem na HYPE 6H: sweep ekstrem 80,52 (15:45 UTC) in pending CISD 82,188 se ujemata. Koda indikatorja je zaklenjena, zato drobne razlike niso izključene.
+  - **Pozor:** backtest je pokazal, da ti signali sami (6H, vstop ob CISD) nimajo roba. Screener je za iskanje kandidatov, odločitev o vstopu ostane po pravilih.
 - **Logika v aplikaciji** (`/*CORE*/ … /*CORE-END*/`) je preverjena proti Python backtestu: 476 poslov se ujema 1:1, rezultat +0,311 R/posel (JS) proti +0,302 R (Python). Če spremeniš pravila, spremeni oboje.
 - `?od=2026-09-13` v URL-ju začne paper log na drug datum (za preverjanje).
 
