@@ -64,6 +64,20 @@ def side_run(t, o, h, l, c, A, p, sym, side):
         if rngP <= 0: continue
         buf = p['sl_buf'] * rngP
         hiS = h[ei:e].max() if ei < e else h[ei]
+        # --- značilke indikatorja (za filter): CISD potrjen v S, FVG po ekstremu
+        fl_cisd = False; fl_fvg = False
+        if p.get('feat'):
+            j = ei if c[ei] < o[ei] else ei - 1; lim = max(idx[k - 1], ei - 12); cl0 = None
+            while j >= lim:
+                if c[j] < o[j]:
+                    r0 = j
+                    while r0 - 1 >= lim and c[r0 - 1] < o[r0 - 1]: r0 -= 1
+                    if j - r0 + 1 >= 2: cl0 = o[r0]; break
+                    j = r0 - 1
+                else: j -= 1
+            fl_cisd = cl0 is not None and ei + 1 < e and c[ei + 1:e].max() > cl0
+            for j in range(e - 1, ei + 1, -1):
+                if l[j] > h[j - 2] and (l[j] - h[j - 2]) >= p['fvg_atr'] * A[j]: fl_fvg = True; break
         # --- nivo vstopa
         lvl = None; mkt = False; conf = None
         if E == 'level': lvl = Pl
@@ -156,7 +170,7 @@ def side_run(t, o, h, l, c, A, p, sym, side):
         fin = p['fee_m'] if etype == 'maker' else p['fee_t'] + p['slip']
         fout = p['fee_m'] if how == 'tp' else p['fee_t'] + p['slip']
         R = (ex - entry) / risk - (fin + fout) / rp
-        out.append(dict(sym=sym, side=side, t=int(t[fi]), R=R, rr=rr, rp=rp, how=how, hold=int((t[xi] - t[fi]) // 60)))
+        out.append(dict(sym=sym, side=side, t=int(t[fi]), R=R, cisd=fl_cisd, fvg=fl_fvg, wick=(min(O[k],C[k])-L[k])/(H[k]-L[k]) if H[k]>L[k] else 0, back=(C[k]-Pl)/rngP, rr=rr, rp=rp, how=how, hold=int((t[xi] - t[fi]) // 60)))
     return out
 
 _cache = {}

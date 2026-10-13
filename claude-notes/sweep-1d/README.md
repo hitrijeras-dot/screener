@@ -126,3 +126,14 @@ Setup 1D ali 12H sweep → cena se dotakne posweepanega nivoja → CISD na 5m / 
 - Takojšen vstop po potrditvi: **negativno** (mediana −0,15 do −0,20 R; s SL pod ekstremom −0,07 do −0,11 R).
 - Limit na retest CISD: okoli 0 do +0,1 R. Najboljše: 1H CISD + retest, TP 2–3R: +0,05 do +0,12 R na obeh skupinah kovancev, a nestabilno po obdobjih (prvi 3 meseci minus, zadnja 2 plus).
 - Zaključek: mehanska potrditev ne izboljša slepega limita. Če čakaš potrditev, vstopi z limitom na retest, ne po trgu. Juretova ročna presoja ni enaka mehanskemu CISD – to bo pokazal dnevnik setupov.
+
+## Točke indikatorja kot filter za Sweep 1D (13. 10. 2026, `koda/feat2.py`)
+| Filter | 20 kovancev (5m) | 28 novih (15m) |
+|---|---|---|
+| vsi | n 317, +0,18 R | n 457, +0,06 R |
+| CISD potrjen v sweep sveči | +0,07 | +0,02 |
+| brez CISD | **+0,84** (n 46) | **+0,17** (n 116) |
+| FVG po ekstremu | +0,19 | +0,07 |
+| zaprtje globoko nazaj (>30 % razpona P) | **+0,39** (n 98) | **+0,18** (n 144) |
+| zaprtje plitvo (≤30 %) | +0,08 | 0,00 |
+Presenetljivo: potrditev indikatorja (CISD/FVG) v sweep sveči ne pomaga, celo slabše. Globoko zaprtje nazaj pomaga v obeh skupinah. Vzorci so majhni – kandidat za nadaljnji test, ne pravilo.
