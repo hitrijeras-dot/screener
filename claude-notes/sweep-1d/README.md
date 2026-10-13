@@ -95,3 +95,28 @@ Meje: dnevna izguba 400 $, skupna 1.000 $ (ne pod 9.000 $). Cilja: faza 1 +8 %, 
   - Kot **velikost rizika** pomaga: pol rizika, ko je bias zadnje seje ob odprtju dneva (= včeraj NY) proti smeri (sess·smer < −20): +127,7 R, maxDD 17,3 R (vs +146 R, DD 23,5 R; razmerje dobiček/DD 7,4 vs 6,2).
   - Long +0,34 R/posel, short +0,26 R/posel → obe smeri ostaneta.
 - **Aplikacija v2:** prvi zaslon je **Danes** (Sweep 1D limiti, bias trga + včeraj NY, riziko ½ proti biasu seje – nastavljivo "½ proti biasu / Vedno poln", riziko 50/75/100 $, količina = riziko / razdalja do SL, smer Oba/Long/Short, veljavni setupi na vrhu, 🔔 obvestila v brskalniku ob novem setupu, ko je aplikacija odprta). Screener: privzeto "V smeri biasa" (pri neodločenem obe smeri) in "Do SL ≤ 3 %" (vse/5/3/2 %).
+
+## Velik test "vse možno" (13. 10. 2026 zvečer)
+Koda: `koda/engine2.py` (vse točke indikatorja kot vstop), `koda/grid2.py`, `koda/conf.py`. Rezultati: `rezultati/grid2_vse_kombinacije.csv`, `rezultati/potrditev_28_novih.csv`.
+
+**Popravek prejšnjih številk:** simulacija na 1h svečah je bila preveč optimistična (izpustila je posle, ki so se v isti uri odprli in zadeli SL). Na 5m svečah je Sweep 1D na 20 kovancih **+0,18 do +0,25 R/posel** (ne +0,30). Najboljši je SL tik za ekstremom (brez dodatka).
+
+**Mreža 1080 kombinacij** (HTF 1H, 4H, 6H, 12H, 1D, 1W × 12 vstopov: level, FVG, FVG sredina, IFVG, CISD, 1-2 cona, GP, fib 0,5, sredina, market, 5m CISD na nivoju (2 različici) × TP EQ / nasprotni ekstrem / 1,5R / 2R / 3R × SL dodatek 0 / 2 % / 5 %):
+- 1H, 4H, 6H: **vse negativno** (ni roba).
+- 5m CISD na posweepanem nivoju (Juretov način): **negativno na vseh okvirjih** (−0,09 do −0,28 R).
+- Market vstop: negativno povsod.
+- Pozitivno le 12H in 1D. 1W ima premalo poslov.
+
+**Potrditev na 28 novih kovancih** (1000PEPE, APT, BAT, FIL, HBAR, INJ, LIT, OGN, ONDO, OP, PUMPFUN, QNT, Q, RENDER, RSR, STRK, STX, S, TIA, UNI, WLD, W, ZEC, ZRO, TRUMP, BLUR, XPL, ICP; 15m izvedba, 16. 4.–13. 10.):
+| Različica | 20 starih | 28 novih | 28 novih, strožje polnjenje |
+|---|---|---|---|
+| Sweep 1D (level, TP EQ, SL 0) | +0,24 R | **+0,06 R** | +0,02 R |
+| 1D level, TP 2R | +0,14 | +0,08 | +0,04 |
+| 12H fib 0,5, TP EQ | +0,18 | +0,09 | +0,08 |
+| 12H level, TP 3R | +0,07 | +0,12 | +0,04 |
+| 12H FVG, TP 3R | +0,07 | +0,01 | −0,01 |
+
+**Zaključek:** noben različica nima močnega, potrjenega roba. Sweep 1D je bil delno prilagojen 20 kovancem. Zadnja 2 meseca (blok C) so bila dobra skoraj za vse. Najbolj stabilen kandidat za nadaljnje testiranje: **12H fib 0,5 → TP EQ** (pozitiven v obeh skupinah tudi s strožjim polnjenjem). Pred izzivom CFT: forward test (paper log v aplikaciji + Bybit demo) vsaj 4 tedne.
+
+## Aplikacija: graf s setupom (13. 10. 2026)
+V zaslonih Danes in Log klik na vrstico odpre graf (5m/15m/1H/4H/1D): predvčerajšnja in sweep sveča (pasova), limit (oranžna), SL, TP, R/R škatli kot TV Long/Short orodje, ▲/▼ ekstrem, krogca za vstop/izhod, črta "limit poteče", spodaj podatki in opis v slovenščini.
