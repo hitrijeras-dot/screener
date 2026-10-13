@@ -8,6 +8,10 @@ Ločeno od Sistem EAX, CISD sistema in Jay HL – pravil ne mešati.
   - setup = HTF sveča (odprta ali zadnja zaprta, živi še eno HTF svečo) posweepa low/high prejšnje; po ekstremu iste LTF potrditve kot `engine.py` (CISD nivo = open prve sveče v nizu ≥2, FVG ≥ 0,3 ATR, retest, 1-2 cona 0,618–0,786 po CISD, RSI divergenca);
   - FVG: vsi FVG po ekstremu, ki jih close ni prebil; fib: pivot (H+L+C)/3 ± f·(H−L) (0,5 … 2,618) od **najnižjega posweepanega lowa med zadnjimi 4 HTF svečami** (tako dela indikator – preverjeno na HYPE 13. 10.: FIB 0,5/0,618/0,786 = 80,409/80,057/79,557); toleranca "na točki" = 0,25 × ATR(LTF).
   - Preverjeno z indikatorjem na HYPE 6H: sweep ekstrem 80,52 (15:45 UTC) in pending CISD 82,188 se ujemata. Koda indikatorja je zaklenjena, zato drobne razlike niso izključene.
+### Screener – točke in filtri (posodobljeno 13. 10. 2026 zvečer)
+- Samo kripto: Bybit `instruments-info`, `symbolType` prazen ali `innovation` (izločeni `stock`, `ETF`, `commodity`, `forex`).
+- Filtri za vse točke indikatorja (gumbi, več hkrati): **FVG**, **IFVG** (bear FVG iz poteze v sweep, ki ga je close obrnil), **VI** (volume imbalance po sweepu), **CISD** (retest potrjenega CISD nivoja), **1-2** cona, **FIB** pivoti, **GP** (0,618–0,65 prejšnje HTF sveče), **OTE** (0,618–0,786 noge od najvišjega high od referenčne sveče do ekstrema), **Sweep nivo** (retest posweepanega nivoja), **Open HTF**. Plus min. ocena x/5 in smer.
+- Klik na vrstico odpre **graf** (SVG, zadnjih 140 LTF sveč) z narisanimi conami (FVG, IFVG, VI, 1-2, GP, OTE), črtami (posweepan nivo, ekstrem/SL, CISD, FIB, Open HTF), začetkom sweep sveče, ▲/▼ na ekstremu in kratkim opisom.
   - **Pozor:** backtest je pokazal, da ti signali sami (6H, vstop ob CISD) nimajo roba. Screener je za iskanje kandidatov, odločitev o vstopu ostane po pravilih.
 - **Logika v aplikaciji** (`/*CORE*/ … /*CORE-END*/`) je preverjena proti Python backtestu: 476 poslov se ujema 1:1, rezultat +0,311 R/posel (JS) proti +0,302 R (Python). Če spremeniš pravila, spremeni oboje.
 - `?od=2026-09-13` v URL-ju začne paper log na drug datum (za preverjanje).
