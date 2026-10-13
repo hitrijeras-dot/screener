@@ -137,3 +137,7 @@ Setup 1D ali 12H sweep → cena se dotakne posweepanega nivoja → CISD na 5m / 
 | zaprtje globoko nazaj (>30 % razpona P) | **+0,39** (n 98) | **+0,18** (n 144) |
 | zaprtje plitvo (≤30 %) | +0,08 | 0,00 |
 Presenetljivo: potrditev indikatorja (CISD/FVG) v sweep sveči ne pomaga, celo slabše. Globoko zaprtje nazaj pomaga v obeh skupinah. Vzorci so majhni – kandidat za nadaljnji test, ne pravilo.
+
+## TradingView indikator "Sweep Screener · Claude" (13. 10. 2026)
+`sweep_screener_indikator.pine` – riše isto kot graf v zaslonu Screener (logika `/*SM*/`): posweepan nivo, SL (ekstrem), CISD, FVG, IFVG, VI, 1-2, GP, OTE, fib pivoti (2 najbližja), Open HTF; setup okvir 6H (graf 5m) ali 1D (graf 15m). Plus današnji Sweep 1D limiti (limit, SL, TP, RR, status). Shranjen v Juretovem TV kot zasebna skripta, dodan na layout "Jay Time & Value".
+Pine past: zgodovina cen (`high[x]`) samo v globalnem obsegu, ne v funkcijah, ki se kličejo le na zadnji sveči – sicer napačne vrednosti. Indikator mora biti na glavni ceni lestvici (`scale = scale.right`).

@@ -1,0 +1,268 @@
+//@version=6
+// Sweep Screener · Claude — riše isto kot graf v aplikaciji Sweep (zaslon Screener) + današnje Sweep 1D limite.
+// Logika = /*SM*/ smBull v sweep/index.html (replikacija OnlyWicks Sweep Model). Če spremeniš eno, spremeni obe.
+indicator("Sweep Screener · Claude", shorttitle = "Sweep·C", overlay = true, scale = scale.right, max_bars_back = 5000, max_lines_count = 300, max_boxes_count = 200, max_labels_count = 200)
+
+// ---------- nastavitve
+tfIn   = input.timeframe("360", "Setup okvir", options = ["360", "D"], tooltip = "360 = 6H (graf 5m), D = 1D (graf 15m)")
+showL  = input.bool(true, "Long", inline = "s", group = "Prikaz")
+showS  = input.bool(true, "Short", inline = "s", group = "Prikaz")
+extR   = input.int(15, "Podaljšaj desno (sveč)", minval = 1, maxval = 200, group = "Prikaz")
+pFVG   = input.bool(true, "FVG", inline = "a", group = "Točke")
+pIFVG  = input.bool(true, "IFVG", inline = "a", group = "Točke")
+pVI    = input.bool(true, "VI", inline = "a", group = "Točke")
+pCISD  = input.bool(true, "CISD", inline = "b", group = "Točke")
+p12    = input.bool(true, "1-2", inline = "b", group = "Točke")
+pGP    = input.bool(true, "GP", inline = "b", group = "Točke")
+pOTE   = input.bool(true, "OTE", inline = "c", group = "Točke")
+pSWP   = input.bool(true, "Posweepan nivo", inline = "c", group = "Točke")
+pOPEN  = input.bool(true, "Open HTF", inline = "c", group = "Točke")
+pFIB   = input.bool(true, "Fib pivoti", inline = "d", group = "Točke")
+nFib   = input.int(2, "koliko najbližjih", minval = 1, maxval = 6, inline = "d", group = "Točke")
+s1d    = input.bool(true, "Pokaži današnje Sweep 1D limite", group = "Sweep 1D")
+
+cFVG = #00d9ff, cIFVG = #b56bff, cVI = #9a9aa8, c12 = #ff7a00, cGP = #ffd400, cOTE = #ff3df0
+cLong = #2dff8f, cShort = #ff2d55, cSwp = #ff7a00, cMut = #8a8a96
+
+// ---------- HTF sveče (zadnjih 8), sledene na grafu
+var array<int>   hB = array.new<int>()
+var array<int>   hT = array.new<int>()
+var array<float> hO = array.new<float>()
+var array<float> hH = array.new<float>()
+var array<float> hL = array.new<float>()
+var array<float> hC = array.new<float>()
+if timeframe.change(tfIn) or hB.size() == 0
+    hB.push(bar_index), hT.push(time), hO.push(open), hH.push(high), hL.push(low), hC.push(close)
+    if hB.size() > 8
+        hB.shift(), hT.shift(), hO.shift(), hH.shift(), hL.shift(), hC.shift()
+else
+    int nn = hB.size() - 1
+    hH.set(nn, math.max(hH.get(nn), high)), hL.set(nn, math.min(hL.get(nn), low)), hC.set(nn, close)
+
+atrS = ta.atr(14)
+
+// zrcaljenje: sg = 1 long, -1 short (short = obrnjene cene, ista bull logika). Zgodovina cen samo v globalnem obsegu (ne v funkcijah).
+HH(int q, int sg) => sg == 1 ? hH.get(q) : -hL.get(q)
+HL(int q, int sg) => sg == 1 ? hL.get(q) : -hH.get(q)
+HO(int q, int sg) => sg * hO.get(q)
+HC(int q, int sg) => sg * hC.get(q)
+
+var array<line>  LNS = array.new<line>()
+var array<box>   BXS = array.new<box>()
+var array<label> LBS = array.new<label>()
+
+tag(int x, float y, string t, color c) =>
+    LBS.push(label.new(x, y, t, style = label.style_label_left, color = color.new(c, 100), textcolor = c, size = size.small))
+lvlLine(int x1, float y, string t, color c, string st, int w) =>
+    LNS.push(line.new(x1, y, bar_index + extR, y, color = c, style = st, width = w))
+    tag(bar_index + extR, y, t, c)
+zone(int x1, float a, float b, string t, color c) =>
+    BXS.push(box.new(x1, math.max(a, b), bar_index + extR, math.min(a, b), border_color = color.new(c, 40), bgcolor = color.new(c, 85), text = t, text_size = size.tiny, text_color = c, text_halign = text.align_right, text_valign = text.align_top))
+
+
+// ---------- Sweep 1D: današnji limiti (včerajšnja sveča posweepa predvčerajšnjo in zapre nazaj)
+[d1H, d1L, d1C, d1T] = request.security(syminfo.tickerid, "D", [high[1], low[1], close[1], time[1]], lookahead = barmerge.lookahead_on)
+[d2H, d2L] = request.security(syminfo.tickerid, "D", [high[2], low[2]], lookahead = barmerge.lookahead_on)
+a1h = request.security(syminfo.tickerid, "60", atrS[1], lookahead = barmerge.lookahead_on)
+dStart = d1T + 86400000
+var bool fillL = false
+var bool fillS = false
+var bool invL = false
+var bool invS = false
+if timeframe.change("D")
+    fillL := false, fillS := false, invL := false, invS := false
+if not fillL and not invL and low < d1L
+    invL := true
+if not fillL and not invL and low <= d2L
+    fillL := true
+if not fillS and not invS and high > d1H
+    invS := true
+if not fillS and not invS and high >= d2H
+    fillS := true
+
+s1dDraw(int sg) =>
+    bool ok = sg == 1 ? d1L < d2L and d1C > d2L : d1H > d2H and d1C < d2H
+    if ok
+        float lev = sg == 1 ? d2L : d2H
+        float ex = sg == 1 ? d1L : d1H
+        float sl = ex - sg * 0.1 * a1h
+        float tp = (d2H + d2L) / 2
+        float rp = math.abs(lev - sl) / lev
+        float rr = (tp - lev) * sg / ((lev - sl) * sg)
+        bool fill = sg == 1 ? fillL : fillS
+        bool inv = sg == 1 ? invL : invS
+        string st = rp < 0.004 or rp > 0.03 ? "preskoči (SL)" : rr < 1 ? "preskoči (RR)" : inv ? "odpadel" : fill ? "vstop ✓" : "čaka"
+        int x1 = dStart, x2 = dStart + 86400000
+        color cT = sg == 1 ? cLong : cShort, cS = sg == 1 ? cShort : cLong
+        BXS.push(box.new(x1, math.max(lev, tp), x2, math.min(lev, tp), xloc = xloc.bar_time, border_color = color.new(cT, 60), bgcolor = color.new(cT, 88)))
+        BXS.push(box.new(x1, math.max(lev, sl), x2, math.min(lev, sl), xloc = xloc.bar_time, border_color = color.new(cS, 60), bgcolor = color.new(cS, 85)))
+        LNS.push(line.new(x1, lev, x2, lev, xloc = xloc.bar_time, color = cSwp, width = 2))
+        LBS.push(label.new(x1, sg == 1 ? math.min(lev, sl) : math.max(lev, sl), "Sweep 1D " + (sg == 1 ? "LONG" : "SHORT") + " limit " + str.tostring(lev, format.mintick) + " · SL " + str.tostring(sl, format.mintick) + " · TP " + str.tostring(tp, format.mintick) + " · RR " + str.tostring(rr, "#.##") + " · " + st, xloc = xloc.bar_time, style = sg == 1 ? label.style_label_upper_left : label.style_label_lower_left, color = color.new(cT, 80), textcolor = cT, size = size.small))
+
+if barstate.islast
+    for l in LNS
+        l.delete()
+    for b in BXS
+        b.delete()
+    for lb in LBS
+        lb.delete()
+    LNS.clear(), BXS.clear(), LBS.clear()
+    for sgi = 0 to 1
+        int sg = sgi == 0 ? 1 : -1
+        if (sg == 1 and showL) or (sg == -1 and showS)
+            int n = hB.size()
+            int last = bar_index
+            bool done = false
+            if n >= 3
+                for k = n - 1 to n - 2
+                    if done
+                        break
+                    int sB = hB.get(k)
+                    int sE = k + 1 < n ? hB.get(k + 1) - 1 : last
+                    float Pl = HL(k - 1, sg)
+                    int i0 = -1
+                    int iS = math.max(sB, last - 4800)
+                    for i = iS to math.max(iS, sE)
+                        if (sg == 1 ? low[bar_index - (i)] : -high[bar_index - (i)]) < Pl
+                            i0 := i
+                            break
+                    if i0 >= 0
+                        float ext = na
+                        int extI = -1
+                        bool inval = false
+                        float lvl = na
+                        int lvlI = -1
+                        bool cisd = false
+                        int cisdI = -1
+                        float hi = -1e100
+                        array<float> fT = array.new<float>(), array<float> fBo = array.new<float>(), array<int> fI = array.new<int>(), array<bool> fD = array.new<bool>()
+                        array<float> vT = array.new<float>(), array<float> vBo = array.new<float>(), array<int> vI = array.new<int>(), array<bool> vD = array.new<bool>()
+                        for i = i0 to last
+                            float bl = (sg == 1 ? low[bar_index - (i)] : -high[bar_index - (i)]), bh = (sg == 1 ? high[bar_index - (i)] : -low[bar_index - (i)]), bo = (sg * open[bar_index - (i)]), bc = (sg * close[bar_index - (i)])
+                            if na(ext) or bl < ext
+                                if i <= sE
+                                    ext := bl, extI := i, lvl := na, lvlI := -1, cisd := false, cisdI := -1, hi := -1e100
+                                    fT.clear(), fBo.clear(), fI.clear(), fD.clear(), vT.clear(), vBo.clear(), vI.clear(), vD.clear()
+                                    int j = bc < bo ? i : i - 1
+                                    int lim = math.max(0, i - 12)
+                                    while j >= lim
+                                        if (sg * close[bar_index - (j)]) < (sg * open[bar_index - (j)])
+                                            int r0 = j
+                                            while r0 - 1 >= lim and (sg * close[bar_index - (r0 - 1)]) < (sg * open[bar_index - (r0 - 1)])
+                                                r0 -= 1
+                                            if j - r0 + 1 >= 2
+                                                lvl := (sg * open[bar_index - (r0)]), lvlI := r0
+                                                break
+                                            j := r0 - 1
+                                        else
+                                            j -= 1
+                                else
+                                    inval := true
+                                    break
+                            if i > extI
+                                if not na(lvl) and not cisd and bc > lvl
+                                    cisd := true, cisdI := i
+                                if i - 2 >= extI and bl > (sg == 1 ? high[bar_index - (i - 2)] : -low[bar_index - (i - 2)]) and bl - (sg == 1 ? high[bar_index - (i - 2)] : -low[bar_index - (i - 2)]) >= 0.3 * atrS[bar_index - (i)]
+                                    fT.push(bl), fBo.push((sg == 1 ? high[bar_index - (i - 2)] : -low[bar_index - (i - 2)])), fI.push(i), fD.push(false)
+                                float pc = (sg * close[bar_index - (i - 1)]), po = (sg * open[bar_index - (i - 1)])
+                                if i - 1 > extI and bc > bo and pc > po and bo > pc and bl <= (sg == 1 ? high[bar_index - (i - 1)] : -low[bar_index - (i - 1)])
+                                    vT.push(bo), vBo.push(pc), vI.push(i), vD.push(false)
+                                if fT.size() > 0
+                                    for q = 0 to fT.size() - 1
+                                        if i > fI.get(q) and bc < fBo.get(q)
+                                            fD.set(q, true)
+                                if vT.size() > 0
+                                    for q = 0 to vT.size() - 1
+                                        if i > vI.get(q) and bc < vBo.get(q)
+                                            vD.set(q, true)
+                                hi := math.max(hi, bh)
+                        if not inval and extI >= 0
+                            done := true
+                            // referenčna sveča: najgloblje posweepana med zadnjimi 4 HTF
+                            int rfK = k - 1
+                            float rfL = HL(k - 1, sg)
+                            for q = k - 1 to math.max(0, k - 4)
+                                if HL(q, sg) > ext and HL(q, sg) < rfL
+                                    rfL := HL(q, sg), rfK := q
+                            float piv = (HH(rfK, sg) + HL(rfK, sg) + HC(rfK, sg)) / 3
+                            float rg = HH(rfK, sg) - HL(rfK, sg)
+                            int legStart = math.max(hB.get(rfK), last - 4800)
+                            color cSide = sg == 1 ? cLong : cShort
+                            color cSL = sg == 1 ? cShort : cLong
+                            float px = sg * close
+                            // FVG
+                            if pFVG and fT.size() > 0
+                                for q = 0 to fT.size() - 1
+                                    if not fD.get(q)
+                                        zone(fI.get(q) - 1, sg * fT.get(q), sg * fBo.get(q), "FVG", cFVG)
+                            // IFVG
+                            if pIFVG
+                                for z = math.max(legStart + 2, 2) to extI
+                                    float top = (sg == 1 ? low[bar_index - (z - 2)] : -high[bar_index - (z - 2)]), bot = (sg == 1 ? high[bar_index - (z)] : -low[bar_index - (z)])
+                                    if top > bot and top - bot >= 0.3 * atrS[bar_index - (z)]
+                                        int inv = -1
+                                        bool dead = false
+                                        for y = z + 1 to last
+                                            if inv < 0
+                                                if (sg * close[bar_index - (y)]) > top
+                                                    inv := y
+                                            else if (sg * close[bar_index - (y)]) < bot
+                                                dead := true
+                                                break
+                                        if inv >= 0 and not dead
+                                            zone(z - 1, sg * top, sg * bot, "IFVG", cIFVG)
+                            // VI
+                            if pVI and vT.size() > 0
+                                for q = 0 to vT.size() - 1
+                                    if not vD.get(q)
+                                        zone(vI.get(q), sg * vT.get(q), sg * vBo.get(q), "VI", cVI)
+                            // CISD
+                            if pCISD and not na(lvl)
+                                lvlLine(lvlI, sg * lvl, cisd ? "CISD" : "CISD ?", cFVG, line.style_dashed, 1)
+                            // 1-2 cona
+                            float r2 = hi - ext
+                            if p12 and cisd and r2 > 0
+                                zone(cisdI, sg * (hi - 0.618 * r2), sg * (hi - 0.786 * r2), "1-2", c12)
+                            // fib pivoti: nFib najbližjih ceni
+                            if pFIB
+                                array<float> fl = array.from(0.5, 0.618, 0.786, 1.0, 1.618, 2.618)
+                                array<float> used = array.new<float>()
+                                for m = 1 to nFib
+                                    float best = na
+                                    float bf = na
+                                    for f in fl
+                                        float L = piv - f * rg
+                                        if L > ext - 1.5 * rg and not used.includes(f)
+                                            if na(best) or math.abs(L - px) < math.abs(best - px)
+                                                best := L, bf := f
+                                    if not na(best)
+                                        used.push(bf)
+                                        lvlLine(hB.get(rfK), sg * best, "Fib " + str.tostring(bf), cMut, line.style_dotted, 1)
+                            // GP prejšnje HTF sveče
+                            if pGP
+                                float PH = HH(k - 1, sg), PL = HL(k - 1, sg)
+                                bool bear = HC(k - 1, sg) < HO(k - 1, sg)
+                                float gA = bear ? PH - 0.618 * (PH - PL) : PL + 0.618 * (PH - PL)
+                                float gB = bear ? PH - 0.65 * (PH - PL) : PL + 0.65 * (PH - PL)
+                                zone(hB.get(k - 1), sg * gA, sg * gB, "GP", cGP)
+                            // OTE
+                            if pOTE
+                                float LH = -1e100
+                                for z = legStart to extI
+                                    LH := math.max(LH, (sg == 1 ? high[bar_index - (z)] : -low[bar_index - (z)]))
+                                if LH > ext
+                                    zone(extI, sg * (ext + 0.618 * (LH - ext)), sg * (ext + 0.786 * (LH - ext)), "OTE", cOTE)
+                            // posweepan nivo, ekstrem, open HTF
+                            if pSWP
+                                lvlLine(hB.get(rfK), sg * rfL, "Sweep", cSwp, line.style_solid, 2)
+                            lvlLine(extI, sg * ext, "SL", cSL, line.style_solid, 2)
+                            LBS.push(label.new(extI, sg * ext, sg == 1 ? "▲" : "▼", style = sg == 1 ? label.style_label_up : label.style_label_down, color = color.new(cSide, 100), textcolor = cSwp, size = size.normal))
+                            if pOPEN
+                                lvlLine(hB.get(n - 1), hO.get(n - 1), "Open HTF", cMut, line.style_dotted, 1)
+                            // začetek sweep sveče
+                            LNS.push(line.new(sB, sg * ext, sB, sg * HH(k, sg), color = color.new(cMut, 50), style = line.style_dotted))
+                            LBS.push(label.new(sB, sg * HH(k, sg), (sg == 1 ? "LONG" : "SHORT") + " sweep " + (tfIn == "D" ? "1D" : "6H") + (cisd ? " · CISD ✓" : ""), style = label.style_label_lower_left, color = color.new(cSide, 80), textcolor = cSide, size = size.small))
+
+    if s1d and timeframe.in_seconds() < 86400
+        s1dDraw(1)
+        s1dDraw(-1)
