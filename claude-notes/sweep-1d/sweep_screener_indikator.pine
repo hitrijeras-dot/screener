@@ -42,6 +42,11 @@ else
     hH.set(nn, math.max(hH.get(nn), high)), hL.set(nn, math.min(hL.get(nn), low)), hC.set(nn, close)
 
 atrS = ta.atr(14)
+max_bars_back(high, 5000)
+max_bars_back(low, 5000)
+max_bars_back(open, 5000)
+max_bars_back(close, 5000)
+max_bars_back(atrS, 5000)
 
 // zrcaljenje: sg = 1 long, -1 short (short = obrnjene cene, ista bull logika). Zgodovina cen samo v globalnem obsegu (ne v funkcijah).
 HH(int q, int sg) => sg == 1 ? hH.get(q) : -hL.get(q)
