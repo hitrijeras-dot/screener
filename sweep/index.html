@@ -65,6 +65,14 @@ select{border:1px solid var(--line);background:var(--s1);border-radius:var(--r2)
 .none{color:var(--mut);font-size:12.5px}
 .score{font-weight:700;font-variant-numeric:tabular-nums}.score small{display:block;font-weight:500;color:var(--mut);font-size:11px;letter-spacing:.02em}
 .px{text-align:right;font-variant-numeric:tabular-nums}.px small{display:block;color:var(--mut);font-size:11.5px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.card{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.card:hover{border-color:var(--mut)}.card.open{border-color:var(--buoy)}
+.card .ch{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card .cf{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut)}
+.cards .det{grid-column:1/-1;border:1px solid var(--buoy);border-radius:var(--r1)}
+.list.tbl{overflow-x:auto}
+table.t tr.rw{cursor:pointer}table.t tr.rw:hover td{background:var(--s2)}table.t tr.dr td{padding:0;white-space:normal;text-align:left}
 .det{padding:4px 14px 14px;border-top:1px dashed var(--line);background:var(--s2);cursor:default}
 .tfs{display:flex;gap:4px;margin:10px 0 6px;flex-wrap:wrap}
 .tfs button{border:1px solid var(--line);background:var(--s1);border-radius:7px;padding:4px 10px;font-size:12.5px;font-weight:700;color:var(--mut);cursor:pointer}
@@ -136,6 +144,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
       <select id="smUni"><option value="top50">Top 50 kripto</option><option value="top100">Top 100 kripto</option><option value="test">20 testiranih</option></select>
       <select id="smMin"><option value="0">Ocena 0+</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5/5</option></select>
       <div class="seg" id="smSide"><button class="on" data-side="all">Oba</button><button data-side="long">Long</button><button data-side="short">Short</button></div>
+      <div class="seg" id="smView"><button data-view="card">Kartice</button><button data-view="table">Tabela</button></div>
       <button class="btn" id="smGo">Skeniraj</button>
     </div>
     <div class="pts" id="smPts"><button class="pt tog on" id="smOnly">Samo na točki</button></div>
@@ -402,7 +411,9 @@ window.addEventListener('hashchange',function(){show(location.hash.slice(1))});
 $('theme').onclick=function(){var c=document.documentElement.dataset.theme,dark=c?c==='dark':!matchMedia('(prefers-color-scheme: light)').matches,n=dark?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem(k,n)}catch(e){};document.querySelectorAll('.chart').forEach(function(el){if(el._redraw)el._redraw()})}})();
 
 // ================= SCREENER =================
-var SMLAST=null,smSide='all',smOnly=true,smSel={},smOpen={},KC={};
+var SMLAST=null,smSide='all',smOnly=true,smSel={},smOpen={},KC={},smView='card';
+try{smView=localStorage.getItem('sweep_view')||'card'}catch(e){}
+document.querySelectorAll('#smView button').forEach(function(b){b.classList.toggle('on',b.dataset.view===smView);b.onclick=function(){smView=b.dataset.view;try{localStorage.setItem('sweep_view',smView)}catch(e){}document.querySelectorAll('#smView button').forEach(function(x){x.classList.toggle('on',x===b)});smRender()}});
 var PTNAME={SWEEP:'Sweep nivo',OPEN:'Open HTF'};
 SM_PTS.forEach(function(p){smSel[p[0]]=true;var b=document.createElement('button');b.className='pt on';b.title=p[1];b.textContent=PTNAME[p[0]]||p[0];b.onclick=function(){smSel[p[0]]=!smSel[p[0]];b.classList.toggle('on',smSel[p[0]]);smRender()};$('smPts').appendChild(b)});
 $('smOnly').onclick=function(){smOnly=!smOnly;this.classList.toggle('on',smOnly);smRender()};
@@ -438,19 +449,25 @@ function smRender(){
   rows.sort(function(a,b){return (smMatch(b).length>0)-(smMatch(a).length>0)||b.score-a.score||a.sym.localeCompare(b.sym)});
   var tfl=SMLAST.tf==='D'?'1D':'6H';
   $('smSum').textContent=hits.length+' na točki od '+SMLAST.rows.length+' aktivnih '+tfl+' setupov · '+SMLAST.n+' kovancev · '+fmtH(SMLAST.now);
-  if(!rows.length){$('smList').innerHTML='<div class="empty">'+(smOnly?'Noben kovanec ni na izbranih točkah. Izberi več točk ali izklopi "Samo na točki".':'Ni aktivnih sweep setupov.')+'</div>';return}
+  if(!rows.length){$('smList').className='list';$('smList').innerHTML='<div class="empty">'+(smOnly?'Noben kovanec ni na izbranih točkah. Izberi več točk ali izklopi "Samo na točki".':'Ni aktivnih sweep setupov.')+'</div>';return}
   var dots=function(x){return [['D',x.div],['F',x.fvg],['R',x.retest],['C',x.cisd],['1',x.zone]].map(function(c){return '<span style="opacity:'+(c[1]?1:.28)+'">'+c[0]+'</span>'}).join(' ')};
-  var html='';
-  rows.forEach(function(x){
-    var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg,m=smMatch(x);
-    html+='<div class="row" data-id="'+id+'"><div class="c"><div class="coin">'+esc(x.sym)+'</div><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span></div>'+
-      '<div class="h">'+(m.length?m.map(function(p){return '<span class="hit">'+esc(ptLabel(p))+'</span>'}).join(''):'<span class="none">ni na točki</span>')+'</div>'+
-      '<div class="score">'+x.score+'/5<small>'+dots(x)+'</small></div>'+
-      '<div class="px">'+fmtP(x.px)+'<small>'+dist.toFixed(2)+' % do SL</small></div></div>';
-    if(smOpen[id])html+='<div class="det" id="d_'+id+'"></div>';
-  });
-  $('smList').innerHTML=html;
-  $('smList').querySelectorAll('.row').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
+  var html='',mode=smView,hitsH=function(m){return m.length?m.map(function(p){return '<span class="hit">'+esc(ptLabel(p))+'</span>'}).join(''):'<span class="none">ni na točki</span>'};
+  if(mode==='table'){
+    html='<table class="t"><thead><tr><th>Kovanec</th><th class="tl">Smer</th><th class="tl">Na točki</th><th>Ocena</th><th>Cena</th><th>Do SL</th><th>CISD</th><th>Sweep</th></tr></thead><tbody>';
+    rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
+      html+='<tr class="rw" data-id="'+id+'"><td><b>'+esc(x.sym)+'</b></td><td class="tl"><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span></td><td class="tl">'+hitsH(smMatch(x))+'</td><td>'+x.score+'/5 <span class="mut" style="font-size:11px">'+dots(x)+'</span></td><td>'+fmtP(x.px)+'</td><td>'+dist.toFixed(2)+' %</td><td>'+(x.lvl==null?'–':fmtP(x.lvl)+(x.cisd?' <span class="up">✓</span>':' <span class="mut">čaka</span>'))+'</td><td>'+fmtT(x.extT)+'</td></tr>';
+      if(smOpen[id])html+='<tr class="dr"><td colspan="8"><div class="det" id="d_'+id+'"></div></td></tr>'});
+    html+='</tbody></table>';
+    $('smList').className='list tbl';$('smList').innerHTML=html;
+    $('smList').querySelectorAll('tr.rw').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
+  } else {
+    rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
+      html+='<div class="card'+(smOpen[id]?' open':'')+'" data-id="'+id+'"><div class="ch"><div><div class="coin">'+esc(x.sym)+'</div><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span></div><div class="px">'+fmtP(x.px)+'<small>'+dist.toFixed(2)+' % do SL</small></div></div>'+
+        '<div>'+hitsH(smMatch(x))+'</div><div class="cf"><span><b style="color:var(--ink)">'+x.score+'/5</b> '+dots(x)+'</span><span>CISD '+(x.lvl==null?'–':(x.cisd?'potrjen':'čaka'))+'</span></div></div>';
+      if(smOpen[id])html+='<div class="det" id="d_'+id+'"></div>'});
+    $('smList').className='cards';$('smList').innerHTML=html;
+    $('smList').querySelectorAll('.card').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
+  }
   rows.forEach(function(x){var id=x.sym+'_'+x.side;if(smOpen[id])smDetail($('d_'+id),x)});
 }
 var TFS=[['1','1m',60000],['5','5m',300000],['15','15m',900000],['60','1H',HOUR],['240','4H',4*HOUR],['D','1D',DAY]];
@@ -486,7 +503,7 @@ function smChart(el,x,all,dt){
   var inR=function(v){return v>=lo&&v<=hi};
   var o='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" font-family="Figtree,system-ui,sans-serif" font-size="11">';
   // mreža (cene levo, majhno)
-  for(var g=1;g<=4;g++){var gv=lo+(hi-lo)*g/5,gy=Y(gv);o+='<line x1="0" x2="'+plotR+'" y1="'+gy+'" y2="'+gy+'" stroke="'+C.grid+'"/>'+(W>=600?'<text x="4" y="'+(gy-3)+'" fill="'+C.mut+'" font-size="10">'+fmtP(gv)+'</text>':'')}
+  for(var g=1;g<=4;g++){var gv=lo+(hi-lo)*g/5,gy=Y(gv);o+='<line x1="0" x2="'+plotR+'" y1="'+gy+'" y2="'+gy+'" stroke="'+C.grid+'"/>'}
   // čas
   var step=Math.max(1,Math.ceil(70/cw));for(var q=Math.ceil(step/2);q<n;q+=step){var d=new Date(bars[q].t),lab=dt>=DAY?d.getDate()+'. '+(d.getMonth()+1)+'.':fmtH(bars[q].t);o+='<text x="'+(q*cw+cw/2)+'" y="'+(H-6)+'" fill="'+C.mut+'" font-size="10" text-anchor="middle">'+lab+'</text>'}
   // začetek sweep sveče
