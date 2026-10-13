@@ -15,6 +15,8 @@ Ločeno od Sistem EAX, CISD sistema in Jay HL – pravil ne mešati.
 ### Aplikacija (13. 10. 2026 zvečer, na Juretovo željo: "vse kot app", pregledni grafi, drugačna tema, lasten bias)
 - PWA (`manifest.webmanifest`, `sw.js`, ikone), spodnja navigacija: Screener, Bias, Limiti, Log, Pravila (vsak zaslon ima svoj #hash, deluje tudi gumb nazaj). Pilula z biasom v glavi odpre zaslon Bias.
 - Graf: preklop TF (1m, 5m, 15m, 1H, 4H, 1D); oznake v desnem robu, razporejene brez prekrivanja; polne so le cone točk, kjer je cena, ostale rahle brez napisov; fib samo dva najbližja ceni.
+- **Jezik:** gumb EN/SL v glavi (shrani v `sweep_lang`, ponovno naloži stran). Besedila so slovenska; v angleškem načinu jih sproti zamenja prevajalnik (slovar `EN` + pravila `EN_RX`, MutationObserver), tudi v grafih. Ko dodaš novo besedilo, dodaj tudi prevod v `EN`.
+- **TV lista:** 13. 10. 2026 narejena lista "Sweep Model 13.10." po rubrikah (smer · točka), prek TradingView API `/api/v1/symbols_list/custom/` (rubrike = vnosi `###Ime`). Kovanec je lahko v listi samo enkrat: pri obeh smereh višja ocena, pri enaki smer biasa; pri več točkah prednost CISD → 1-2 → FVG → IFVG → Sweep → FIB → GP → OTE.
 - **Lasten bias (zaslon Bias):** top 100 kripto. Višji okvirji: % nad/v/pod CPR prejšnjega M/W/D. Seje (UTC 1h sveče): Azija 0–8, London 8–13, NY 13–21; rezultat seje = 0,5 × pivot (neto položaj zaprtja vs dnevni CPR) + 0,3 × smer (neto zaprtje nad/pod odprtjem seje) + 0,2 × sweep (neto: posweepal low prejšnje seje in zaprl nad njim = +1, high in zaprl pod = −1). Skupaj = 0,5 × povprečje M/W/D + 0,5 × trenutna/zadnja seja; ≤ −20 Bearish, ≥ +20 Bullish, sicer Neodločen.
 
 ### Prejšnja različica biasa (po metodi Scanner X; nadomeščena z lastnim)

@@ -32,7 +32,7 @@ button,select,input{font:inherit;color:inherit}
 .bpill{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--s1);border-radius:999px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:13px}
 .bpill i{width:9px;height:9px;border-radius:50%;background:var(--mut)}
 .bpill.bear i{background:var(--short)}.bpill.bull i{background:var(--long)}
-.ib{border:1px solid var(--line);background:var(--s1);border-radius:999px;width:34px;height:34px;cursor:pointer}
+.ib{border:1px solid var(--line);background:var(--s1);border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:12px;font-weight:700}
 main{max-width:1000px;margin:0 auto;padding:14px 14px calc(92px + env(safe-area-inset-bottom))}
 .view{display:none}.view.on{display:block}
 h2{font:700 26px/1.1 var(--hd);letter-spacing:-.02em;margin:4px 0 4px}
@@ -130,6 +130,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
   <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#12343e"/><path d="M4 21c3 0 4.5-3 8-3s5 3 8 3 4.5-3 8-3" stroke="#57d3a6" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M16 5v15" stroke="#f3c34f" stroke-width="2.2" stroke-linecap="round"/><rect x="13" y="8" width="6" height="7" rx="1.5" fill="#f3c34f"/></svg>Sweep</div>
   <span class="sp"></span>
   <button class="bpill" id="biasPill" title="Odpri bias trga"><i></i><span>Bias …</span></button>
+  <button class="ib" id="lang" title="English">EN</button>
   <button class="ib" id="theme" title="Svetla / temna tema">◐</button>
 </header>
 
@@ -216,6 +217,8 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
   <button data-v="rules"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>Pravila</button>
 </nav>
 <script>
+var LANG='sl';try{LANG=localStorage.getItem('sweep_lang')||'sl'}catch(e){}
+var LOC=LANG==='en'?'en-GB':'sl-SI';
 var API='https://api.bybit.com/v5/market/';
 var TESTED=['AAVE','ADA','ARB','AVAX','BNB','BTC','DOGE','DOT','ENA','ETH','HYPE','LINK','LTC','NEAR','SOL','SUI','TAO','TRX','WIF','XRP'];
 var LOG_START=Date.UTC(2026,9,13); // dnevna sveča 13. 10. 2026 (UTC)
@@ -379,11 +382,11 @@ async function kRange(sym,iv,from,to){
 }
 async function pool(items,n,fn){var res=[],i=0;async function w(){while(i<items.length){var k=i++;try{res[k]=await fn(items[k])}catch(e){res[k]={err:e}}}}var ws=[];for(var j=0;j<n;j++)ws.push(w());await Promise.all(ws);return res}
 var fmtP=function(v){if(v==null||v!==v)return '–';var a=Math.abs(v),d=a>=1000?1:a>=100?2:a>=1?3:a>=0.1?4:a>=0.01?5:6;return v.toFixed(d)};
-var fmtT=function(t){return new Date(t).toLocaleString('sl-SI',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})};
-var fmtH=function(t){return new Date(t).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'})};
+var fmtT=function(t){return new Date(t).toLocaleString(LOC,{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})};
+var fmtH=function(t){return new Date(t).toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'})};
 var fmtD=function(t){var d=new Date(t);return d.getUTCDate()+'. '+(d.getUTCMonth()+1)+'.'};
 var fR=function(v){return v==null||v!==v?'–':(v>0?'+':'')+v.toFixed(2)+' R'};
-var fUsd=function(v){return (v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleString('sl-SI',{maximumFractionDigits:0})+' $'};
+var fUsd=function(v){return (v>0?'+':v<0?'−':'')+Math.abs(v).toLocaleString(LOC,{maximumFractionDigits:0})+' $'};
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function alertMsg(m){var a=$('alert');if(!m){a.classList.remove('on');return}a.textContent=m;a.classList.add('on')}
 var CRYPTO=null;
@@ -650,6 +653,91 @@ function render(){
 }
 $('go').onclick=run;$('uni').onchange=run;$('risk').onchange=render;
 setInterval(function(){if(started.limits||started.log)run()},5*60*1000);
+
+// ================= JEZIK (slovensko / angleško) =================
+// Besedila v aplikaciji so slovenska; v angleškem načinu jih prevajalnik sproti zamenja (tudi v grafih in tabelah).
+var EN={"FVG – nepokrit bull/bear FVG po sweepu":"FVG – uncovered FVG after the sweep","IFVG – obrnjen FVG iz poteze v sweep":"IFVG – inverted FVG from the move into the sweep","Volume imbalance po sweepu":"Volume imbalance after the sweep","Retest CISD nivoja (po potrditvi)":"Retest of the CISD level (after confirmation)","1-2 cona (0,618–0,786 impulza po CISD)":"1-2 zone (0.618–0.786 of the impulse after CISD)","HTF fib pivot (0,5 … 2,618)":"HTF fib pivot (0.5 … 2.618)","Golden pocket HTF sveče (0,618–0,65)":"Golden pocket of the HTF candle (0.618–0.65)","OTE cona (0,618–0,786 noge v sweep)":"OTE zone (0.618–0.786 of the leg into the sweep)","Retest posweepanega nivoja":"Retest of the swept level","Odprtje HTF sveče (opening line)":"HTF candle open (opening line)",
+'Bias …':'Bias …','Kovanci na točki':'Coins at a point',
+'Sweep Model: višja sveča je posweepala prejšnji high ali low. Tukaj so kovanci, kjer je cena zdaj v FVG, na fibu, v 1-2 coni ali na drugi točki indikatorja. Tapni kovanec za graf.':'Sweep Model: a higher-timeframe candle swept the previous high or low. These are the coins where price is now in an FVG, on a fib, in the 1-2 zone or at another point of the indicator. Tap a coin for its chart.',
+'Top 50 kripto':'Top 50 crypto','Top 100 kripto':'Top 100 crypto','Top 30 kripto':'Top 30 crypto','20 testiranih':'20 tested','20 testiranih kovancev':'20 tested coins',
+'Ocena 0+':'Score 0+','Oba':'Both','Kartice':'Cards','Tabela':'Table','Skeniraj':'Scan','Samo na točki':'Only at a point','Skeniram trg…':'Scanning the market…',
+'Bias trga':'Market bias','Naš lasten izračun iz Bybit podatkov, neodvisen od EAX. Gleda, kje so kovanci glede na pivote (mesec, teden, dan) in kako se je trg obnašal v vsaki seji.':'Our own calculation from Bybit data, independent of EAX. It looks at where coins sit relative to their pivots (month, week, day) and how the market behaved in each session.',
+'Računam bias…':'Calculating bias…','Limiti Sweep 1D':'Sweep 1D limits',
+'Strategija iz backtesta: dnevni sweep, zaprtje nazaj, limit na posweepan nivo. Setupi iz včerajšnje dnevne sveče veljajo do 2:00.':'The backtested strategy: daily sweep, close back inside, limit at the swept level. Setups from yesterday’s daily candle are valid until 2:00.',
+'Osveži':'Refresh','veljavnih limitov danes':'valid limits today','Aktivni limiti':'Active limits','Status se sproti posodablja iz Bybit podatkov.':'Status updates live from Bybit data.','Nalagam…':'Loading…',
+'Možni ob naslednjem zaprtju':'Possible at the next close','Današnja sveča je posweepala včerajšnji nivo in je zdaj nazaj v rangu. Velja, če tako zapre ob 2:00.':'Today’s candle swept yesterday’s level and is back inside the range. Valid only if it closes that way at 2:00.',
+'Kaj bi bilo, če bi trgovala Sweep 1D od 13. 10. 2026 naprej. Izračunano po istih pravilih kot backtest, s provizijami, največ 3 posli v isto smer na dan.':'What would have happened trading Sweep 1D from 13 Oct 2026 on. Same rules as the backtest, fees included, at most 3 trades in one direction per day.',
+'Riziko na posel $':'Risk per trade $','poslov':'trades','skupaj R':'total R','skupaj $':'total $',
+'Pravila':'Rules','Limiti':'Limits','Log':'Log','Bias':'Bias','Screener':'Screener',
+'Sweep 1D (strategija iz backtesta)':'Sweep 1D (backtested strategy)',
+'Dnevna sveča (pri nas zapre ob 2:00) posweepa včerajšnji low (long) ali high (short).':'The daily candle (closes at 2:00 our time) sweeps yesterday’s low (long) or high (short).',
+'Sveča se zapre nazaj nad včerajšnjim lowom oziroma pod highom.':'The candle closes back above yesterday’s low, or below its high.',
+'Naslednji dan limit (Post-Only) točno na posweepan nivo, velja 24 ur. Če cena pred vstopom preseže ekstrem sweep sveče, setup odpade.':'Next day a Post-Only limit exactly at the swept level, valid for 24 hours. If price breaks the sweep candle’s extreme before the fill, the setup is cancelled.',
+'SL za ekstremom sweep sveče + 0,1 × ATR(14) na 1h. Razdalja 0,4–3 %, sicer preskoči.':'SL beyond the sweep candle’s extreme + 0.1 × ATR(14) on 1h. Distance 0.4–3 %, otherwise skip.',
+'TP na sredini včerajšnje sveče (EQ). Če je manj kot 1:1, preskoči.':'TP at the middle of yesterday’s candle (EQ). Skip if it is below 1:1.',
+'Po 48 urah zapri. Največ 3 posli v isto smer na dan.':'Close after 48 hours. At most 3 trades in one direction per day.',
+'Riziko 75 $ na posel, blizu cilja 50 $.':'Risk 75 $ per trade, 50 $ near the target.',
+'Nov posel samo, če je današnja izguba + riziko odprtih + nov posel največ 350 $ (meja 400 $).':'New trade only if today’s loss + open risk + the new trade is at most 350 $ (limit 400 $).',
+'Nov posel samo, če stanje − odprti riziko − nov posel ostane vsaj 9.050 $ (meja 9.000 $).':'New trade only if balance − open risk − the new trade stays at least 9,050 $ (limit 9,000 $).',
+'Setup: višja sveča (6H ali 1D) posweepa low ali high prejšnje. Po ekstremu iščem točke indikatorja Sweep Model: FVG, IFVG, VI, CISD, 1-2 cona, HTF fib pivoti, GP, OTE, posweepan nivo in odprtje HTF sveče. Ocena x/5: divergenca, FVG, retest, CISD, 1-2. Backtest je pokazal, da ti signali sami niso imeli roba, zato so za iskanje kandidatov.':'Setup: a higher candle (6H or 1D) sweeps the previous low or high. After the extreme I look for the Sweep Model points: FVG, IFVG, VI, CISD, 1-2 zone, HTF fib pivots, GP, OTE, the swept level and the HTF open. Score x/5: divergence, FVG, retest, CISD, 1-2. The backtest showed these signals alone had no edge, so they are for finding candidates.',
+'Top 100 kripto kovancev na Bybitu. Za mesec, teden in dan: koliko kovancev je nad, v ali pod pivot območjem (CPR) prejšnjega obdobja. Za vsako sejo (Azija, London, New York) seštejem tri stvari: kje je cena glede na dnevni pivot (50 %), ali je seja zaprla višje ali nižje od odprtja (30 %) in ali je posweepala low ali high prejšnje seje in zaprla nazaj (20 %). Rezultat od −100 do +100. Skupni bias je povprečje višjih okvirjev in trenutne seje: pod −20 iščem predvsem shorte, nad +20 predvsem longe.':'Top 100 crypto coins on Bybit. For month, week and day: how many coins are above, inside or below the pivot range (CPR) of the previous period. For each session (Asia, London, New York) I add three things: where price is against the daily pivot (50 %), whether the session closed higher or lower than it opened (30 %) and whether it swept the previous session’s low or high and closed back (20 %). Result from −100 to +100. Overall bias is the average of the higher timeframes and the current session: below −20 I look mainly for shorts, above +20 mainly for longs.',
+'Ni finančni nasvet. Backtest ni zagotovilo za prihodnost.':'Not financial advice. A backtest is no guarantee for the future.',
+'Kovanec':'Coin','Smer':'Direction','Na točki':'At point','Ocena':'Score','Cena':'Price','Do SL':'To SL','Sweep':'Sweep','ni na točki':'not at a point','čaka':'waiting',
+'Posweepan nivo':'Swept level','Ekstrem sweepa (SL)':'Sweep extreme (SL)','zaprta nazaj':'closed back','ni zaprta nazaj':'did not close back','še odprta':'still open',
+'Cena je zdaj na:':'Price is now at:','Sweep nivo':'Sweep level','Open HTF':'HTF open',
+'Bearish':'Bearish','Bullish':'Bullish','Neodločen':'Undecided',
+'Seje danes':'Sessions today','Stolpec gor pomeni bikovsko sejo, dol medvedjo. Rezultat je mešanica: položaj glede na dnevni pivot, smer seje in sweep prejšnje seje.':'A bar up means a bullish session, down a bearish one. The score mixes position against the daily pivot, session direction and the sweep of the previous session.',
+'Seja':'Session','Pivot':'Pivot','Skupaj':'Total','Včeraj NY':'Yesterday NY','Azija':'Asia','zdaj':'now','še ni začela':'not started yet',
+'Višji okvirji':'Higher timeframes','Koliko kovancev je nad (zeleno), v (sivo) ali pod (koralno) pivot območjem prejšnjega meseca, tedna in dneva. Številka desno je neto razlika.':'How many coins are above (green), inside (grey) or below (coral) the pivot range of the previous month, week and day. The number on the right is the net difference.',
+'Mesec':'Month','Teden':'Week','Dan':'Day',
+'Večina trga je pod pivoti in seje tečejo navzdol. Iščem predvsem shorte.':'Most of the market is below its pivots and sessions are flowing down. Looking mainly for shorts.',
+'Večina trga je nad pivoti in seje tečejo navzgor. Iščem predvsem longe.':'Most of the market is above its pivots and sessions are flowing up. Looking mainly for longs.',
+'Trg je razdeljen. Obe smeri, z manjšim rizikom.':'The market is split. Both directions, with smaller risk.',
+'čaka na vstop':'waiting for entry','ni bilo vstopa':'no fill','odpadel':'cancelled','preskočen (SL)':'skipped (SL)','preskočen (RR < 1)':'skipped (RR < 1)','zaprt po 48 h':'closed after 48 h','odprt':'open','ni podatkov':'no data','bo preskočen':'will be skipped',
+'Limit':'Limit','TP (EQ)':'TP (EQ)','RR':'RR','Do limita':'To limit','Status':'Status','Bodoči limit':'Future limit','Ekstrem':'Extreme','Sweep dan':'Sweep day','Vstop':'Entry','Izhod':'Exit','zdaj ':'now',
+'Trenutno nič.':'Nothing right now.','Danes ni setupov. Včerajšnja dnevna sveča ni nikjer posweepala in zaprla nazaj.':'No setups today. Yesterday’s daily candle did not sweep and close back anywhere.',
+'Paper log se začne z dnevno svečo 13. 10. 2026, ki zapre ob 2:00 14. 10. Prvi vstopi so možni od takrat naprej.':'The paper log starts with the daily candle of 13 Oct 2026, which closes at 2:00 on 14 Oct. First entries are possible from then on.',
+'Noben kovanec ni na izbranih točkah. Izberi več točk ali izklopi "Samo na točki".':'No coin is at the selected points. Pick more points or turn off "Only at a point".',
+'Ni aktivnih sweep setupov.':'No active sweep setups.',
+'Odpri bias trga':'Open market bias','Svetla / temna tema':'Light / dark theme','Setup timeframe':'Setup timeframe'
+};
+var EN_RX=[
+[/^(\d+) na točki od (\d+) aktivnih (\S+) setupov · (\d+) kovancev · (.+)$/,'$1 at a point out of $2 active $3 setups · $4 coins · $5'],
+[/^Skeniram (\d+) kovancev…$/,'Scanning $1 coins…'],
+[/^(.+) % do SL$/,'$1 % to SL'],
+[/^CISD potrjen$/,'CISD confirmed'],[/^CISD čaka$/,'CISD waiting'],
+[/^(.+) potrjen$/,'$1 confirmed'],[/^(.+) še čaka$/,'$1 still waiting'],
+[/^(\S+) sveča$/,'$1 candle'],
+[/^\. Ocena (\d)\/5\.$/,'. Score $1/5.'],
+[/^Cena trenutno ni na nobeni izbrani točki\. Ocena (\d)\/5\.$/,'Price is not at any selected point right now. Score $1/5.'],
+[/^Neodločen (.+)$/,'Undecided $1'],
+[/^(.+) Skupaj (\S+) od ±100\.$/,function(m,a,b){return (EN[a]||a)+' Total '+b+' of ±100.'}],
+[/^(.+) · v teku$/,function(m,a){return (EN[a]||a)+' · live'}],
+[/^(\d+) kripto kovancev z največjim prometom na Bybitu · osveženo (.+) · samodejno vsakih 10 minut\. Časi so po našem času\.$/,'$1 crypto coins with the highest volume on Bybit · updated $2 · refreshes every 10 minutes. Times are in your local time.'],
+[/^Sweep 1D osvežen (.+)\. Podatki: Bybit USDT perpetual\.$/,'Sweep 1D updated $1. Data: Bybit USDT perpetual.'],
+[/^(.+) · čez limit 3$/,function(m,a){return (EN[a]||a)+' · over the limit of 3'}],
+[/^Nalagam (.+)…$/,'Loading $1…'],
+[/^nad (\d+) %, vmes (\d+) %, pod (\d+) %$/,'above $1 %, inside $2 %, below $3 %'],
+[/^Graf se ni naložil: (.+)$/,'Chart did not load: $1'],
+[/^Skeniranje ni uspelo: (.+)\. Preveri povezavo in tapni Skeniraj\.$/,'Scan failed: $1. Check the connection and tap Scan.'],
+[/^Bias se ni izračunal: (.+)\. Poskusim znova čez 10 minut\.$/,'Bias was not calculated: $1. Trying again in 10 minutes.'],
+[/^(\d)\+$/,'$1+']
+];
+function trText(s){var k=s.trim();if(!k)return null;if(EN[k]!=null)return s.replace(k,EN[k]);for(var i=0;i<EN_RX.length;i++){if(EN_RX[i][0].test(k))return s.replace(k,k.replace(EN_RX[i][0],EN_RX[i][1]))}return null}
+function trNode(n){
+  if(n.nodeType===3){var r=trText(n.nodeValue);if(r!=null&&r!==n.nodeValue)n.nodeValue=r;return}
+  if(n.nodeType!==1||n.tagName==='SCRIPT'||n.tagName==='STYLE')return;
+  ['title','aria-label'].forEach(function(a){var v=n.getAttribute&&n.getAttribute(a);if(v){var r=trText(v);if(r!=null)n.setAttribute(a,r)}});
+  for(var c=n.firstChild;c;c=c.nextSibling)trNode(c);
+}
+if(LANG==='en'){
+  document.documentElement.lang='en';
+  trNode(document.body);
+  new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==='characterData')trNode(m.target);else m.addedNodes.forEach(trNode)})}).observe(document.body,{subtree:true,childList:true,characterData:true});
+}
+$('lang').textContent=LANG==='en'?'SL':'EN';
+$('lang').title=LANG==='en'?'Slovenščina':'English';
+$('lang').onclick=function(){try{localStorage.setItem('sweep_lang',LANG==='en'?'sl':'en')}catch(e){}location.reload()};
 
 // ---------- zagon
 show(location.hash.slice(1)||'screener');smRun();
