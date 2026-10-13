@@ -739,7 +739,7 @@ $('lang').onclick=function(){try{localStorage.setItem('sweep_lang',LANG==='en'?'
 
 // ---------- zagon
 show(location.hash.slice(1)||'screener');smRun();
-if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(function(){});
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(function(reg){reg.update()}).catch(function(){});
 
 </script>
 </body>
