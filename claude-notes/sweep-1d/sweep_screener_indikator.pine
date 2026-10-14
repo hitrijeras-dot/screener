@@ -1,6 +1,6 @@
 //@version=6
 // Sweep Screener · Claude — riše isto kot graf v aplikaciji Sweep (zaslon Screener) + današnje Sweep 1D limite.
-// Logika = /*SM*/ smBull v sweep/index.html (replikacija OnlyWicks Sweep Model). Če spremeniš eno, spremeni obe.
+// Logika = /*SM*/ smBull v sweep/index.html (replikacija OnlyWicks Sweep Model, umerjena 14. 10. 2026 po opisu in risbah pravega indikatorja). Če spremeniš eno, spremeni obe.
 indicator("Sweep Screener · Claude", shorttitle = "Sweep·C", overlay = true, scale = scale.right, max_bars_back = 5000, max_lines_count = 300, max_boxes_count = 200, max_labels_count = 200)
 
 // ---------- nastavitve
@@ -14,19 +14,18 @@ pFVG   = input.bool(true, "FVG", inline = "a", group = "Točke")
 pIFVG  = input.bool(true, "IFVG", inline = "a", group = "Točke")
 pVI    = input.bool(true, "VI", inline = "a", group = "Točke")
 pCISD  = input.bool(true, "CISD", inline = "b", group = "Točke")
-p12    = input.bool(true, "1-2", inline = "b", group = "Točke")
 pGP    = input.bool(true, "GP", inline = "b", group = "Točke")
 pOTE   = input.bool(true, "OTE", inline = "c", group = "Točke")
 pSWP   = input.bool(true, "Posweepan nivo", inline = "c", group = "Točke")
 pOPEN  = input.bool(true, "Open HTF", inline = "c", group = "Točke")
 pFIB   = input.bool(true, "Fib pivoti", inline = "d", group = "Točke")
-nFib   = input.int(2, "koliko najbližjih", minval = 1, maxval = 6, inline = "d", group = "Točke")
+nFib   = input.int(6, "največ (samo dotaknjeni)", minval = 1, maxval = 6, inline = "d", group = "Točke")
 s1d    = input.bool(true, "Pokaži današnje Sweep 1D limite", group = "Sweep 1D")
 
-cFVG = #00d9ff, cIFVG = #b56bff, cVI = #9a9aa8, c12 = #ff7a00, cGP = #ffd400, cOTE = #ff3df0
+cFVG = #00d9ff, cIFVG = #b56bff, cVI = #9a9aa8, cGP = #ffd400, cOTE = #ff3df0
 cLong = #2dff8f, cShort = #ff2d55, cSwp = #ff7a00, cMut = #8a8a96
 
-// ---------- HTF sveče (zadnjih 8), sledene na grafu
+// ---------- HTF sveče (zadnjih 8; setup uporablja pas zadnjih 4), sledene na grafu
 var array<int>   hB = array.new<int>()
 var array<int>   hT = array.new<int>()
 var array<float> hO = array.new<float>()
@@ -126,8 +125,9 @@ if barstate.islast
             int n = hB.size()
             int last = bar_index
             bool done = false
-            if n >= 3
-                for k = n - 1 to n - 2
+            if n >= 5
+                // kot OnlyWicks (pas 4 HTF sveč): sweep sveča v zadnjih 3, najstarejši še živ setup ima prednost (wick čez ekstrem = Retest)
+                for k = n - 3 to n - 1
                     if done
                         break
                     int sB = hB.get(k)
@@ -152,11 +152,12 @@ if barstate.islast
                         array<float> vT = array.new<float>(), array<float> vBo = array.new<float>(), array<int> vI = array.new<int>(), array<bool> vD = array.new<bool>()
                         for i = i0 to last
                             float bl = (sg == 1 ? low[bar_index - (i)] : -high[bar_index - (i)]), bh = (sg == 1 ? high[bar_index - (i)] : -low[bar_index - (i)]), bo = (sg * open[bar_index - (i)]), bc = (sg * close[bar_index - (i)])
-                            if na(ext) or bl < ext
-                                if i <= sE
+                            if i <= sE
+                                if na(ext) or bl < ext
                                     ext := bl, extI := i, lvl := na, lvlI := -1, cisd := false, cisdI := -1, hi := -1e100
                                     fT.clear(), fBo.clear(), fI.clear(), fD.clear(), vT.clear(), vBo.clear(), vI.clear(), vD.clear()
-                                    int j = bc < bo ? i : i - 1
+                                    // CISD: odprtje zadnje serije >= 2 dostavnih sveč, ki se konča na ekstremu ali pred njim
+                                    int j = i
                                     int lim = math.max(0, i - 12)
                                     while j >= lim
                                         if (sg * close[bar_index - (j)]) < (sg * open[bar_index - (j)])
@@ -169,9 +170,10 @@ if barstate.islast
                                             j := r0 - 1
                                         else
                                             j -= 1
-                                else
-                                    inval := true
-                                    break
+                            else if bc <= ext
+                                // setup mrtev šele, ko sveča ZAPRE čez ekstrem
+                                inval := true
+                                break
                             if i > extI
                                 if not na(lvl) and not cisd and bc > lvl
                                     cisd := true, cisdI := i
@@ -189,50 +191,71 @@ if barstate.islast
                                         if i > vI.get(q) and bc < vBo.get(q)
                                             vD.set(q, true)
                                 hi := math.max(hi, bh)
-                        if not inval and extI >= 0
+                        // nivo: najbolj skrajen še deviški nivo v pasu (do 3 sveče nazaj), ki ga je sweep vzel
+                        int rfK = k - 1
+                        int qLo = math.max(0, n - 4, k - 3)
+                        if k - 2 >= qLo
+                            for q = k - 2 to qLo
+                                float vq = HL(q, sg)
+                                bool vir = true
+                                for m = q + 1 to k - 1
+                                    if HL(m, sg) < vq
+                                        vir := false
+                                if vir and vq > ext and vq < HL(rfK, sg)
+                                    rfK := q
+                        float rfL = HL(rfK, sg)
+                        // setup šele, ko sweep sveča zapre nazaj nad nivo (odprta sveča: trenutna cena)
+                        float sC = k < n - 1 ? HC(k, sg) : sg * close
+                        if not inval and extI >= 0 and sC > rfL
                             done := true
                             int l0 = LNS.size(), b0 = BXS.size(), lb0 = LBS.size()
-                            // referenčna sveča: najgloblje posweepana med zadnjimi 4 HTF
-                            int rfK = k - 1
-                            float rfL = HL(k - 1, sg)
-                            for q = k - 1 to math.max(0, k - 4)
-                                if HL(q, sg) > ext and HL(q, sg) < rfL
-                                    rfL := HL(q, sg), rfK := q
                             float piv = (HH(rfK, sg) + HL(rfK, sg) + HC(rfK, sg)) / 3
                             float rg = HH(rfK, sg) - HL(rfK, sg)
                             int legStart = math.max(hB.get(rfK), last - 4800)
                             color cSide = sg == 1 ? cLong : cShort
                             color cSL = sg == 1 ? cShort : cLong
                             float px = sg * close
-                            // najnižji low / najvišji high od vsake sveče naprej (za brisanje pobranih con)
+                            // najnižji low / najvišji high od vsake sveče naprej
                             array<float> mnF = array.new<float>(last - legStart + 2, 1e100)
                             array<float> mxF = array.new<float>(last - legStart + 2, -1e100)
                             for i = last to legStart
                                 mnF.set(i - legStart, math.min(mnF.get(i - legStart + 1), (sg == 1 ? low[bar_index - (i)] : -high[bar_index - (i)])))
                                 mxF.set(i - legStart, math.max(mxF.get(i - legStart + 1), (sg == 1 ? high[bar_index - (i)] : -low[bar_index - (i)])))
-                            // FVG: samo nepokrite (cena ni šla čez celo cono), največ maxZ najnovejših
+                            // FVG: prvi še nepokrit FVG po ekstremu (kot indikator)
                             if pFVG and fT.size() > 0
-                                int cnt = 0
-                                for q = fT.size() - 1 to 0
-                                    if cnt < maxZ and not fD.get(q) and mnF.get(fI.get(q) + 1 - legStart) > fBo.get(q)
-                                        zone(fI.get(q) - 1, sg * fT.get(q), sg * fBo.get(q), "FVG", cFVG)
-                                        cnt += 1
-                            // IFVG: obrnjen in ne pobran, največ maxZ najbližjih ekstremu
-                            if pIFVG
-                                int cnt = 0
-                                for z = extI to math.max(legStart + 2, 2)
-                                    if cnt >= maxZ
+                                for q = 0 to fT.size() - 1
+                                    if not fD.get(q)
+                                        zone(fI.get(q) - 2, sg * fT.get(q), sg * fBo.get(q), "FVG", cFVG)
                                         break
-                                    float top = (sg == 1 ? low[bar_index - (z - 2)] : -high[bar_index - (z - 2)]), bot = (sg == 1 ? high[bar_index - (z)] : -low[bar_index - (z)])
-                                    if top > bot and top - bot >= 0.3 * atrS[bar_index - (z)]
-                                        int inv = -1
-                                        for y = z + 1 to last
-                                            if (sg * close[bar_index - (y)]) > top
-                                                inv := y
-                                                break
-                                        if inv >= 0 and inv < last and mnF.get(inv + 1 - legStart) > bot
-                                            zone(z - 1, sg * top, sg * bot, "IFVG", cIFVG)
-                                            cnt += 1
+                            // IFVG: FVG v potezi v sweep, ki ga je close prvi prebil PO ekstremu; prebit nazaj = "IFVG ✗"
+                            if pIFVG
+                                int bInv = 1000000000
+                                float bTop = na
+                                float bBot = na
+                                int bZ = -1
+                                bool bDead = false
+                                int zA = math.max(legStart + 2, 2)
+                                int zB = math.min(extI + 1, last)
+                                if zB >= zA
+                                    for z = zA to zB
+                                        float top = (sg == 1 ? low[bar_index - (z - 2)] : -high[bar_index - (z - 2)]), bot = (sg == 1 ? high[bar_index - (z)] : -low[bar_index - (z)])
+                                        if top > bot and top - bot >= 0.3 * atrS[bar_index - (z)]
+                                            int inv = -1
+                                            bool dead = false
+                                            for y = z + 1 to last
+                                                float cy = sg * close[bar_index - (y)]
+                                                if inv < 0
+                                                    if cy > top
+                                                        inv := y
+                                                        if inv <= extI or inv >= bInv
+                                                            break
+                                                else if cy < bot
+                                                    dead := true
+                                                    break
+                                            if inv > extI and inv < bInv
+                                                bInv := inv, bTop := top, bBot := bot, bZ := z, bDead := dead
+                                if bZ >= 0
+                                    zone(bZ - 2, sg * bTop, sg * bBot, bDead ? "IFVG ✗" : "IFVG", bDead ? cMut : cIFVG)
                             // VI
                             if pVI and vT.size() > 0
                                 int cnt = 0
@@ -243,27 +266,22 @@ if barstate.islast
                             // CISD
                             if pCISD and not na(lvl)
                                 lvlLine(lvlI, sg * lvl, cisd ? "CISD" : "CISD ?", cFVG, line.style_dashed, 1)
-                            // 1-2 cona: izgine, ko jo cena prebije do spodnjega roba
+                            // OTE (kot indikator): 0,618–0,786 povratka od ekstrema do najdlje po njem; šele ko je CISD potrjen in impulz od CISD vsaj 1 : 1
                             float r2 = hi - ext
-                            if p12 and cisd and r2 > 0
-                                float zb = hi - 0.786 * r2
-                                if cisdI >= last or mnF.get(cisdI + 1 - legStart) > zb
-                                    zone(cisdI, sg * (hi - 0.618 * r2), sg * zb, "1-2", c12)
-                            // fib pivoti: nFib najbližjih ceni
+                            if pOTE and cisd and r2 > 0 and hi - lvl >= lvl - ext
+                                float oT = hi - 0.618 * r2, oB = hi - 0.786 * r2
+                                bool hit = cisdI < last and mnF.get(cisdI + 1 - legStart) <= oT
+                                zone(extI, sg * oT, sg * oB, hit ? "OTE ✓" : "OTE", cOTE)
+                            // fib pivoti sveče nivoja: samo dotaknjeni (od začetka sweep sveče)
                             if pFIB
                                 array<float> fl = array.from(0.5, 0.618, 0.786, 1.0, 1.618, 2.618)
-                                array<float> used = array.new<float>()
-                                for m = 1 to nFib
-                                    float best = na
-                                    float bf = na
-                                    for f in fl
-                                        float L = piv - f * rg
-                                        if L > ext - 1.5 * rg and not used.includes(f)
-                                            if na(best) or math.abs(L - px) < math.abs(best - px)
-                                                best := L, bf := f
-                                    if not na(best)
-                                        used.push(bf)
-                                        lvlLine(hB.get(rfK), sg * best, "Fib " + str.tostring(bf), cMut, line.style_dotted, 1)
+                                int s0 = math.max(sB, legStart)
+                                int nf = 0
+                                for f in fl
+                                    float L = piv - f * rg
+                                    if nf < nFib and L > ext - 1.5 * rg and mnF.get(s0 - legStart) <= L and mxF.get(s0 - legStart) >= L
+                                        lvlLine(hB.get(rfK), sg * L, "Fib " + str.tostring(f), cMut, line.style_dotted, 1)
+                                        nf += 1
                             // GP prejšnje HTF sveče: izgine, ko jo cena preide v celoti (od sweep sveče naprej)
                             if pGP
                                 float PH = HH(k - 1, sg), PL = HL(k - 1, sg)
@@ -273,22 +291,6 @@ if barstate.islast
                                 int g0 = math.max(sB, legStart)
                                 if not (mnF.get(g0 - legStart) <= math.min(gA, gB) and mxF.get(g0 - legStart) >= math.max(gA, gB))
                                     zone(hB.get(k - 1), sg * gA, sg * gB, "GP", cGP)
-                            // OTE: izgine, ko cena po ekstremu pade skozi celo cono
-                            if pOTE
-                                float LH = -1e100
-                                for z = legStart to extI
-                                    LH := math.max(LH, (sg == 1 ? high[bar_index - (z)] : -low[bar_index - (z)]))
-                                if LH > ext
-                                    float oA = ext + 0.618 * (LH - ext), oB = ext + 0.786 * (LH - ext)
-                                    bool used2 = false
-                                    float mxAfter = -1e100
-                                    for z = extI + 1 to last
-                                        mxAfter := math.max(mxAfter, (sg == 1 ? high[bar_index - (z)] : -low[bar_index - (z)]))
-                                        if mxAfter >= oB and (sg == 1 ? low[bar_index - (z)] : -high[bar_index - (z)]) <= oA
-                                            used2 := true
-                                            break
-                                    if not used2
-                                        zone(extI, sg * oA, sg * oB, "OTE", cOTE)
                             // posweepan nivo, ekstrem, open HTF
                             if pSWP
                                 lvlLine(hB.get(rfK), sg * rfL, "Sweep", cSwp, line.style_solid, 2)
@@ -298,9 +300,9 @@ if barstate.islast
                                 lvlLine(hB.get(n - 1), hO.get(n - 1), "Open HTF", cMut, line.style_dotted, 1)
                             // začetek sweep sveče
                             LNS.push(line.new(sB, sg * ext, sB, sg * HH(k, sg), color = color.new(cMut, 50), style = line.style_dotted))
-                            LBS.push(label.new(sB, sg * HH(k, sg), (sg == 1 ? "LONG" : "SHORT") + " sweep " + (tfIn == "D" ? "1D" : "6H") + (cisd ? " · CISD ✓" : ""), style = label.style_label_lower_left, color = color.new(cSide, 80), textcolor = cSide, size = size.small))
-                            rg0.push(l0), rg0.push(LNS.size()), rg0.push(b0), rg0.push(BXS.size()), rg0.push(lb0), rg0.push(LBS.size()), rg0.push(extI)
-    // samo zadnji setup: pobriši risbe starejše strani
+                            LBS.push(label.new(sB, sg * HH(k, sg), (sg == 1 ? "LONG" : "SHORT") + " setup " + (tfIn == "D" ? "1D" : "6H") + (cisd ? " · CISD ✓" : ""), style = label.style_label_lower_left, color = color.new(cSide, 80), textcolor = cSide, size = size.small))
+                            rg0.push(l0), rg0.push(LNS.size()), rg0.push(b0), rg0.push(BXS.size()), rg0.push(lb0), rg0.push(LBS.size()), rg0.push(sB * 10000 + math.min(9999, extI - sB))
+    // samo zadnji setup: pobriši risbe starejše strani (starejša sweep sveča; ista sveča → zgodnejši ekstrem)
     if onlyLast and rg0.size() == 14
         int o = rg0.get(6) < rg0.get(13) ? 0 : 7
         for q = rg0.get(o) to rg0.get(o + 1) - 1
