@@ -326,23 +326,23 @@ function applyCap(list){
 /*SM*/
 // Sweep Model screener (ista replikacija kot backtest engine.py, run_side): HTF sweep + LTF potrditve + vse točke indikatorja.
 var SM={minDelivery:2,fvgAtr:0.3,zone:[0.618,0.786],fibs:[0.5,0.618,0.786,1,1.618,2.618],tolAtr:0.25,gp:[0.618,0.65],ote:[0.618,0.786]};
-var SM_PTS=[['FVG','FVG – nepokrit bull/bear FVG po sweepu'],['IFVG','IFVG – obrnjen FVG iz poteze v sweep'],['VI','Volume imbalance po sweepu'],['CISD','Retest CISD nivoja (po potrditvi)'],['FIB','HTF fib pivot (0,5 … 2,618)'],['GP','Golden pocket HTF sveče (0,618–0,65)'],['OTE','OTE – 0,618–0,786 povratka po ekstremu (kot indikator)'],['SWEEP','Retest posweepanega nivoja'],['OPEN','Odprtje HTF sveče (opening line)']];
+var SM_PTS=[['FVG','FVG – nepokrit bull/bear FVG po sweepu'],['IFVG','IFVG – obrnjen FVG iz poteze v sweep'],['VI','Volume imbalance po sweepu'],['CISD','Retest CISD nivoja (po potrditvi)'],['FIB','HTF fib pivot (0,5 … 2,618)'],['GP','Golden pocket HTF sveče (0,618–0,65)'],['OTE','OTE – 0,618–0,786 povratka po ekstremu; kot indikator šele, ko je CISD potrjen in impulz vsaj 1 : 1'],['SWEEP','Retest posweepanega nivoja'],['OPEN','Odprtje HTF sveče (opening line)']];
 function smAtr(b){var a=[];for(var i=0;i<b.length;i++){var pc=i?b[i-1].c:b[i].c,tr=Math.max(b[i].h-b[i].l,Math.abs(b[i].h-pc),Math.abs(b[i].l-pc));a.push(i?a[i-1]+(tr-a[i-1])/14:tr)}return a}
 function smRsi(b){var r=[],au=1e-12,ad=1e-12;for(var i=0;i<b.length;i++){var d=i?b[i].c-b[i-1].c:0;au+=((d>0?d:0)-au)/14;ad+=((d<0?-d:0)-ad)/14;r.push(100-100/(1+au/Math.max(ad,1e-12)))}return r}
 function smMirror(b){return b.map(function(x){return {t:x.t,o:-x.o,h:-x.l,l:-x.h,c:-x.c}})}
 // bull logika; za short pokliči z zrcaljenimi svečami. htf: HTF sveče (zadnja je lahko odprta), ltf: LTF sveče, htfMs: dolžina HTF sveče.
 function smBull(htf,ltf,htfMs,now){
   var A=smAtr(ltf),R=smRsi(ltf),best=null;
-  for(var k=htf.length-1;k>=Math.max(1,htf.length-2);k--){
+  for(var k=htf.length-1;k>=Math.max(1,htf.length-4);k--){
     var P=htf[k-1],S=htf[k],sEnd=S.t+htfMs,closed=sEnd<=now;
-    if(closed&&now>=sEnd+htfMs)continue;                       // setup živi še eno HTF svečo po zaprtju
+    if(closed&&now>=sEnd+3*htfMs)continue;                     // kot indikator: setup živi, dokler ekstrem ni prebit (največ 3 HTF sveče po zaprtju)
     var i0=-1;for(var i=0;i<ltf.length;i++){if(ltf[i].t>=S.t&&ltf[i].t<sEnd&&ltf[i].l<P.l){i0=i;break}}
     if(i0<0)continue;
     var st=null,ext=Infinity,extI=-1,inval=false;
     var reset=function(ei){
       var s={lvl:null,cisd:false,cisdI:-1,fvgs:[],vis:[],retest:false,zone:false,div:false,hi:-Infinity,cisdRet:false};
-      var j=ltf[ei].c<ltf[ei].o?ei:ei-1,lim=Math.max(0,ei-12);
-      if(ltf[ei].c<ltf[ei].o){var q0=ei;while(q0-1>=lim&&ltf[q0-1].c<ltf[q0-1].o)q0--;s.lvl=ltf[q0].o;s.lvlT=ltf[q0].t;j=-1}
+      // CISD (kot indikator): odprtje zadnje serije ≥ 2 dostavnih (rdečih) sveč, ki se konča na ekstremu ali pred njim
+      var j=ei,lim=Math.max(0,ei-12);
       while(j>=lim){ if(ltf[j].c<ltf[j].o){var r0=j;while(r0-1>=lim&&ltf[r0-1].c<ltf[r0-1].o)r0--; if(j-r0+1>=SM.minDelivery){s.lvl=ltf[r0].o;s.lvlT=ltf[r0].t;break} j=r0-1}else j--; }
       for(var q=ei-6;q>Math.max(5,ei-60);q--){var mn=Infinity;for(var z=q-5;z<=q+5&&z<ltf.length;z++)mn=Math.min(mn,ltf[z].l);if(ltf[q].l===mn){if(ltf[ei].l<ltf[q].l&&R[ei]>R[q])s.div=true;break}}
       return s};
@@ -362,15 +362,17 @@ function smBull(htf,ltf,htfMs,now){
     if(inval||!st)continue;
     var px=ltf[ltf.length-1].c,a=A[A.length-1],tol=SM.tolAtr*a,last=ltf[ltf.length-1];
     var near=function(L){return Math.abs(px-L)<=tol}, inside=function(lo,hi){return px>=lo-tol&&px<=hi+tol};
-    // referenčna sveča: najnižji posweepan low med zadnjimi 4 HTF svečami (tako ravna indikator)
-    var Rf=P,rfK=k-1;for(var q=k-1;q>=Math.max(0,k-4);q--){if(htf[q].l>ext&&htf[q].l<Rf.l){Rf=htf[q];rfK=q}}
+    // referenčna sveča (kot indikator): od prejšnje HTF sveče nazaj, dokler so lowi vse nižji (do lokalnega dna), največ 4 sveče
+    var rfK=k-1;while(rfK-1>=Math.max(0,k-4)&&htf[rfK-1].l<htf[rfK].l&&htf[rfK-1].l>ext)rfK--;var Rf=htf[rfK];
     var piv=(Rf.h+Rf.l+Rf.c)/3,rg=Rf.h-Rf.l,pts=[],dr={boxes:[],lines:[]};
     var BX=function(k,lo,hi,t0){dr.boxes.push({k:k,lo:lo,hi:hi,t0:t0})},LN=function(k,y,t0){dr.lines.push({k:k,y:y,t0:t0})};
-    // FVG (bull, nepokrit)
-    st.fvgs.slice(0,1).forEach(function(f){if(f.dead)return;BX('FVG',f.bot,f.top,ltf[f.i-1].t);if(inside(f.bot,f.top))pts.push({k:'FVG',lvl:f.top,lo:f.bot,hi:f.top})});
-    // IFVG: bear FVG v potezi v sweep (od začetka referenčne sveče do ekstrema), ki ga je close prebil navzgor in ni bil spet prebit navzdol
-    var legStart=0;for(var z=0;z<ltf.length;z++){if(ltf[z].t>=htf[rfK].t){legStart=z;break}}
-    for(var z=Math.max(2,legStart);z<=extI;z++){var top=ltf[z-2].l,bot=ltf[z].h;if(top>bot&&(top-bot)>=SM.fvgAtr*A[z]){var inv=-1,dead=false;for(var y=z+1;y<ltf.length;y++){if(inv<0){if(ltf[y].c>top)inv=y}else if(ltf[y].c<bot){dead=true;break}}if(inv>=0&&!dead){BX('IFVG',bot,top,ltf[z-1].t);if(inside(bot,top))pts.push({k:'IFVG',lvl:top,lo:bot,hi:top})}}}
+    // FVG: prvi še nepokrit FVG po ekstremu (tako riše indikator)
+    st.fvgs.filter(function(f){return !f.dead}).slice(0,1).forEach(function(f){BX('FVG',f.bot,f.top,ltf[f.i-2].t);if(inside(f.bot,f.top))pts.push({k:'FVG',lvl:f.top,lo:f.bot,hi:f.top})});
+    var ifv=null,legStart=0;for(var z=0;z<ltf.length;z++){if(ltf[z].t>=htf[rfK].t){legStart=z;break}}
+    // kot indikator: med FVG-ji (≥ 0,3 ATR) v potezi v sweep (do sveče za ekstremom) izbere tistega, ki ga je close prvi prebil PO ekstremu (pri izenačenju starejšega);
+    // če ga je cena kasneje spet prebila nazaj, ostane narisan (IFVG | X), a ni točka
+    for(var z=Math.max(2,legStart);z<=Math.min(extI+1,ltf.length-1);z++){var top=ltf[z-2].l,bot=ltf[z].h;if(top>bot&&(top-bot)>=SM.fvgAtr*A[z]){var inv=-1,dead=false;for(var y=z+1;y<ltf.length;y++){if(inv<0){if(ltf[y].c>top)inv=y}else if(ltf[y].c<bot){dead=true;break}}if(inv>extI&&(!ifv||inv<ifv.inv))ifv={bot:bot,top:top,t:ltf[z-2].t,dead:dead,inv:inv}}}
+    if(ifv){BX('IFVG',ifv.bot,ifv.top,ifv.t);if(!ifv.dead&&inside(ifv.bot,ifv.top))pts.push({k:'IFVG',lvl:ifv.top,lo:ifv.bot,hi:ifv.top})}
     // VI
     st.vis.forEach(function(f){if(f.dead)return;if(inside(f.bot,f.top)){BX('VI',f.bot,f.top,ltf[f.i].t);pts.push({k:'VI',lvl:f.top,lo:f.bot,hi:f.top})}}); // VI indikator riše le na HTF sveči – na grafu samo, ko je cena tam
     // CISD retest
@@ -378,7 +380,8 @@ function smBull(htf,ltf,htfMs,now){
     if(st.cisd&&near(st.lvl))pts.push({k:'CISD',lvl:st.lvl});
     // 1-2 cona
     var r2=st.hi-ext;
-    if(r2>0){var zt=st.hi-SM.ote[0]*r2,zb=st.hi-SM.ote[1]*r2;st.zt=zt;st.zb=zb;BX('OTE',zb,zt,ltf[extI].t);if(inside(zb,zt)&&px>ext)pts.push({k:'OTE',lvl:zt,lo:zb,hi:zt})}
+    // indikator nariše OTE šele, ko je CISD potrjen in je impulz od CISD vsaj 1 : 1 (razdalja ekstrem→CISD)
+    if(r2>0&&st.cisd&&st.lvl!=null&&st.hi-st.lvl>=st.lvl-ext){var zt=st.hi-SM.ote[0]*r2,zb=st.hi-SM.ote[1]*r2;st.zt=zt;st.zb=zb;BX('OTE',zb,zt,ltf[extI].t);if(inside(zb,zt)&&px>ext)pts.push({k:'OTE',lvl:zt,lo:zb,hi:zt})}
     // HTF fib pivoti
     var sI=0;for(var z=0;z<ltf.length;z++){if(ltf[z].t>=S.t){sI=z;break}}
     SM.fibs.forEach(function(f){var L=piv-f*rg,tch=false;for(var z=sI;z<ltf.length;z++){if(ltf[z].l<=L&&ltf[z].h>=L){tch=true;break}}if(L>ext-3*rg*0.5)dr.lines.push({k:'FIB '+f,y:L,t0:htf[rfK].t,touched:tch});if(near(L))pts.push({k:'FIB',lab:'FIB '+f,lvl:L})}); // indikator: samo dotaknjeni nivoji
@@ -467,8 +470,8 @@ async function smRun(){
     if(!SMLAST)$('smList').innerHTML='<div class="empty">Skeniram '+syms.length+' kovancev…</div>';
     var bars={};
     var res=await pool(syms,5,async function(s){
-      var h=mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval='+tf+'&limit=6')).list);
-      var l=mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval='+ltfIv+'&limit=300')).list);
+      var h=mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval='+tf+'&limit=10')).list);
+      var l=mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval='+ltfIv+'&limit=600')).list);
       if(h.length<3||l.length<50)return [];
       bars[s]={h:h,l:l};
       return smScan(h,l,htfMs,now).map(function(x){x.sym=s;return x});

@@ -151,3 +151,13 @@ Risbe OnlyWicks Sweep Model se dajo prebrati v TV spletu: `TradingViewApi._activ
 - 1-2 cone indikator na teh kovancih ni narisal (sprožilec FVG, "impulse must clear") → iz screenerja umaknjena.
 - **Še odprto**: indikator setup označi z "Bull/Bear x/5" le pri nekaterih sweepih (BTC, HYPE, STRK long so imeli samo oznako ekstrema, brez točk); setupi ostanejo vidni več HTF sveč (BTC short iz 10:10 še ob 23:45). OTE ni narisan pri LIT short. Za to rabim večji vzorec (30+ kovancev).
 - 14. 10.: Jure ne želi ocene setupa v screenerju → odstranjena (filter "Ocena", stolpec, opis). Graf kot indikator: fib samo dotaknjeni (od začetka sweep sveče) ali tisti, na katerem je cena; GP, VI, Open HTF samo, ko je cena tam.
+
+## Umerjanje na 30 kovancih (14. 10. 2026 zvečer, TV Desktop na Juretovem računalniku)
+Podatki: `/home/claude/bt/ow/*.json` (risbe indikatorja + sveče), primerjava `owscore.js`. Ujemanje škatel (OTE/FVG/IFVG) **17/56 → 51/56**, CISD + fib nivoji **36/133 → 103/133**.
+- **Setup živi več HTF sveč**: dokler ekstrem ni prebit (največ 3 zaprte sveče nazaj). Prej le 1 sveča → manjkali so npr. bear setupi iz 02:00 (AAVE, FIL, HBAR, HYPE, LTC, OP). Screener zdaj nalaga 10 HTF + 600 LTF sveč.
+- **CISD** = odprtje zadnje serije **≥ 2** dostavnih sveč, ki se konča na ekstremu ali pred njim (tudi če je ekstremna sveča sama dostavna, a osamljena – HYPE, OP, ADA). Čas potrditve se ujema z oznako CISD v indikatorju.
+- **FVG** = prvi še *nepokrit* FVG po ekstremu (pokriti = close čez daljno stran).
+- **IFVG** = med FVG-ji (≥ 0,3 ATR) v potezi v sweep (do sveče za ekstremom) tisti, ki ga je close **prvi** prebil po ekstremu (izenačenje → starejši). Če je kasneje spet prebit nazaj, ga indikator pusti z "IFVG | X" → narisan, a ni točka.
+- **OTE** se nariše šele, ko je CISD potrjen in impulz od CISD vsaj 1 : 1 (DOT, UNI, STX ~0,8–1,0 → brez OTE; vsi narisani ≥ 1,8).
+- **Fib pivot sveča**: od prejšnje HTF sveče nazaj, dokler so lowi nižji (lokalno dno), max 4 → ujema WLD/UNI/TAO/XRP; ne ujema HYPE/UNI short (indikator vzel prejšnjo svečo) in STX long (vzel 20:00) – pravila ne poznam.
+- **Ne znam (še)**: kdaj indikator nov sweep označi "Bull/Bear x/5" (samo DOT, STX, UNI od ~15) – ostali imajo le "·" (prazna oznaka). Ni ocena, ni CISD, ni 90m, ni dnevni sweep. Prav tako indikator včasih obdrži starejši setup, čeprav ga je naslednja sveča malenkost prebila (LINK, SUI, BNB = "Retest"), BTC/ENA/TAO/XRP pa zamenja z novim (meja ~0,2 %?). Screener zato kaže tudi "·" sweepe.
