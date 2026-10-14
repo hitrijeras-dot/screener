@@ -266,11 +266,15 @@ if barstate.islast
                             // CISD
                             if pCISD and not na(lvl)
                                 lvlLine(lvlI, sg * lvl, cisd ? "CISD" : "CISD ?", cFVG, line.style_dashed, 1)
-                            // OTE (kot indikator): 0,618–0,786 povratka od ekstrema do najdlje po njem; šele ko je CISD potrjen in impulz od CISD vsaj 1 : 1
+                            // OTE (kot indikator, 1-2 trigger FVG + "impulse must clear"): 0,618–0,786 povratka od ekstrema do najdlje po njem; šele ko impulz s FVG preseže celo sweep svečo
                             float r2 = hi - ext
-                            if pOTE and cisd and r2 > 0 and hi - lvl >= lvl - ext
+                            if pOTE and r2 > 0 and fT.size() > 0 and hi > HH(k, sg)
                                 float oT = hi - 0.618 * r2, oB = hi - 0.786 * r2
-                                bool hit = cisdI < last and mnF.get(cisdI + 1 - legStart) <= oT
+                                bool hit = false
+                                for z = extI + 1 to last
+                                    if (sg == 1 ? high[bar_index - (z)] : -low[bar_index - (z)]) >= hi
+                                        hit := z < last and mnF.get(z + 1 - legStart) <= oT
+                                        break
                                 zone(extI, sg * oT, sg * oB, hit ? "OTE ✓" : "OTE", cOTE)
                             // fib pivoti sveče nivoja: samo dotaknjeni (od začetka sweep sveče)
                             if pFIB

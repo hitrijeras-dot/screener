@@ -158,7 +158,7 @@ Podatki: `/home/claude/bt/ow/*.json` (risbe indikatorja + sveče), primerjava `o
 - **CISD** = odprtje zadnje serije **≥ 2** dostavnih sveč, ki se konča na ekstremu ali pred njim (tudi če je ekstremna sveča sama dostavna, a osamljena – HYPE, OP, ADA). Čas potrditve se ujema z oznako CISD v indikatorju.
 - **FVG** = prvi še *nepokrit* FVG po ekstremu (pokriti = close čez daljno stran).
 - **IFVG** = med FVG-ji (≥ 0,3 ATR) v potezi v sweep (do sveče za ekstremom) tisti, ki ga je close **prvi** prebil po ekstremu (izenačenje → starejši). Če je kasneje spet prebit nazaj, ga indikator pusti z "IFVG | X" → narisan, a ni točka.
-- **OTE** se nariše šele, ko je CISD potrjen in impulz od CISD vsaj 1 : 1 (DOT, UNI, STX ~0,8–1,0 → brez OTE; vsi narisani ≥ 1,8).
+- **OTE** se nariše šele, ko impulz po ekstremu (s FVG) preseže celo sweep svečo (nastavitev 1-2: trigger FVG, "impulse must clear"). Prejšnje pravilo 1 : 1 je bilo napačno (DOT ga je kasneje doseglo, indikator OTE ni narisal).
 - **Fib pivot sveča**: od prejšnje HTF sveče nazaj, dokler so lowi nižji (lokalno dno), max 4 → ujema WLD/UNI/TAO/XRP; ne ujema HYPE/UNI short (indikator vzel prejšnjo svečo) in STX long (vzel 20:00) – pravila ne poznam.
 - **Ne znam (še)**: kdaj indikator nov sweep označi "Bull/Bear x/5" (samo DOT, STX, UNI od ~15) – ostali imajo le "·" (prazna oznaka). Ni ocena, ni CISD, ni 90m, ni dnevni sweep. Prav tako indikator včasih obdrži starejši setup, čeprav ga je naslednja sveča malenkost prebila (LINK, SUI, BNB = "Retest"), BTC/ENA/TAO/XRP pa zamenja z novim (meja ~0,2 %?). Screener zato kaže tudi "·" sweepe.
 
@@ -171,4 +171,4 @@ Pravila iz opisa, potrjena na 30 kovancih in vgrajena v `/*SM*/`:
 - Novejši setup v nasprotni smeri postane glavni; starejši ostane kot "prejšnji" (indikator riše njegove cone, oznaka Bear/Bull izgine).
 - Fib pivoti iz sveče nivoja.
 Rezultat: setupi enaki pri 22/30 kovancih (prej ~6/30), škatle 55/56. Preostalih 8 (ADA, ARB, AVAX, BNB, NEAR, DOGE, ETH, SOL) – mi najdemo short, indikator nima oznake (ARB/BNB/ADA cone sicer riše). Razloga ne poznam – počakam PDF navodila.
-Pine "Sweep·C" (sweep_screener_indikator.pine) teh pravil še NIMA.
+Pine "Sweep·C" posodobljen z istimi pravili (TV različica 5, 14. 10. 2026 zvečer).

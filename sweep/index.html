@@ -326,7 +326,7 @@ function applyCap(list){
 /*SM*/
 // Sweep Model screener (ista replikacija kot backtest engine.py, run_side): HTF sweep + LTF potrditve + vse točke indikatorja.
 var SM={minDelivery:2,fvgAtr:0.3,zone:[0.618,0.786],fibs:[0.5,0.618,0.786,1,1.618,2.618],tolAtr:0.25,gp:[0.618,0.65],ote:[0.618,0.786]};
-var SM_PTS=[['FVG','FVG – nepokrit bull/bear FVG po sweepu'],['IFVG','IFVG – obrnjen FVG iz poteze v sweep'],['VI','Volume imbalance po sweepu'],['CISD','Retest CISD nivoja (po potrditvi)'],['FIB','HTF fib pivot (0,5 … 2,618)'],['GP','Golden pocket HTF sveče (0,618–0,65)'],['OTE','OTE – 0,618–0,786 povratka po ekstremu; kot indikator šele, ko je CISD potrjen in impulz vsaj 1 : 1'],['SWEEP','Retest posweepanega nivoja'],['OPEN','Odprtje HTF sveče (opening line)']];
+var SM_PTS=[['FVG','FVG – nepokrit bull/bear FVG po sweepu'],['IFVG','IFVG – obrnjen FVG iz poteze v sweep'],['VI','Volume imbalance po sweepu'],['CISD','Retest CISD nivoja (po potrditvi)'],['FIB','HTF fib pivot (0,5 … 2,618)'],['GP','Golden pocket HTF sveče (0,618–0,65)'],['OTE','OTE – 0,618–0,786 povratka po ekstremu; kot indikator šele, ko impulz (s FVG) preseže celo sweep svečo'],['SWEEP','Retest posweepanega nivoja'],['OPEN','Odprtje HTF sveče (opening line)']];
 function smAtr(b){var a=[];for(var i=0;i<b.length;i++){var pc=i?b[i-1].c:b[i].c,tr=Math.max(b[i].h-b[i].l,Math.abs(b[i].h-pc),Math.abs(b[i].l-pc));a.push(i?a[i-1]+(tr-a[i-1])/14:tr)}return a}
 function smRsi(b){var r=[],au=1e-12,ad=1e-12;for(var i=0;i<b.length;i++){var d=i?b[i].c-b[i-1].c:0;au+=((d>0?d:0)-au)/14;ad+=((d<0?-d:0)-ad)/14;r.push(100-100/(1+au/Math.max(ad,1e-12)))}return r}
 function smMirror(b){return b.map(function(x){return {t:x.t,o:-x.o,h:-x.l,l:-x.h,c:-x.c}})}
@@ -385,8 +385,8 @@ function smBull(htf,ltf,htfMs,now){
     if(st.cisd&&near(st.lvl))pts.push({k:'CISD',lvl:st.lvl});
     // 1-2 cona
     var r2=st.hi-ext;
-    // indikator nariše OTE šele, ko je CISD potrjen in je impulz od CISD vsaj 1 : 1 (razdalja ekstrem→CISD)
-    if(r2>0&&st.cisd&&st.lvl!=null&&st.hi-st.lvl>=st.lvl-ext){var zt=st.hi-SM.ote[0]*r2,zb=st.hi-SM.ote[1]*r2;st.zt=zt;st.zb=zb;BX('OTE',zb,zt,ltf[extI].t);if(inside(zb,zt)&&px>ext)pts.push({k:'OTE',lvl:zt,lo:zb,hi:zt})}
+    // OTE kot indikator (1-2: trigger FVG, "impulse must clear"): impulz po ekstremu mora preseči celo sweep svečo in imeti FVG
+    if(r2>0&&st.fvgs.length>0&&st.hi>S.h){var zt=st.hi-SM.ote[0]*r2,zb=st.hi-SM.ote[1]*r2;st.zt=zt;st.zb=zb;BX('OTE',zb,zt,ltf[extI].t);if(inside(zb,zt)&&px>ext)pts.push({k:'OTE',lvl:zt,lo:zb,hi:zt})}
     // HTF fib pivoti
     var sI=0;for(var z=0;z<ltf.length;z++){if(ltf[z].t>=S.t){sI=z;break}}
     SM.fibs.forEach(function(f){var L=piv-f*rg,tch=false;for(var z=sI;z<ltf.length;z++){if(ltf[z].l<=L&&ltf[z].h>=L){tch=true;break}}if(L>ext-3*rg*0.5)dr.lines.push({k:'FIB '+f,y:L,t0:htf[rfK].t,touched:tch});if(near(L))pts.push({k:'FIB',lab:'FIB '+f,lvl:L})}); // indikator: samo dotaknjeni nivoji
