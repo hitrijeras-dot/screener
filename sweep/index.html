@@ -229,6 +229,8 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
         <li>Če je zadnja seja (včeraj NY) proti smeri posla (pod −20 za long, nad +20 za short), vzemi pol rizika. V backtestu: +128 R namesto +146 R, največji padec 17 R namesto 24 R.</li>
       </ol>
       <p class="warn">Pošten opomnik (13. 10. 2026): natančnejši test na 5m svečah da na 20 testiranih kovancih okoli +0,2 R na posel, na 28 novih kovancih, ki jih pri razvoju nisva uporabila, pa le okoli +0,06 R (če limit ujame samo prebod nivoja, skoraj 0). Rob je majhen in še ni potrjen, zato najprej paper log in demo, šele potem izziv.</p>
+      <h3>Screener: »Do 6H FVG« in »Do 1D FVG«</h3>
+      <p>Koliko je cena oddaljena od najbližjega še nepokritega FVG na 6H oziroma 1D svečah (kot FVG na HTF svečah indikatorja). ↑ = cona je nad ceno, ↓ = pod ceno, »v coni« = cena je že v njej (takrat se pokaže tudi točka »HTF FVG«). Delno zapolnjen FVG šteje samo s preostankom. Na grafu kovanca sta coni narisani rahlo.</p>
       <h3>Stolpca »Nazaj %« in »CISD v sweepu«</h3>
       <p>Nazaj %: kako globoko v predvčerajšnjo svečo je sweep sveča zaprla nazaj (zeleno nad 30 %). CISD v sweepu: ali je bil na 15m CISD potrjen že v sweep sveči. V backtestu so bili boljši setupi z globokim zaprtjem nazaj (+0,39 R / +0,18 R na novih kovancih) in brez CISD v sweepu (+0,84 R / +0,17 R). Vzorci so majhni – to sta kandidata za filter, ki ju preverjava v paper logu, ne pravilo.</p>
       <h3>Crypto Fund Trader 10k (2-step)</h3>
@@ -326,7 +328,7 @@ function applyCap(list){
 /*SM*/
 // Sweep Model screener (ista replikacija kot backtest engine.py, run_side): HTF sweep + LTF potrditve + vse točke indikatorja.
 var SM={minDelivery:2,fvgAtr:0.3,zone:[0.618,0.786],fibs:[0.5,0.618,0.786,1,1.618,2.618],tolAtr:0.25,gp:[0.618,0.65],ote:[0.618,0.786]};
-var SM_PTS=[['FVG','FVG – nepokrit bull/bear FVG po sweepu'],['IFVG','IFVG – obrnjen FVG iz poteze v sweep'],['VI','Volume imbalance po sweepu'],['CISD','Retest CISD nivoja (po potrditvi)'],['FIB','HTF fib pivot (0,5 … 2,618)'],['GP','Golden pocket HTF sveče (0,618–0,65)'],['OTE','OTE – 0,618–0,786 povratka po ekstremu; kot indikator šele, ko impulz (s FVG) preseže celo sweep svečo'],['SWEEP','Retest posweepanega nivoja'],['OPEN','Odprtje HTF sveče (opening line)']];
+var SM_PTS=[['FVG','FVG – nepokrit bull/bear FVG po sweepu'],['IFVG','IFVG – obrnjen FVG iz poteze v sweep'],['VI','Volume imbalance po sweepu'],['CISD','Retest CISD nivoja (po potrditvi)'],['FIB','HTF fib pivot (0,5 … 2,618)'],['GP','Golden pocket HTF sveče (0,618–0,65)'],['OTE','OTE – 0,618–0,786 povratka po ekstremu; kot indikator šele, ko impulz (s FVG) preseže celo sweep svečo'],['SWEEP','Retest posweepanega nivoja'],['OPEN','Odprtje HTF sveče (opening line)'],['HFVG','HTF FVG – cena v nepokritem 6H ali 1D FVG']];
 function smAtr(b){var a=[];for(var i=0;i<b.length;i++){var pc=i?b[i-1].c:b[i].c,tr=Math.max(b[i].h-b[i].l,Math.abs(b[i].h-pc),Math.abs(b[i].l-pc));a.push(i?a[i-1]+(tr-a[i-1])/14:tr)}return a}
 function smRsi(b){var r=[],au=1e-12,ad=1e-12;for(var i=0;i<b.length;i++){var d=i?b[i].c-b[i-1].c:0;au+=((d>0?d:0)-au)/14;ad+=((d<0?-d:0)-ad)/14;r.push(100-100/(1+au/Math.max(ad,1e-12)))}return r}
 function smMirror(b){return b.map(function(x){return {t:x.t,o:-x.o,h:-x.l,l:-x.h,c:-x.c}})}
@@ -405,6 +407,17 @@ function smBull(htf,ltf,htfMs,now){
   }
   return best;
 }
+// HTF FVG (kot FVG na HTF svečah indikatorja): 3-svečni FVG, ki ga cena še ni v celoti zapolnila; vrne najbližjega ceni
+function htfFvg(b,px){var best=null;
+  for(var i=2;i<b.length-1;i++){var lo,hi,k;   // zadnja (odprta) sveča še ne tvori FVG, ga pa lahko zapolni
+    if(b[i].l>b[i-2].h){lo=b[i-2].h;hi=b[i].l;k='bull';for(var j=i+1;j<b.length;j++)hi=Math.min(hi,b[j].l)}
+    else if(b[i].h<b[i-2].l){lo=b[i].h;hi=b[i-2].l;k='bear';for(var j=i+1;j<b.length;j++)lo=Math.max(lo,b[j].h)}
+    else continue;
+    if(hi<=lo)continue;
+    var d=px>hi?(hi-px)/px*100:px<lo?(lo-px)/px*100:0,z={lo:lo,hi:hi,kind:k,d:d,t0:b[i-1].t};
+    if(!best||Math.abs(d)<Math.abs(best.d))best=z}
+  return best}
+function fvgTxt(f){if(!f)return '–';return f.d===0?'0 % v coni':Math.abs(f.d).toFixed(2)+' % '+(f.d>0?'↑':'↓')}
 function smScan(htf,ltf,htfMs,now){
   var out=[],L=smBull(htf,ltf,htfMs,now);
   var S=smBull(smMirror(htf),smMirror(ltf),htfMs,now);
@@ -466,7 +479,7 @@ $('theme').onclick=function(){var c=document.documentElement.dataset.theme,dark=
 var smBiasOn=true,SMLAST=null,smSide='all',smOnly=true,smSel={},smOpen={},KC={},smView='card';
 try{smView=localStorage.getItem('sweep_view')||'card'}catch(e){}
 document.querySelectorAll('#smView button').forEach(function(b){b.classList.toggle('on',b.dataset.view===smView);b.onclick=function(){smView=b.dataset.view;try{localStorage.setItem('sweep_view',smView)}catch(e){}document.querySelectorAll('#smView button').forEach(function(x){x.classList.toggle('on',x===b)});smRender()}});
-var PTNAME={SWEEP:'Sweep nivo',OPEN:'Open HTF'};
+var PTNAME={SWEEP:'Sweep nivo',OPEN:'Open HTF',HFVG:'HTF FVG'};
 SM_PTS.forEach(function(p){smSel[p[0]]=true;var b=document.createElement('button');b.className='pt on';b.title=p[1];b.textContent=PTNAME[p[0]]||p[0];b.onclick=function(){smSel[p[0]]=!smSel[p[0]];b.classList.toggle('on',smSel[p[0]]);smRender()};$('smPts').appendChild(b)});
 $('smOnly').onclick=function(){smOnly=!smOnly;this.classList.toggle('on',smOnly);smRender()};
 document.querySelectorAll('#smSide button').forEach(function(b){b.onclick=function(){smSide=b.dataset.side;document.querySelectorAll('#smSide button').forEach(function(x){x.classList.toggle('on',x===b)});smRender()}});
@@ -478,11 +491,15 @@ async function smRun(){
     if(!SMLAST)$('smList').innerHTML='<div class="empty">Skeniram '+syms.length+' kovancev…</div>';
     var bars={};
     var res=await pool(syms,5,async function(s){
-      var h=mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval='+tf+'&limit=10')).list);
+      var h=mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval='+tf+'&limit=40')).list);
       var l=mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval='+ltfIv+'&limit=600')).list);
+      var dd=tf==='D'?h:mapK((await jget(API+'kline?category=linear&symbol='+s+'USDT&interval=D&limit=40')).list);
       if(h.length<3||l.length<50)return [];
       bars[s]={h:h,l:l};
-      return smScan(h,l,htfMs,now).map(function(x){x.sym=s;return x});
+      var px=l[l.length-1].c,f6=tf==='D'?null:htfFvg(h,px),fD=htfFvg(dd,px);
+      return smScan(h,l,htfMs,now).map(function(x){x.sym=s;x.f6=f6;x.fD=fD;
+        [[f6,'6H FVG'],[fD,'1D FVG']].forEach(function(q){var f=q[0];if(!f)return;x.draw.boxes.push({k:q[1],lo:f.lo,hi:f.hi,t0:f.t0});if(f.d===0)x.points.push({k:'HFVG',lab:q[1]+' ('+(f.kind==='bull'?'bull':'bear')+')',lvl:f.hi,lo:f.lo,hi:f.hi})});
+        return x});
     });
     var rows=[];res.forEach(function(r){if(Array.isArray(r))rows=rows.concat(r)});
     SMLAST={now:now,rows:rows,tf:tf,htfMs:htfMs,ltfIv:ltfIv,n:syms.length,bars:bars};KC={};
@@ -507,17 +524,17 @@ function smRender(){
   var dots=function(x){return [['D',x.div],['F',x.fvg],['R',x.retest],['C',x.cisd],['1',x.zone]].map(function(c){return '<span style="opacity:'+(c[1]?1:.28)+'">'+c[0]+'</span>'}).join(' ')};
   var html='',mode=smView,hitsH=function(m){return m.length?m.map(function(p){return '<span class="hit">'+esc(ptLabel(p))+'</span>'}).join(''):'<span class="none">ni na točki</span>'};
   if(mode==='table'){
-    html='<table class="t"><thead><tr><th>Kovanec</th><th class="tl">Smer</th><th class="tl">Na točki</th><th>Cena</th><th>Do SL</th><th>CISD</th><th>Sweep</th></tr></thead><tbody>';
+    html='<table class="t"><thead><tr><th>Kovanec</th><th class="tl">Smer</th><th class="tl">Na točki</th><th>Cena</th><th>Do SL</th><th>CISD</th><th>Sweep</th>'+(SMLAST.tf==='D'?'':'<th>Do 6H FVG</th>')+'<th>Do 1D FVG</th></tr></thead><tbody>';
     rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
-      html+='<tr class="rw" data-id="'+id+'"><td><b>'+esc(x.sym)+'</b></td><td class="tl"><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>'+(x.hist?' <span class="mut">prejšnji</span>':'')+'</td><td class="tl">'+hitsH(smMatch(x))+'</td><td>'+fmtP(x.px)+'</td><td>'+dist.toFixed(2)+' %</td><td>'+(x.lvl==null?'–':fmtP(x.lvl)+(x.cisd?' <span class="up">✓</span>':' <span class="mut">čaka</span>'))+'</td><td>'+fmtT(x.extT)+'</td></tr>';
-      if(smOpen[id])html+='<tr class="dr"><td colspan="7"><div class="det" id="d_'+id+'"></div></td></tr>'});
+      html+='<tr class="rw" data-id="'+id+'"><td><b>'+esc(x.sym)+'</b></td><td class="tl"><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>'+(x.hist?' <span class="mut">prejšnji</span>':'')+'</td><td class="tl">'+hitsH(smMatch(x))+'</td><td>'+fmtP(x.px)+'</td><td>'+dist.toFixed(2)+' %</td><td>'+(x.lvl==null?'–':fmtP(x.lvl)+(x.cisd?' <span class="up">✓</span>':' <span class="mut">čaka</span>'))+'</td><td>'+fmtT(x.extT)+'</td>'+(SMLAST.tf==='D'?'':'<td>'+fvgTxt(x.f6)+'</td>')+'<td>'+fvgTxt(x.fD)+'</td></tr>';
+      if(smOpen[id])html+='<tr class="dr"><td colspan="9"><div class="det" id="d_'+id+'"></div></td></tr>'});
     html+='</tbody></table>';
     $('smList').className='list tbl';$('smList').innerHTML=html;
     $('smList').querySelectorAll('tr.rw').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
   } else {
     rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
       html+='<div class="card'+(smOpen[id]?' open':'')+'" data-id="'+id+'"><div class="ch"><div><div class="coin">'+esc(x.sym)+'</div><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>'+(x.hist?' <small class="mut">prejšnji setup</small>':'')+'</div><div class="px">'+fmtP(x.px)+'<small>'+dist.toFixed(2)+' % do SL</small></div></div>'+
-        '<div>'+hitsH(smMatch(x))+'</div><div class="cf"><span>CISD '+(x.lvl==null?'–':(x.cisd?'potrjen':'čaka'))+'</span></div></div>';
+        '<div>'+hitsH(smMatch(x))+'</div><div class="cf"><span>CISD '+(x.lvl==null?'–':(x.cisd?'potrjen':'čaka'))+'</span>'+(x.f6?'<span>6H FVG '+fvgTxt(x.f6)+'</span>':'')+(x.fD?'<span>1D FVG '+fvgTxt(x.fD)+'</span>':'')+'</div></div>';
       if(smOpen[id])html+='<div class="det" id="d_'+id+'"></div>'});
     $('smList').className='cards';$('smList').innerHTML=html;
     $('smList').querySelectorAll('.card').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
@@ -544,7 +561,7 @@ function smFacts(x){
   return '<div class="facts">'+f.map(function(a){return '<div><span>'+a[0]+'</span>'+a[1]+'</div>'}).join('')+'</div><p class="story">'+(m?'Cena je zdaj na: <b>'+esc(m)+'</b>. ':'Cena trenutno ni na nobeni izbrani točki.')+'</p>';
 }
 // --- graf: pregleden, oznake v desnem robu brez prekrivanja
-var ZCOL={'FVG':'#00d9ff','IFVG':'#b56bff','VI':'#9a9aa8','1-2':'#ff7a00','GP':'#ffd400','OTE':'#ff3df0'};
+var ZCOL={'6H FVG':'#4dd0a8','1D FVG':'#4da3ff','FVG':'#00d9ff','IFVG':'#b56bff','VI':'#9a9aa8','1-2':'#ff7a00','GP':'#ffd400','OTE':'#ff3df0'};
 function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
 function smChart(el,x,all,dt){
   var W=Math.max(320,Math.round(el.clientWidth||800)),H=Math.round(W>=900?Math.min(560,W*0.4):Math.min(440,Math.max(250,W*0.52))),gut=Math.min(118,Math.max(92,W*0.13)),pb=22,pt=10,right=12;

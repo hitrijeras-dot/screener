@@ -172,3 +172,4 @@ Pravila iz opisa, potrjena na 30 kovancih in vgrajena v `/*SM*/`:
 - Fib pivoti iz sveče nivoja.
 Rezultat: setupi enaki pri 22/30 kovancih (prej ~6/30), škatle 55/56. Preostalih 8 (ADA, ARB, AVAX, BNB, NEAR, DOGE, ETH, SOL) – mi najdemo short, indikator nima oznake (ARB/BNB/ADA cone sicer riše). Razloga ne poznam – počakam PDF navodila.
 Pine "Sweep·C" posodobljen z istimi pravili (TV različica 5, 14. 10. 2026 zvečer).
+- 14. 10. zvečer: screener ima stolpca **Do 6H FVG / Do 1D FVG** (najbližji nepokrit HTF FVG, delno zapolnjen šteje s preostankom, odprta sveča FVG ne tvori, ga pa zapolni) + točko "HTF FVG", ko je cena v coni. Jure želel videti oddaljenost od HTF FVG.
