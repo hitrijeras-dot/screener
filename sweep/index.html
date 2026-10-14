@@ -484,13 +484,14 @@ function ptLabel(p){return p.lab||PTNAME[p.k]||p.k}
 function smRender(){
   if(!SMLAST)return;
   var near=+$('smNear').value||99,all=SMLAST.rows.filter(function(x){return ((x.px-x.ext)/x.px*100*(x.side==='long'?1:-1))<=near}),rows=all;
-  var bd=(smBiasOn&&BIAS)?(BIAS.tot<=-20?'short':BIAS.tot>=20?'long':null):null;if(bd)rows=rows.filter(function(x){return x.side===bd});
+  var bd=(smBiasOn&&BIAS)?(BIAS.tot<=-20?'short':BIAS.tot>=20?'long':null):null,hidB=0;if(bd){hidB=rows.filter(function(x){return x.side!==bd&&smMatch(x).length}).length;rows=rows.filter(function(x){return x.side===bd})}
   if(smSide!=='all')rows=rows.filter(function(x){return x.side===smSide});
   var hits=rows.filter(function(x){return smMatch(x).length});
   if(smOnly)rows=hits;
   rows.sort(function(a,b){return (smMatch(b).length>0)-(smMatch(a).length>0)||a.sym.localeCompare(b.sym)});
   var tfl=SMLAST.tf==='D'?'1D':'6H';
   $('smSum').textContent=hits.length+' na točki od '+SMLAST.rows.length+' aktivnih '+tfl+' setupov · '+SMLAST.n+' kovancev · '+fmtH(SMLAST.now);
+  if(hidB)$('smSum').textContent+=' · '+hidB+' '+(bd==='short'?'longov':'shortov')+' skritih (bias '+(bd==='short'?'Bearish':'Bullish')+' – izklopi »V smeri biasa«)';
   if(!rows.length){$('smList').className='list';$('smList').innerHTML='<div class="empty">'+(smOnly?'Noben kovanec ni na izbranih točkah. Izberi več točk ali izklopi "Samo na točki".':'Ni aktivnih sweep setupov.')+'</div>';return}
   var dots=function(x){return [['D',x.div],['F',x.fvg],['R',x.retest],['C',x.cisd],['1',x.zone]].map(function(c){return '<span style="opacity:'+(c[1]?1:.28)+'">'+c[0]+'</span>'}).join(' ')};
   var html='',mode=smView,hitsH=function(m){return m.length?m.map(function(p){return '<span class="hit">'+esc(ptLabel(p))+'</span>'}).join(''):'<span class="none">ni na točki</span>'};
@@ -920,6 +921,7 @@ var EN_RX=[
 [/^(\S+) \(1D\)$/,'$1 (1D)'],
 [/^(\d+) na točki od (\d+) aktivnih (\S+) setupov · (\d+) kovancev · (.+)$/,'$1 at a point out of $2 active $3 setups · $4 coins · $5'],
 [/^Skeniram (\d+) kovancev…$/,'Scanning $1 coins…'],
+[/^(.+) · (\d+) (longov|shortov) skritih \(bias (\w+) – izklopi »V smeri biasa«\)$/,function(m,a,n,w,b){return trText(a)+' · '+n+' '+(w==='longov'?'longs':'shorts')+' hidden (bias '+b+' – turn off “With the bias”)'}],
 [/^(.+) % do SL$/,'$1 % to SL'],
 [/^CISD potrjen$/,'CISD confirmed'],[/^CISD čaka$/,'CISD waiting'],
 [/^(.+) potrjen$/,'$1 confirmed'],[/^(.+) še čaka$/,'$1 still waiting'],
