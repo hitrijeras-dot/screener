@@ -151,7 +151,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
 
   <section class="view" id="v-screener">
     <h2>Kovanci na točki</h2>
-    <p class="lead">Sweep Model: višja sveča je posweepala prejšnji high ali low. Tukaj so kovanci, kjer je cena zdaj v FVG, na fibu, v 1-2 coni ali na drugi točki indikatorja. Tapni kovanec za graf.</p>
+    <p class="lead">Sweep Model (kot indikator): 6H sveča je vzela še nedotaknjen high ali low iz zadnjih 3 sveč in zaprla nazaj (odprta sveča: cena je nazaj). Tukaj so kovanci, kjer je cena zdaj v FVG, na fibu, v OTE ali na drugi točki indikatorja. Tapni kovanec za graf.</p>
     <div class="ctl">
       <select id="smTf" title="Setup timeframe"><option value="360">Setup 6H</option><option value="D">Setup 1D</option></select>
       <select id="smUni"><option value="top50">Top 50 kripto</option><option value="top100">Top 100 kripto</option><option value="test">20 testiranih</option></select>
@@ -333,9 +333,11 @@ function smMirror(b){return b.map(function(x){return {t:x.t,o:-x.o,h:-x.l,l:-x.h
 // bull logika; za short pokliči z zrcaljenimi svečami. htf: HTF sveče (zadnja je lahko odprta), ltf: LTF sveče, htfMs: dolžina HTF sveče.
 function smBull(htf,ltf,htfMs,now){
   var A=smAtr(ltf),R=smRsi(ltf),best=null;
-  for(var k=htf.length-1;k>=Math.max(1,htf.length-4);k--){
+  // kot indikator (nastavitev: 6H pas s 4 svečami): sweep sveča in njen nivo morata biti v pasu (trenutna + 3 prejšnje). Starejši setup ostane, dokler LTF sveča ne ZAPRE čez njegov ekstrem
+  // (wick čez ekstrem v naslednji sveči je le "Retest"), zato iščemo od najstarejše sveče naprej in vzamemo prvi živi setup.
+  var kMin=Math.max(1,htf.length-3);
+  for(var k=kMin;k<htf.length;k++){
     var P=htf[k-1],S=htf[k],sEnd=S.t+htfMs,closed=sEnd<=now;
-    if(closed&&now>=sEnd+3*htfMs)continue;                     // kot indikator: setup živi, dokler ekstrem ni prebit (največ 3 HTF sveče po zaprtju)
     var i0=-1;for(var i=0;i<ltf.length;i++){if(ltf[i].t>=S.t&&ltf[i].t<sEnd&&ltf[i].l<P.l){i0=i;break}}
     if(i0<0)continue;
     var st=null,ext=Infinity,extI=-1,inval=false;
@@ -348,7 +350,7 @@ function smBull(htf,ltf,htfMs,now){
       return s};
     for(var i=i0;i<ltf.length;i++){
       var b=ltf[i];
-      if(b.l<ext){ if(b.t<sEnd){ext=b.l;extI=i;st=reset(i)} else {inval=true;break} }
+      if(b.t<sEnd){ if(b.l<ext){ext=b.l;extI=i;st=reset(i)} } else if(b.c<=ext){inval=true;break}
       if(i<=extI)continue;
       if(st.lvl!==null&&!st.cisd&&b.c>st.lvl){st.cisd=true;st.cisdI=i}
       if(i-2>=extI&&b.l>ltf[i-2].h&&(b.l-ltf[i-2].h)>=SM.fvgAtr*A[i])st.fvgs.push({bot:ltf[i-2].h,top:b.l,i:i,dead:false});
@@ -360,10 +362,13 @@ function smBull(htf,ltf,htfMs,now){
       if(st.cisd&&i>st.cisdI&&!st.zone){var rg=st.hi-ext;if(rg>0&&b.l<=st.hi-SM.zone[0]*rg)st.zone=true}
     }
     if(inval||!st)continue;
+    // nivo (kot indikator): najbolj skrajen še "deviški" low v pasu (do 3 sveče nazaj), ki ga je sweep vzel; vmes ga ni prebila nobena sveča
+    var rfK=k-1;for(var q=k-2;q>=Math.max(0,htf.length-4,k-3);q--){var vq=htf[q].l,vir=true;for(var m=q+1;m<k;m++)if(htf[m].l<vq){vir=false;break}if(vir&&vq>ext&&vq<htf[rfK].l)rfK=q}
+    var Rf=htf[rfK];
+    // setup šele, ko sweep sveča zapre nazaj nad nivo (odprta sveča: trenutna cena)
+    var sC=closed?S.c:ltf[ltf.length-1].c;if(!(sC>Rf.l))continue;
     var px=ltf[ltf.length-1].c,a=A[A.length-1],tol=SM.tolAtr*a,last=ltf[ltf.length-1];
     var near=function(L){return Math.abs(px-L)<=tol}, inside=function(lo,hi){return px>=lo-tol&&px<=hi+tol};
-    // referenčna sveča (kot indikator): od prejšnje HTF sveče nazaj, dokler so lowi vse nižji (do lokalnega dna), največ 4 sveče
-    var rfK=k-1;while(rfK-1>=Math.max(0,k-4)&&htf[rfK-1].l<htf[rfK].l&&htf[rfK-1].l>ext)rfK--;var Rf=htf[rfK];
     var piv=(Rf.h+Rf.l+Rf.c)/3,rg=Rf.h-Rf.l,pts=[],dr={boxes:[],lines:[]};
     var BX=function(k,lo,hi,t0){dr.boxes.push({k:k,lo:lo,hi:hi,t0:t0})},LN=function(k,y,t0){dr.lines.push({k:k,y:y,t0:t0})};
     // FVG: prvi še nepokrit FVG po ekstremu (tako riše indikator)
@@ -396,13 +401,16 @@ function smBull(htf,ltf,htfMs,now){
     var cur=htf[htf.length-1];if(cur.t+htfMs>now)LN('Open HTF',cur.o,cur.t);if(cur.t+htfMs>now&&near(cur.o))pts.push({k:'OPEN',lvl:cur.o});
     var score=st.div+(st.fvgs.length>0)+st.retest+st.cisd+st.zone;
     var res={sweptLvl:Rf.l,ext:ext,extT:ltf[extI].t,sT:S.t,closed:closed,closedBack:closed?S.c>P.l:null,lvl:st.lvl,cisd:st.cisd,div:st.div,fvg:st.fvgs.length>0,retest:st.retest,zone:st.zone,score:score,points:pts,px:px,atr:a,pivot:piv,eq:(P.h+P.l)/2,opp:P.h,hi:st.hi,zt:st.zt,zb:st.zb,draw:dr,extI:extI};
-    if(!best)best=res; // najprej najnovejša (odprta) sveča
+    if(!best)best=res; // najstarejši še živi setup
   }
   return best;
 }
 function smScan(htf,ltf,htfMs,now){
-  var out=[],L=smBull(htf,ltf,htfMs,now);if(L){L.side='long';out.push(L)}
+  var out=[],L=smBull(htf,ltf,htfMs,now);
   var S=smBull(smMirror(htf),smMirror(ltf),htfMs,now);
+  // indikator ima en aktiven setup: novejši v nasprotni smeri postane glavni, starejši ostane narisan kot zgodovina (History 1)
+  if(L&&S){if(L.sT!==S.sT){if(L.sT>S.sT)S.hist=true;else L.hist=true}else{if(L.extT>S.extT)S=null;else L=null}}
+  if(L){L.side='long';out.push(L)}
   if(S){['sweptLvl','ext','lvl','px','pivot','eq','opp','hi','zt','zb'].forEach(function(k){if(S[k]!=null)S[k]=-S[k]});S.points.forEach(function(p){['lvl','lo','hi'].forEach(function(k){if(p[k]!=null)p[k]=-p[k]})});S.draw.boxes.forEach(function(b){var lo=-b.hi;b.hi=-b.lo;b.lo=lo});S.draw.lines.forEach(function(l){l.y=-l.y});S.side='short';out.push(S)}
   return out;
 }
@@ -501,14 +509,14 @@ function smRender(){
   if(mode==='table'){
     html='<table class="t"><thead><tr><th>Kovanec</th><th class="tl">Smer</th><th class="tl">Na točki</th><th>Cena</th><th>Do SL</th><th>CISD</th><th>Sweep</th></tr></thead><tbody>';
     rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
-      html+='<tr class="rw" data-id="'+id+'"><td><b>'+esc(x.sym)+'</b></td><td class="tl"><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span></td><td class="tl">'+hitsH(smMatch(x))+'</td><td>'+fmtP(x.px)+'</td><td>'+dist.toFixed(2)+' %</td><td>'+(x.lvl==null?'–':fmtP(x.lvl)+(x.cisd?' <span class="up">✓</span>':' <span class="mut">čaka</span>'))+'</td><td>'+fmtT(x.extT)+'</td></tr>';
+      html+='<tr class="rw" data-id="'+id+'"><td><b>'+esc(x.sym)+'</b></td><td class="tl"><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>'+(x.hist?' <span class="mut">prejšnji</span>':'')+'</td><td class="tl">'+hitsH(smMatch(x))+'</td><td>'+fmtP(x.px)+'</td><td>'+dist.toFixed(2)+' %</td><td>'+(x.lvl==null?'–':fmtP(x.lvl)+(x.cisd?' <span class="up">✓</span>':' <span class="mut">čaka</span>'))+'</td><td>'+fmtT(x.extT)+'</td></tr>';
       if(smOpen[id])html+='<tr class="dr"><td colspan="7"><div class="det" id="d_'+id+'"></div></td></tr>'});
     html+='</tbody></table>';
     $('smList').className='list tbl';$('smList').innerHTML=html;
     $('smList').querySelectorAll('tr.rw').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
   } else {
     rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
-      html+='<div class="card'+(smOpen[id]?' open':'')+'" data-id="'+id+'"><div class="ch"><div><div class="coin">'+esc(x.sym)+'</div><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span></div><div class="px">'+fmtP(x.px)+'<small>'+dist.toFixed(2)+' % do SL</small></div></div>'+
+      html+='<div class="card'+(smOpen[id]?' open':'')+'" data-id="'+id+'"><div class="ch"><div><div class="coin">'+esc(x.sym)+'</div><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>'+(x.hist?' <small class="mut">prejšnji setup</small>':'')+'</div><div class="px">'+fmtP(x.px)+'<small>'+dist.toFixed(2)+' % do SL</small></div></div>'+
         '<div>'+hitsH(smMatch(x))+'</div><div class="cf"><span>CISD '+(x.lvl==null?'–':(x.cisd?'potrjen':'čaka'))+'</span></div></div>';
       if(smOpen[id])html+='<div class="det" id="d_'+id+'"></div>'});
     $('smList').className='cards';$('smList').innerHTML=html;
@@ -870,7 +878,7 @@ setInterval(function(){if(started.limits||started.log)run()},5*60*1000);
 // Besedila v aplikaciji so slovenska; v angleškem načinu jih prevajalnik sproti zamenja (tudi v grafih in tabelah).
 var EN={"Cena trenutno ni na nobeni izbrani točki.":"Price is not at any selected point right now.","Količina je izračunana tako, da je izguba na SL skupaj s provizijami (vstop maker 0,02 %, izhod taker 0,055 % + 0,02 % zdrs) točno enaka rizikom. »Na TP« je profit po provizijah.":"Size is calculated so that the loss at SL including fees (maker entry 0.02 %, taker exit 0.055 % + 0.02 % slippage) equals the risk exactly. \u201cAt TP\u201d is profit after fees.","Nazaj %": "Back %", "CISD v sweepu": "CISD in sweep", "da": "yes", "ne ✓": "no ✓", "Stolpca »Nazaj %« in »CISD v sweepu«": "Columns “Back %” and “CISD in sweep”", "Nazaj %: kako globoko v predvčerajšnjo svečo je sweep sveča zaprla nazaj (zeleno nad 30 %). CISD v sweepu: ali je bil na 15m CISD potrjen že v sweep sveči. V backtestu so bili boljši setupi z globokim zaprtjem nazaj (+0,39 R / +0,18 R na novih kovancih) in brez CISD v sweepu (+0,84 R / +0,17 R). Vzorci so majhni – to sta kandidata za filter, ki ju preverjava v paper logu, ne pravilo.": "Back %: how deep into the previous candle the sweep candle closed back (green above 30 %). CISD in sweep: whether a 15m CISD was already confirmed inside the sweep candle. In the backtest, setups with a deep close back (+0.39 R / +0.18 R on new coins) and without CISD in the sweep (+0.84 R / +0.17 R) were better. Samples are small – these are filter candidates we check in the paper log, not rules.","Račun · Funded": "Account · Funded", "Začetni račun $": "Starting balance $", "Faza 1 · +8 %": "Phase 1 · +8 %", "Faza 2 · +5 %": "Phase 2 · +5 %", "stanje (z odprtimi)": "balance (incl. open)", "profit skupaj": "total profit", "do cilja": "to target", "če vsi zadenejo TP": "if all hit TP", "Na TP": "At TP", "dosežen ✓": "reached ✓", "preskoči": "skip","Limit bi veljal": "Limit would be valid", "Včeraj (nivo)": "Yesterday (level)", "Današnja sveča (še odprta)": "Today's candle (still open)", "👆 Klikni na kovanec za graf.": "👆 Click a coin for a chart.","Pošten opomnik (13. 10. 2026): natančnejši test na 5m svečah da na 20 testiranih kovancih okoli +0,2 R na posel, na 28 novih kovancih, ki jih pri razvoju nisva uporabila, pa le okoli +0,06 R (če limit ujame samo prebod nivoja, skoraj 0). Rob je majhen in še ni potrjen, zato najprej paper log in demo, šele potem izziv.":"Honest note (13 Oct 2026): a more precise test on 5m candles gives about +0.2 R per trade on the 20 tested coins, but only about +0.06 R on 28 new coins not used during development (close to 0 if the limit only fills when price trades through the level). The edge is small and not yet confirmed, so paper log and demo first, the challenge later.","👆 Klikni na kovanec za graf s setupom, na naslov stolpca za razvrščanje.": "👆 Click a coin for a chart with the setup, a column title to sort.", "Sweep sveča": "Sweep candle", "Posweepan nivo = limit": "Swept level = limit", "Ekstrem sweepa": "Sweep extreme", "Limit velja do": "Limit valid until", "Vstop": "Entry", "Izhod": "Exit", "Predvčeraj (nivo)": "Day before (level)", "limit poteče": "limit expires", "Posel je odprt.": "Trade is open.", "Posel je dosegel TP.": "Trade hit TP.", "Posel je zadel SL.": "Trade hit SL.", "Posel je zaprt po 48 urah.": "Trade closed after 48 h.", "Cena je presegla ekstrem pred vstopom – setup odpadel.": "Price broke the extreme before entry – setup cancelled.", "Cena ni prišla do limita v 24 urah.": "Price did not reach the limit within 24 h.","Danes":"Today","preskoči (RR)":"skip (RR)","preskoči (SL)":"skip (SL)","Sweep 1D – strategija iz backtesta. Setupi iz včerajšnje dnevne sveče, limit velja do 2:00. Pri vsakem poslu je že izračunan riziko in količina.":"Sweep 1D – the backtested strategy. Setups from yesterday’s daily candle, the limit is valid until 2:00. Risk and size are already calculated for every trade.","½ proti biasu":"½ against bias","Vedno poln":"Always full","Riziko $":"Risk $","Vpiši riziko na posel v $":"Enter risk per trade in $","skupni riziko veljavnih":"total risk of valid setups","Status se sproti posodablja iz Bybit podatkov. Riziko ½ pomeni, da je bila zadnja seja (včeraj NY) proti smeri posla.":"Status updates live from Bybit data. Risk ½ means the last session (yesterday NY) went against the trade direction.","Riziko":"Risk","Količina":"Size","Bias trga":"Market bias","Včeraj NY":"Yesterday NY","Longi danes s polovičnim rizikom.":"Longs today with half risk.","Shorti danes s polovičnim rizikom.":"Shorts today with half risk.","Danes poln riziko v obe smeri.":"Full risk in both directions today.","V smeri biasa":"With the bias","Do SL: vse":"To SL: all","Do SL ≤ 5 %":"To SL ≤ 5 %","Do SL ≤ 3 %":"To SL ≤ 3 %","Do SL ≤ 2 %":"To SL ≤ 2 %","Pokaži samo smer, ki jo kaže bias trga (pri neodločenem obe)":"Show only the direction of the market bias (both when undecided)","Največja razdalja do SL":"Maximum distance to SL","Obvestila ob novem setupu":"Notifications for new setups","Če je zadnja seja (včeraj NY) proti smeri posla (pod −20 za long, nad +20 za short), vzemi pol rizika. V backtestu: +128 R namesto +146 R, največji padec 17 R namesto 24 R.":"If the last session (yesterday NY) is against the trade (below −20 for a long, above +20 for a short), take half risk. In the backtest: +128 R instead of +146 R, max drawdown 17 R instead of 24 R.","Backtest (180 dni, 20 kovancev): kot filter bias ne pomaga – posli proti biasu so bili še vedno v plusu. Pomaga pa pri velikosti rizika (pravilo zgoraj). Long +0,34 R in short +0,26 R na posel, zato ostaneta obe smeri.":"Backtest (180 days, 20 coins): as a filter the bias does not help – trades against it were still profitable. It does help with position size (rule above). Long +0.34 R and short +0.26 R per trade, so both directions stay.","Ta brskalnik ne podpira obvestil.":"This browser does not support notifications.","FVG – nepokrit bull/bear FVG po sweepu":"FVG – uncovered FVG after the sweep","IFVG – obrnjen FVG iz poteze v sweep":"IFVG – inverted FVG from the move into the sweep","Volume imbalance po sweepu":"Volume imbalance after the sweep","Retest CISD nivoja (po potrditvi)":"Retest of the CISD level (after confirmation)","1-2 cona (0,618–0,786 impulza po CISD)":"1-2 zone (0.618–0.786 of the impulse after CISD)","HTF fib pivot (0,5 … 2,618)":"HTF fib pivot (0.5 … 2.618)","Golden pocket HTF sveče (0,618–0,65)":"Golden pocket of the HTF candle (0.618–0.65)","OTE – 0,618–0,786 povratka po ekstremu (kot indikator)":"OTE – 0.618–0.786 retracement after the extreme (as in the indicator)","Retest posweepanega nivoja":"Retest of the swept level","Odprtje HTF sveče (opening line)":"HTF candle open (opening line)",
 'Bias …':'Bias …','Kovanci na točki':'Coins at a point',
-'Sweep Model: višja sveča je posweepala prejšnji high ali low. Tukaj so kovanci, kjer je cena zdaj v FVG, na fibu, v 1-2 coni ali na drugi točki indikatorja. Tapni kovanec za graf.':'Sweep Model: a higher-timeframe candle swept the previous high or low. These are the coins where price is now in an FVG, on a fib, in the 1-2 zone or at another point of the indicator. Tap a coin for its chart.',
+'Sweep Model (kot indikator): 6H sveča je vzela še nedotaknjen high ali low iz zadnjih 3 sveč in zaprla nazaj (odprta sveča: cena je nazaj). Tukaj so kovanci, kjer je cena zdaj v FVG, na fibu, v OTE ali na drugi točki indikatorja. Tapni kovanec za graf.':'Sweep Model (like the indicator): a 6H candle took an untouched high or low from the last 3 candles and closed back inside (open candle: price is back). These are the coins where price is now in an FVG, on a fib, in the 1-2 zone or at another point of the indicator. Tap a coin for its chart.',
 'Top 50 kripto':'Top 50 crypto','Top 100 kripto':'Top 100 crypto','Top 30 kripto':'Top 30 crypto','20 testiranih':'20 tested','20 testiranih kovancev':'20 tested coins',
 'Oba':'Both','Kartice':'Cards','Tabela':'Table','Skeniraj':'Scan','Samo na točki':'Only at a point','Skeniram trg…':'Scanning the market…',
 'Bias trga':'Market bias','Naš lasten izračun iz Bybit podatkov, neodvisen od EAX. Gleda, kje so kovanci glede na pivote (mesec, teden, dan) in kako se je trg obnašal v vsaki seji.':'Our own calculation from Bybit data, independent of EAX. It looks at where coins sit relative to their pivots (month, week, day) and how the market behaved in each session.',

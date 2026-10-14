@@ -161,3 +161,14 @@ Podatki: `/home/claude/bt/ow/*.json` (risbe indikatorja + sveče), primerjava `o
 - **OTE** se nariše šele, ko je CISD potrjen in impulz od CISD vsaj 1 : 1 (DOT, UNI, STX ~0,8–1,0 → brez OTE; vsi narisani ≥ 1,8).
 - **Fib pivot sveča**: od prejšnje HTF sveče nazaj, dokler so lowi nižji (lokalno dno), max 4 → ujema WLD/UNI/TAO/XRP; ne ujema HYPE/UNI short (indikator vzel prejšnjo svečo) in STX long (vzel 20:00) – pravila ne poznam.
 - **Ne znam (še)**: kdaj indikator nov sweep označi "Bull/Bear x/5" (samo DOT, STX, UNI od ~15) – ostali imajo le "·" (prazna oznaka). Ni ocena, ni CISD, ni 90m, ni dnevni sweep. Prav tako indikator včasih obdrži starejši setup, čeprav ga je naslednja sveča malenkost prebila (LINK, SUI, BNB = "Retest"), BTC/ENA/TAO/XRP pa zamenja z novim (meja ~0,2 %?). Screener zato kaže tudi "·" sweepe.
+
+## Opis in nastavitve indikatorja (14. 10. 2026, 20:40) → screener
+Prebral opis skripte na TV in vse nastavitve (samo branje): History 1, Min score 0, **nobena zahteva (Requirements) ni vklopljena**, HTF-2 = 6H s **4 svečami v pasu**, Last HTF sweep = on, Invalidated setups = Mark, FVG min 0,3 ATR, 1-2 trigger FVG / While alive / impulse must clear / min 5 bar, fib Show = Sweep side, Only touched, Keep with setup.
+Pravila iz opisa, potrjena na 30 kovancih in vgrajena v `/*SM*/`:
+- Setup = sweep sveča vzame **deviški** nivo (vmes ga ni prebila nobena sveča) in **zapre nazaj** (odprta sveča: trenutna cena). Nivo = najbolj skrajen tak nivo med svečami v pasu (do 3 nazaj). Pravilo "Bull/Bear vs ·" se ujema 30/31.
+- Sweep sveča in nivo morata biti v pasu (trenutna + 3) → setupi iz sveče 4 nazaj ne obstajajo.
+- Starejši setup živi, dokler LTF sveča ne **zapre** čez ekstrem; wick čez je "Retest" (LINK/SUI/BNB obdržani, BTC/ENA/TAO/XRP zamenjani – 7/7).
+- Novejši setup v nasprotni smeri postane glavni; starejši ostane kot "prejšnji" (indikator riše njegove cone, oznaka Bear/Bull izgine).
+- Fib pivoti iz sveče nivoja.
+Rezultat: setupi enaki pri 22/30 kovancih (prej ~6/30), škatle 55/56. Preostalih 8 (ADA, ARB, AVAX, BNB, NEAR, DOGE, ETH, SOL) – mi najdemo short, indikator nima oznake (ARB/BNB/ADA cone sicer riše). Razloga ne poznam – počakam PDF navodila.
+Pine "Sweep·C" (sweep_screener_indikator.pine) teh pravil še NIMA.
