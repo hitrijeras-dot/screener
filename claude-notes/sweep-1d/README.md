@@ -150,3 +150,4 @@ Risbe OnlyWicks Sweep Model se dajo prebrati v TV spletu: `TradingViewApi._activ
 - **FVG**: indikator kaže samo prvi FVG po ekstremu.
 - 1-2 cone indikator na teh kovancih ni narisal (sprožilec FVG, "impulse must clear") → iz screenerja umaknjena.
 - **Še odprto**: indikator setup označi z "Bull/Bear x/5" le pri nekaterih sweepih (BTC, HYPE, STRK long so imeli samo oznako ekstrema, brez točk); setupi ostanejo vidni več HTF sveč (BTC short iz 10:10 še ob 23:45). OTE ni narisan pri LIT short. Za to rabim večji vzorec (30+ kovancev).
+- 14. 10.: Jure ne želi ocene setupa v screenerju → odstranjena (filter "Ocena", stolpec, opis). Graf kot indikator: fib samo dotaknjeni (od začetka sweep sveče) ali tisti, na katerem je cena; GP, VI, Open HTF samo, ko je cena tam.
