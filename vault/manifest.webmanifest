@@ -2,7 +2,7 @@
   "name": "EAX Vault", "short_name": "Vault",
   "description": "Kartice EAX Secret Vaulta z grafom in rezultatom trejda v živo (Bybit USDT perp).",
   "lang": "sl", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "any",
-  "background_color": "#0c0f14", "theme_color": "#0c0f14",
+  "background_color": "#0a0a0b", "theme_color": "#0a0a0b",
   "icons": [
     {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
     {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
