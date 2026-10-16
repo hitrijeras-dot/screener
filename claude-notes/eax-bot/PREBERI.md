@@ -12,6 +12,10 @@ Neizpolnjen limit prekliče, ko kartica izgine iz Vaulta, ko je kartica že na T
 (reduce-only limit, privzeto 50 % pozicije). Ko se TP1 izpolni, premakne **SL na vstop (BE)** + 0,1 % za provizije, ostanek cilja TP2.
 Izklop: `BE_AFTER_TP1=0` (potem celotna pozicija zapre na TP1). Delež: `TP1_CLOSE_PCT`.
 
+## Testa (priporočeno pred zagonom)
+- `simulacija.command` – dvoklik: za vse kartice, ki so zdaj v igri, pokaže, kaj **bi** bot naredil (cena, količina, SL, TP, market ali limit). Nič ne odda, ključ ni potreben.
+- `test-demo.command` – dvoklik (ko je ključ vpisan): na **demo** računu odda majhen BTC limit 20 % pod ceno, preveri, da je na Bybitu, in ga takoj prekliče. Če na koncu piše **TEST USPEŠEN**, ključ in povezava delata.
+
 ## Prvi zagon (korak za korakom)
 1. Na Bybitu preklopi na **Demo Trading** → profil → **API** → *Create New Key* → *System-generated* →
    dovoljenja **Contract: Orders + Positions** (Read-Write). **Ne** obkljukaj Withdraw/Transfer. Kopiraj *API Key* in *Secret*.

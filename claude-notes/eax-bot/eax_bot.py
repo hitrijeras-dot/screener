@@ -407,8 +407,63 @@ def cycle(cfg, bb, st, first):
             log(f"✖ {c['sym']}: oddaja ni uspela: {e}")
 
 
+def simulacija(cfg, bb):
+    """Brez naročil: za vsako kartico V IGRI z vstopom pokaže, kaj bi bot naredil, če bi bila zdaj nova FIRST ENTRY."""
+    v = get_vault(cfg["VAULT_URL"])
+    log(f"SIMULACIJA (nič se ne odda) · Vault osvežen {v.get('updated')} · {len(v.get('cards', []))} kartic")
+    n = 0
+    for c in v.get("cards", []):
+        if not (c.get("sec") == "IN PLAY" and c.get("entry") and c.get("stop") and c.get("tp1")):
+            continue
+        n += 1
+        try:
+            res, desc = plan(c, cfg, bb)
+            log(("✔ BI ODDAL: " if res else "– preskočil: ") + (desc if res else f"{c['sym']}: {desc}") + f"   [na kartici {c.get('type') or '?'}]")
+        except Exception as e:
+            log(f"✖ {c['sym']}: {e}")
+    log(f"Konec simulacije · {n} kartic v igri pregledanih.")
+
+
+def test_narocilo(cfg, bb):
+    """Preizkus povezave na DEMO: odda majhen Post-Only limit daleč od cene, preveri in ga takoj prekliče."""
+    if cfg["DEMO"] != "1":
+        log("Test naročila teče samo na DEMO (DEMO=1).")
+        return
+    sym = "BTCUSDT"
+    log("1/5 Povezava z Bybit DEMO …")
+    n = len(bb.positions())
+    log(f"   ✔ ključ deluje · odprtih pozicij {n}")
+    ins = bb.instrument(sym)
+    px = bb.price(sym)
+    e = round_price(px * 0.80, ins["tick"])
+    log(f"2/5 BTC cena {px} · testni BUY limit {e} (20 % pod ceno, ne bo se izpolnil), količina {ins['min']}")
+    link = f"eax-test-{int(time.time())}"
+    bb.create({"category": "linear", "symbol": sym, "side": "Buy", "orderType": "Limit", "qty": fmt_step(ins["min"], ins["step"]),
+               "price": fmt_step(e, ins["tick"]), "timeInForce": "PostOnly", "orderLinkId": link,
+               "stopLoss": fmt_step(round_price(px * 0.78, ins["tick"]), ins["tick"]), "takeProfit": fmt_step(round_price(px * 0.85, ins["tick"]), ins["tick"]),
+               "tpslMode": "Full", "positionIdx": 0})
+    log("3/5 ✔ naročilo oddano")
+    time.sleep(3)
+    s = bb.order_status(sym, link) or {}
+    log(f"4/5 status na Bybitu: {s.get('orderStatus')} (pričakovano New)")
+    ok = bb.cancel(sym, link)
+    time.sleep(2)
+    s = bb.order_status(sym, link) or {}
+    log(f"5/5 {'✔ preklicano' if ok else '✖ preklic ni uspel – prekliči ročno na Bybitu'} · status {s.get('orderStatus')}")
+    log("TEST USPEŠEN – bot lahko oddaja in preklicuje naročila na tvojem demo računu." if ok and s.get("orderStatus") == "Cancelled" else "Test ni v celoti uspel – poglej zgoraj.")
+
+
 def main():
     cfg = load_cfg()
+    if "--simulacija" in sys.argv:
+        simulacija(cfg, Bybit(cfg))
+        return
+    if "--test" in sys.argv:
+        try:
+            test_narocilo(cfg, Bybit(cfg))
+        except Exception as e:
+            log(f"✖ Test ni uspel: {e}  (preveri API_KEY/API_SECRET, DEMO=1 in dovoljenja ključa Contract Orders+Positions)")
+        return
     once = "--enkrat" in sys.argv
     if cfg["DRY_RUN"] != "1" and (not cfg["API_KEY"] or not cfg["API_SECRET"]):
         log("Manjka API_KEY ali API_SECRET v nastavitve.txt.")
