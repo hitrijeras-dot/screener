@@ -1,0 +1,31 @@
+# ==== EAX bot – nastavitve ====
+# Vrstice z # so komentarji. Spreminjaj samo vrednosti za "=".
+
+# Tvoj Bybit API ključ (ustvari ga na Bybitu: API Management, dovoljenja "Contract – Orders & Positions", BREZ "Withdraw").
+# Ključ ostane samo v tej datoteki na tvojem računalniku. Nikomur ga ne pošiljaj.
+API_KEY=
+API_SECRET=
+
+# 1 = Bybit DEMO račun (za demo potrebuješ ključ, ustvarjen v Demo Trading), 0 = PRAVI račun
+DEMO=1
+
+# 1 = samo izpiše, kaj bi naredil (nič ne odda). Ko si zadovoljen, nastavi na 0.
+DRY_RUN=1
+
+# Riziko na posel v $ (izguba na SL skupaj s provizijami)
+RISK_USD=10
+
+# Največ odprtih poslov + čakajočih limitov hkrati
+MAX_OPEN=3
+
+# Katere ocene kartic trguje (npr. samo S,A)
+GRADES=S,A,B,C
+
+# Kartica mora biti sprožena največ toliko minut nazaj
+MAX_AGE_MIN=30
+
+# Neizpolnjen limit prekliči po toliko urah
+ORDER_TTL_H=4
+
+# Največji vzvod, ki ga bot nastavi
+MAX_LEV=10
