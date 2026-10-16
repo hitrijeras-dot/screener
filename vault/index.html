@@ -44,7 +44,9 @@ button{font:inherit;color:var(--ink);cursor:pointer}
 #det.on{display:block}
 .tfs{display:flex;gap:6px;margin:10px 0}
 .tf{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:5px 11px;font-size:13px}.tf.on{background:var(--accbg);border-color:var(--acc);color:var(--acc);font-weight:600}
-#ch{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px;box-shadow:var(--sh);touch-action:pan-y}
+#ch{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--sh);height:min(62vh,520px);min-height:320px;position:relative}
+#ch iframe{width:100%;height:100%;border:0;display:block}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--mut);margin:8px 2px 0}.leg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
 #ch svg{display:block;width:100%}
 .kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:12px}
 .kv div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px}.kv span{display:block;font-size:11px;color:var(--mut)}.kv b{font-size:14px;font-variant-numeric:tabular-nums}
@@ -82,16 +84,18 @@ button{font:inherit;color:var(--ink);cursor:pointer}
  <div class="w">
   <div class="tfs" id="tfs"></div>
   <div id="ch"></div>
+  <div class="leg" id="leg"></div>
   <div id="dres"></div>
   <div class="kv" id="kv"></div>
   <div class="links" id="lk"></div>
   <div class="note">Sveče v živo z Bybita. Kartice zapiše Claude iz EAX Secret Vaulta vsakih 5 min. Ni finančni nasvet.</div>
  </div>
 </div>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const API='https://api.bybit.com/v5/market/';
-const TFS=[['5','5m'],['15','15m'],['30','30m'],['60','1H'],['240','4H']];
+const TFS=[['5','5m'],['15','15m'],['30','30m'],['60','1H'],['240','4H'],['tv','TV ↗']];let CH=null,SER=null,CHsym='';
 let RISK=+(localStorage.getItem('vault_risk')||10),V={cards:[]},PX={},F=localStorage.getItem('vault_f')||'all',TF=localStorage.getItem('vault_tf')||'15',cur=null,K=[];
 try{const t=localStorage.getItem('vault_theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -140,9 +144,9 @@ $('#list').onclick=e=>{const b=e.target.closest('[data-s]');if(b){location.hash=
 $('#bk').onclick=()=>{history.length>1?history.back():location.hash=''};
 $('#rk').textContent=RISK+' $';$('#rk').onclick=()=>{const v=prompt('Riziko na trejd v $',RISK);if(v&&+v>0){RISK=+v;try{localStorage.setItem('vault_risk',RISK)}catch(e){};$('#rk').textContent=RISK+' $';render();if(cur)$('#dres').innerHTML=resHtml(prog(cur))}};
 $('#rf').onclick=()=>{loadVault();loadPx()};
-$('#th').onclick=()=>{const d=document.documentElement,cur=d.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'),n=cur==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('vault_theme',n)}catch(e){};if(cur)draw()};
+$('#th').onclick=()=>{const d=document.documentElement,cur=d.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'),n=cur==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('vault_theme',n)}catch(e){};if(cur){killChart();CHsym='';loadK()}};
 window.addEventListener('hashchange',route);
-function route(){const s=decodeURIComponent(location.hash.slice(1));if(s)openCard(s);else{cur=null;$('#det').classList.remove('on');document.body.style.overflow=''}}
+function route(){const s=decodeURIComponent(location.hash.slice(1));if(s)openCard(s);else{cur=null;killChart();CHsym='';$('#det').classList.remove('on');document.body.style.overflow=''}}
 async function openCard(sym,keep){const c=V.cards.find(x=>x.sym===sym);if(!c){if(V.cards.length)location.hash='';return}
  cur=c;$('#det').classList.add('on');document.body.style.overflow='hidden';
  const L=isL(c);$('#dt').innerHTML=`${c.sym} <span class="pill ${L?'L':'S'}">${L?'LONG ↑':'SHORT ↓'}</span> <span class="pill gr">${c.grade}</span>`;
@@ -154,37 +158,42 @@ async function openCard(sym,keep){const c=V.cards.find(x=>x.sym===sym);if(!c){if
  $('#dres').innerHTML=resHtml(prog(c));
  $('#kv').innerHTML=k.map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join('');
  $('#lk').innerHTML=`<a href="https://www.tradingview.com/chart/?symbol=BYBIT:${c.sym}USDT.P" target="_blank" rel="noopener">TradingView</a><a href="https://www.bybit.com/trade/usdt/${c.sym}USDT" target="_blank" rel="noopener">Bybit</a>`;
- if(!keep)K=[];await loadK();}
-$('#tfs').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;TF=b.dataset.t;try{localStorage.setItem('vault_tf',TF)}catch(e){};document.querySelectorAll('.tf').forEach(x=>x.classList.toggle('on',x.dataset.t===TF));K=[];loadK()};
-async function loadK(){if(!cur)return;const sym=cur.sym;
- try{const r=await (await fetch(`${API}kline?category=linear&symbol=${sym}USDT&interval=${TF}&limit=160`)).json();if(!cur||cur.sym!==sym)return;
-  K=r.result.list.reverse().map(k=>[+k[0],+k[1],+k[2],+k[3],+k[4]]);draw()}catch(e){$('#ch').innerHTML='<div class="empty">Sveč ni bilo mogoče naložiti.</div>'}}
-function draw(){const c=cur;if(!c||!K.length)return;
- const W=Math.max(320,$('#ch').clientWidth-12),H=Math.round(Math.min(460,Math.max(300,W*0.62))),Lp=4,Rp=78,T=10,B=22;
- const up=css('--long'),dn=css('--short'),grid=css('--grid'),mut=css('--mut'),ink=css('--ink'),ent=css('--entry');
- let lo=Math.min(...K.map(k=>k[3])),hi=Math.max(...K.map(k=>k[2]));
- const lv=c.entry?[[c.entry,ent,'Vstop'],[c.stop,dn,'SL'],[c.tp1,up,'TP1']]:[];
- lv.forEach(l=>{lo=Math.min(lo,l[0]);hi=Math.max(hi,l[0])});
- let tp2in=false;if(c.tp2){const sp=hi-lo;if(c.tp2<=hi+sp*.5&&c.tp2>=lo-sp*.5){tp2in=true;lo=Math.min(lo,c.tp2);hi=Math.max(hi,c.tp2)}}
- const pd=(hi-lo)*.05;lo-=pd;hi+=pd;
- const n=K.length,cw=(W-Lp-Rp)/n,x=i=>Lp+i*cw+cw/2,y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
- let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${c.sym} graf">`;
- for(let i=0;i<=5;i++){const v=lo+(hi-lo)*i/5;s+=`<line x1="${Lp}" x2="${W-Rp}" y1="${y(v)}" y2="${y(v)}" stroke="${grid}"/><text x="${W-Rp+6}" y="${y(v)+4}" font-size="11" fill="${mut}">${fmt(v)}</text>`}
- const ms=+TF*60000;let fi=-1;if(c.firedAt){const f=new Date(c.firedAt).getTime();fi=(f-K[0][0])/ms;}
- const x0=fi>=0&&fi<n?Lp+fi*cw:Lp;
- if(c.entry){s+=`<rect x="${x0}" y="${Math.min(y(c.entry),y(c.stop))}" width="${W-Rp-x0}" height="${Math.abs(y(c.entry)-y(c.stop))}" fill="${dn}" opacity=".12"/><rect x="${x0}" y="${Math.min(y(c.entry),y(c.tp1))}" width="${W-Rp-x0}" height="${Math.abs(y(c.entry)-y(c.tp1))}" fill="${up}" opacity=".12"/>`}
- if(fi>=0&&fi<n)s+=`<line x1="${x0+cw/2}" x2="${x0+cw/2}" y1="${T}" y2="${H-B}" stroke="${css('--warn')}" stroke-dasharray="3 3"/><text x="${x0+cw/2+4}" y="${T+12}" font-size="11" fill="${css('--warn')}">karta ${hm(new Date(c.firedAt))}</text>`;
- const step=Math.ceil(n/6);
- K.forEach((k,i)=>{const col=k[4]>=k[1]?up:dn,X=x(i);s+=`<line x1="${X}" x2="${X}" y1="${y(k[2])}" y2="${y(k[3])}" stroke="${col}"/><rect x="${X-cw*.36}" y="${y(Math.max(k[1],k[4]))}" width="${Math.max(1,cw*.72)}" height="${Math.max(1,Math.abs(y(k[1])-y(k[4])))}" fill="${col}"/>`;
-  if(i%step===0){const d=new Date(k[0]);s+=`<text x="${X}" y="${H-6}" font-size="10" fill="${mut}" text-anchor="middle">${TF>=240||d.getHours()+d.getMinutes()===0?d.getDate()+'.'+(d.getMonth()+1)+' ':''}${hm(d)}</text>`}});
- const lab=(v,col,t,dash)=>{s+=`<line x1="${Lp}" x2="${W-Rp}" y1="${y(v)}" y2="${y(v)}" stroke="${col}" stroke-width="1.4" ${dash?'stroke-dasharray="5 4"':''}/><rect x="${W-Rp+2}" y="${y(v)-9}" width="${Rp-4}" height="18" rx="4" fill="${col}"/><text x="${W-Rp/2}" y="${y(v)+4}" font-size="10.5" fill="#fff" text-anchor="middle" font-weight="600">${t} ${fmt(v)}</text>`};
- lv.forEach(([v,col,t])=>lab(v,col,t));if(tp2in)lab(c.tp2,up,'TP2',1);
- const last=K[n-1][4];s+=`<line x1="${Lp}" x2="${W-Rp}" y1="${y(last)}" y2="${y(last)}" stroke="${ink}" stroke-width=".6" stroke-dasharray="2 3"/><circle cx="${x(n-1)}" cy="${y(last)}" r="3.5" fill="${ink}"/>`;
- if(c.tp2&&!tp2in)s+=`<text x="${Lp+4}" y="${isL(c)?T+12:H-B-6}" font-size="11" fill="${mut}">TP2 ${fmt(c.tp2)} ${isL(c)?'↑ nad':'↓ pod'} grafom</text>`;
- $('#ch').innerHTML=s+'</svg>'}
-window.addEventListener('resize',()=>{if(cur)draw()});
+ if(!keep){K=[];killChart();CHsym=''}await loadK();}
+$('#tfs').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;TF=b.dataset.t;try{localStorage.setItem('vault_tf',TF)}catch(e){};document.querySelectorAll('.tf').forEach(x=>x.classList.toggle('on',x.dataset.t===TF));K=[];killChart();CHsym='';loadK()};
+const TZ=-new Date().getTimezoneOffset()*60;
+const dec=v=>{const a=Math.abs(v);return a>=100?2:a>=1?3:a>=0.01?5:6};
+function killChart(){if(CH){try{CH.remove()}catch(e){}CH=null;SER=null}}
+function tvEmbed(){killChart();CHsym='';const c=cur,th=(document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+ $('#ch').innerHTML=`<iframe src="https://s.tradingview.com/widgetembed/?symbol=BYBIT%3A${c.sym}USDT.P&interval=15&theme=${th}&style=1&timezone=Europe%2FLjubljana&locale=sl&hidesidetoolbar=0&saveimage=0&withdateranges=1" allowfullscreen></iframe>`;
+ $('#leg').innerHTML='Pravi TradingView graf (BYBIT perp). Nivojev kartice tukaj ni – za vstop/SL/TP izberi 5m–4H.'}
+async function loadK(){if(!cur)return;if(TF==='tv'){tvEmbed();return}const sym=cur.sym,tf=TF;
+ try{const r=await (await fetch(`${API}kline?category=linear&symbol=${sym}USDT&interval=${tf}&limit=600`)).json();if(!cur||cur.sym!==sym||TF!==tf)return;
+  K=r.result.list.reverse().map(k=>[+k[0],+k[1],+k[2],+k[3],+k[4]]);draw(sym+tf)}catch(e){killChart();$('#ch').innerHTML='<div class="empty">Sveč ni bilo mogoče naložiti.</div>'}}
+function draw(key){const c=cur;if(!c||!K.length||TF==='tv')return;
+ const data=K.map(k=>({time:k[0]/1000+TZ,open:k[1],high:k[2],low:k[3],close:k[4]}));
+ if(CH&&CHsym===key){data.slice(-3).forEach(d=>SER.update(d));return}
+ killChart();$('#ch').innerHTML='';CHsym=key;
+ const up=css('--long'),dn=css('--short'),ink=css('--ink'),mut=css('--mut'),grid=css('--grid'),bg=css('--card'),ent=css('--entry'),warn=css('--warn');
+ const p=dec(c.entry||K[K.length-1][4]);
+ CH=LightweightCharts.createChart($('#ch'),{autoSize:true,layout:{background:{type:'solid',color:bg},textColor:mut,fontSize:11},grid:{vertLines:{color:grid},horzLines:{color:grid}},
+  rightPriceScale:{borderColor:grid,scaleMargins:{top:.08,bottom:.08}},timeScale:{borderColor:grid,timeVisible:true,secondsVisible:false,rightOffset:6},
+  crosshair:{mode:LightweightCharts.CrosshairMode.Normal},localization:{locale:'sl-SI',priceFormatter:v=>v.toFixed(p)},handleScroll:true,handleScale:true});
+ SER=CH.addCandlestickSeries({upColor:up,downColor:dn,borderUpColor:up,borderDownColor:dn,wickUpColor:up,wickDownColor:dn,priceFormat:{type:'price',precision:p,minMove:Math.pow(10,-p)}});
+ SER.setData(data);
+ const leg=[];const line=(v,col,t,st)=>{if(v==null)return;SER.createPriceLine({price:v,color:col,lineWidth:2,lineStyle:st||0,axisLabelVisible:true,title:t});leg.push(`<span><i style="background:${col}"></i>${t} ${fmt(v)}</span>`)};
+ if(c.entry){line(c.entry,ent,'Vstop');line(c.stop,dn,'SL');line(c.tp1,up,'TP1 '+(c.tp1r||''));line(c.tp2,up,'TP2 '+(c.tp2r||''),2);
+  if(c.firedAt){const ft=new Date(c.firedAt).getTime()/1000+TZ,ms=+TF*60,t0=data[0].time;if(ft>=t0){const ix=data.findIndex(d=>d.time>ft-ms);const d=data[Math.max(0,ix)];if(d){
+   const series2=CH.addLineSeries({color:'rgba(0,0,0,0)',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
+   const zone=data.filter(x=>x.time>=d.time);
+   const mk=(v,col)=>{const s2=CH.addBaselineSeries({baseValue:{type:'price',price:c.entry},topFillColor1:col,topFillColor2:col,bottomFillColor1:col,bottomFillColor2:col,topLineColor:'rgba(0,0,0,0)',bottomLineColor:'rgba(0,0,0,0)',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});s2.setData(zone.map(x=>({time:x.time,value:v})));};
+   const a=(h)=>h+'22';mk(c.tp1,up.startsWith('#')?a(up):'rgba(27,175,122,.13)');mk(c.stop,dn.startsWith('#')?a(dn):'rgba(227,73,72,.13)');
+   SER.setMarkers([{time:d.time,position:isL(c)?'belowBar':'aboveBar',color:warn,shape:isL(c)?'arrowUp':'arrowDown',text:'karta '+hm(new Date(c.firedAt))}]);}}}}
+ else if(c.firedAt){const ft=new Date(c.firedAt).getTime()/1000+TZ,ix=data.findIndex(d=>d.time>ft-+TF*60);if(ix>=0)SER.setMarkers([{time:data[ix].time,position:isL(c)?'belowBar':'aboveBar',color:warn,shape:'circle',text:'karta'}])}
+ $('#leg').innerHTML=leg.join('')+'<span>Vleci z miško / prstom · kolesce = zoom · dvoklik na os = ponastavi</span>';
+ const n=data.length;CH.timeScale().setVisibleLogicalRange({from:Math.max(0,n-120),to:n+6});}
+
 loadVault().then(()=>{loadPx();route()});
-setInterval(loadPx,15000);setInterval(loadVault,60000);setInterval(()=>{if(cur)loadK()},30000);
+setInterval(loadPx,15000);setInterval(loadVault,60000);setInterval(()=>{if(cur&&TF!=='tv')loadK()},30000);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
