@@ -142,9 +142,8 @@ td .s{font-weight:800}
   <div class="sec"><span class="b bIP">PRAVILA</span><small>kaj pomeni kaj</small></div>
   <h3>Vault</h3><p>Kartice iz EAX Secret Vaulta. Claude jih prepiše vsakih 5 min, cene in rezultat so v živo z Bybita. Rezultat je izračunan iz kartice – app ni povezan s tvojim računom.</p>
   <h3>Suen poravnava (Art of Crypto)</h3><p>Vstop samo, ko so <b>dnevni, urni in 5-minutni okvir poravnani</b> in je <b>5m CISD v smeri dnevnega biasa</b>. Tukaj: dnevni bias = barva včerajšnje dnevne sveče; 1H in 5m = smer zadnjega potrjenega CISD. Zelena ✓ pri kartici pomeni, da so vsi trije v smeri karte. Pri vstopu poglej še, kako svež je 5m CISD (starost je v tabeli).</p>
-  <h3>CISD na grafu</h3><p>Ista logika kot v Moj Screener: sveča posweepa nepreseženi swing high/low in zapre nazaj, CISD nivo je odprtje zadnje serije nasprotnih sveč. Potrjen, ko sveča zapre čez nivo. Na grafu: turkizna črta od nivoja do potrditve in puščica <b>CISD</b>. Zadnji CISD se nadaljuje do desnega roba.</p>
-  <h3>Sweep na grafu</h3><p>Indikator Sweep Model iz Sweep appa (skupna koda v <b>skupno/indikator.js</b>): višja sveča (6H ali 1D) posweepa low/high prejšnje, potem točke FVG, IFVG, CISD, OTE, GP, VI, fib pivoti, posweepan nivo in odprtje HTF sveče. Oranžna črta = posweepan nivo, rdeča/zelena = ekstrem (SL), turkizna = CISD, cone so polnejše, ko je cena v njih.</p>
-  <h3>Gumba CISD in Sweep</h3><p>Nad grafom ju vklopiš ali izklopiš, app si zapomni izbiro.</p>
+  <h3>Sweep + CISD na grafu</h3><p>En indikator, narisan tako kot v Sweep appu (skupna koda v <b>skupno/indikator.js</b>): višja sveča (6H ali 1D) posweepa low/high prejšnje. <b>CISD</b> je odprtje zadnje serije vsaj dveh nasprotnih sveč do ekstrema sweepa (turkizna črta »CISD«, dokler ni potrjen »CISD ?«); potrjen je, ko sveča zapre čez ta nivo. Oranžna črta = posweepan nivo, rdeča/zelena = ekstrem (SL), sive pikčaste = dotaknjeni fibi, cone FVG, IFVG, OTE, GP, VI in HTF FVG so polnejše, ko je cena v njih. Puščica označi svečo ekstrema.</p>
+  <h3>Gumb Sweep + CISD</h3><p>Nad grafom ga vklopiš ali izklopiš, app si zapomni izbiro. 6H ali 1D izbereš v rubriki Sweep.</p>
   <p class="note">Ni finančni nasvet. Signal šteje samo na zaprti sveči.</p>
  </div>
 </div>
@@ -222,7 +221,7 @@ async function loadTk(){try{const r=await (await fetch(API+'tickers?category=lin
 async function loadIns(sym){if(INS[sym])return INS[sym];try{const r=await (await fetch(API+'instruments-info?category=linear&symbol='+sym+'USDT')).json();const i=r.result.list[0];INS[sym]={step:+i.lotSizeFilter.qtyStep,min:+i.lotSizeFilter.minOrderQty,tick:+i.priceFilter.tickSize,lev:+i.leverageFilter.maxLeverage}}catch(e){INS[sym]=null}return INS[sym]}
 // ---------- skupni indikator: Suen poravnava (1D/1H/5m) + Sweep Model
 const HOUR=36e5,DAY=864e5,KC={},AL={},SWR={};
-let PV=ls('pv','vault'),OVC=ls('ovc','1')==='1',OVS=ls('ovs','1')==='1',SWTF=ls('swtf','6H'),AF=ls('af','all'),SF=ls('sf','all'),ANA=0,anaBusy=false;
+let PV=ls('pv','vault'),OVS=ls('ovs','1')==='1',SWTF=ls('swtf','6H'),AF=ls('af','all'),SF=ls('sf','all'),ANA=0,anaBusy=false;
 async function kl(sym,iv,lim){const key=sym+'|'+iv+'|'+lim,o=KC[key];if(o&&Date.now()-o.t<55000)return o.b;
  const r=await (await fetch(`${API}kline?category=linear&symbol=${sym}USDT&interval=${iv}&limit=${lim}`,{cache:'no-store'})).json();if(r.retCode!==0)throw new Error(r.retMsg);
  const b=r.result.list.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4]})).reverse();KC[key]={t:Date.now(),b};return b}
@@ -355,8 +354,8 @@ function detailInd(){const c=cur;if(!c)return;const s=suen(c),x=swMain(c),L=isL(
  else{const sg2=x.side==='long'?1:-1,m=x.side===(L?'long':'short');
   $('#dsw').innerHTML=`<h4><span>SWEEP MODEL · ${tfl}</span><span class="b ${x.side==='long'?'bL':'bS'}">${x.side==='long'?'LONG':'SHORT'} SWEEP${m?' ✓ kot karta':' · proti karti'}</span></h4><div class="dg n"><div><span class="lab">Posweepan nivo</span><b>${fmt(x.sweptLvl)}</b><small>sweep ${dhm(new Date(x.extT))}</small></div><div><span class="lab">Ekstrem (SL)</span><b class="neg">${fmt(x.ext)}</b><small>do SL ${((x.px-x.ext)/x.px*100*sg2).toFixed(2)} %</small></div><div><span class="lab">CISD</span><b>${x.lvl==null?'–':fmt(x.lvl)}</b><small>${x.lvl==null?'':x.cisd?'potrjen':'še čaka'}</small></div><div><span class="lab">${tfl} sveča</span><b>${x.closed?(x.closedBack?'zaprta nazaj':'ni zaprta nazaj'):'še odprta'}</b><small>ocena ${x.score}/5</small></div></div>`+
   `<div class="su" style="margin-top:8px">Cena je na: <span class="pts">${x.points.map(p=>`<span class="pt">${ptLab(p)}</span>`).join('')||'<span class="mini">nobeni točki</span>'}</span></div>`}}
-function ovBtns(){$('#ovs').innerHTML=`<span>Na grafu:</span><button class="ov c ${OVC?'on':''}" data-o="c">${OVC?'✓ ':''}CISD</button><button class="ov s ${OVS?'on':''}" data-o="s">${OVS?'✓ ':''}Sweep (${SWTF==='6H'?'6H':'1D'})</button>`}
-$('#ovs').onclick=e=>{const b=e.target.closest('[data-o]');if(!b)return;if(b.dataset.o==='c'){OVC=!OVC;ss('ovc',OVC?'1':'0')}else{OVS=!OVS;ss('ovs',OVS?'1':'0')}ovBtns();drawOv()};
+function ovBtns(){$('#ovs').innerHTML=`<span>Na grafu:</span><button class="ov s ${OVS?'on':''}" data-o="s">${OVS?'✓ ':''}Sweep + CISD (${SWTF==='6H'?'6H':'1D'})</button>`}
+$('#ovs').onclick=e=>{const b=e.target.closest('[data-o]');if(!b)return;OVS=!OVS;ss('ovs',OVS?'1':'0');ovBtns();drawOv()};
 // ---------- risanje indikatorja na graf (CISD + Sweep)
 let OV=[],DT=[],BMK=[];
 function clearOv(){if(CH)OV.forEach(s=>{try{CH.removeSeries(s)}catch(e){}});OV=[]}
@@ -365,21 +364,18 @@ function drawOv(){if(!CH||!SER||!cur||TF==='tv'||!DT.length)return;clearOv();con
  const seg=(y,t0,t1,col,w,st,title)=>{const a=snap(t0),b=t1?Math.min(end,snap(t1)):end;if(!(b>a))return;const s=CH.addLineSeries({...ap,color:col,lineWidth:w,lineStyle:st,lastValueVisible:!!title,title:title||''});s.setData([{time:a,value:y},{time:b,value:y}]);OV.push(s)};
  const box=(lo,hi,t0,col)=>{const a=snap(t0);if(!(end>a))return;const s=CH.addBaselineSeries({...ap,lastValueVisible:false,baseValue:{type:'price',price:lo},topFillColor1:col,topFillColor2:col,bottomFillColor1:'rgba(0,0,0,0)',bottomFillColor2:'rgba(0,0,0,0)',topLineColor:'rgba(0,0,0,0)',bottomLineColor:'rgba(0,0,0,0)',lineWidth:1});s.setData([{time:a,value:hi},{time:end,value:hi}]);OV.push(s)};
  const CY='#22d3ee',OR='#ff9f1c';
- if(OVC){const ev=cisdEvents(K.slice(0,-1).map(k=>({t:k[0],o:k[1],h:k[2],l:k[3],c:k[4]}))).filter(e=>e.tC/1000+TZ>=DT[0]).slice(-6);
-  ev.forEach((e,i)=>{const last=i===ev.length-1;seg(e.lvl,e.tL,last?null:e.tC+tfs*1000,CY,last?2:1,last?0:2,last?'CISD '+(e.dir==='bull'?'↑':'↓'):'');mk.push({time:snap(e.tC),position:e.dir==='bull'?'belowBar':'aboveBar',color:CY,shape:e.dir==='bull'?'arrowUp':'arrowDown',text:'CISD'})});
-  leg.push(`<span><i style="background:${CY}"></i>CISD ${TFS.find(t=>t[0]===TF)[1]} (zadnjih ${ev.length})</span>`)}
- const sw=SWR[c.sym];
- if(OVS&&sw&&sw.rows.length){const ZC={'6H FVG':'77,208,168','1D FVG':'77,163,255','FVG':'0,217,255','IFVG':'181,107,255','VI':'154,154,168','GP':'255,212,0','OTE':'255,61,240'};
-  sw.rows.forEach(x=>{const hit={};x.points.forEach(p=>hit[p.k]=1);const fa=x.hist?.5:1;
-   x.draw.boxes.forEach(b=>box(b.lo,b.hi,b.t0,`rgba(${ZC[b.k]||'255,159,28'},${(hit[b.k]?.2:.07)*fa})`));
-   const hitF=x.points.filter(p=>p.k==='FIB').map(p=>p.lvl);
-   x.draw.lines.filter(l=>/Posweepan|Ekstrem|CISD/.test(l.k)||(l.k==='Open HTF'&&hit.OPEN)||(/^FIB/.test(l.k)&&(l.touched||hitF.includes(l.y)))).forEach(l=>{
-    const col=/Ekstrem/.test(l.k)?(x.side==='long'?css('--short'):css('--long')):/CISD/.test(l.k)?CY:/Posweepan/.test(l.k)?OR:css('--mut');
-    const nm=/Ekstrem/.test(l.k)?'SL sweep':/Posweepan/.test(l.k)?'Sweep':l.k==='Open HTF'?'Open':l.k.replace('FIB ','Fib ');
-    seg(l.y,l.t0,null,col,/Posweepan|Ekstrem/.test(l.k)?2:1,/FIB|Open/.test(l.k)?1:2,x.hist||/FIB/.test(l.k)?'':nm)});
-   mk.push({time:snap(x.extT),position:x.side==='long'?'belowBar':'aboveBar',color:OR,shape:'circle',text:(x.hist?'prejšnji ':'')+'sweep '+(x.side==='long'?'L':'S')})});
-  const m=swMain(c);leg.push(`<span><i style="background:${OR}"></i>Sweep ${sw.tf}${m?' · '+(m.side==='long'?'long':'short')+(m.points.length?' · na: '+m.points.map(ptLab).join(', '):''):''}</span>`)}
- else if(OVS)leg.push(`<span class="mini">Sweep: ${sw?'ni aktivnega '+sw.tf+' sweepa':'računam …'}</span>`);
+ // en indikator kot v Sweep appu (smChart): aktiven sweep + njegov CISD, cone in nivoji
+ const sw=SWR[c.sym],x=OVS&&sw?swMain(c):null;
+ if(x){const ZC={'6H FVG':'77,208,168','1D FVG':'77,163,255','FVG':'0,217,255','IFVG':'181,107,255','VI':'154,154,168','1-2':'255,122,0','GP':'255,212,0','OTE':'255,61,240'},hit={};x.points.forEach(p=>hit[p.k]=1);
+  x.draw.boxes.forEach(b=>box(b.lo,b.hi,b.t0,`rgba(${ZC[b.k]||'255,159,28'},${hit[b.k]?.22:.07})`));
+  const hitF=x.points.filter(p=>p.k==='FIB').map(p=>p.lvl);
+  x.draw.lines.filter(l=>/Posweepan|Ekstrem|CISD/.test(l.k)||(l.k==='Open HTF'&&hit.OPEN)||(/^FIB/.test(l.k)&&(l.touched||hitF.includes(l.y)))).forEach(l=>{
+   const col=/Ekstrem/.test(l.k)?(x.side==='long'?css('--short'):css('--long')):/CISD/.test(l.k)?CY:/Posweepan/.test(l.k)?OR:css('--mut');
+   const nm=/Ekstrem/.test(l.k)?'SL':/Posweepan/.test(l.k)?'Sweep':l.k==='Open HTF'?'Open':l.k.replace('FIB ','Fib ');
+   seg(l.y,l.t0,null,col,/Posweepan|Ekstrem/.test(l.k)?2:1,/FIB|Open/.test(l.k)?1:2,nm)});
+  mk.push({time:snap(x.extT),position:x.side==='long'?'belowBar':'aboveBar',color:OR,shape:x.side==='long'?'arrowUp':'arrowDown',text:''});
+  leg.push(`<span><i style="background:${OR}"></i>Sweep ${sw.tf} · ${x.side==='long'?'long':'short'}</span><span><i style="background:${CY}"></i>CISD ${x.lvl==null?'–':fmt(x.lvl)+(x.cisd?' potrjen':' čaka')}</span>`+(x.points.length?`<span>Cena je na: <b style="color:#ff9f1c">${x.points.map(ptLab).join(', ')}</b></span>`:'<span>Cena trenutno ni na nobeni točki.</span>'))}
+ else if(OVS)leg.push(`<span class="mini">Sweep + CISD: ${sw?'ni aktivnega '+sw.tf+' sweepa na tem kovancu':'računam …'}</span>`);
  mk.sort((a,b)=>a.time-b.time);SER.setMarkers(mk);$('#leg2').innerHTML=leg.join('')}
 $('#tfs').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;TF=b.dataset.t;ss('tf',TF);document.querySelectorAll('.tf').forEach(x=>x.classList.toggle('on',x.dataset.t===TF));K=[];killChart();loadK()};
 const TZ=-new Date().getTimezoneOffset()*60;
@@ -403,7 +399,7 @@ function draw(key){const c=cur;if(!c||!K.length||TF==='tv'||!window.LightweightC
  if(c.entry){line(c.entry,ent,'Entry');line(c.stop,dn,'Stop');line(c.tp1,up,'TP1 '+(c.tp1r||''));line(c.tp2,up,'TP2 '+(c.tp2r||''),2);
   if(mi>=0){const zone=data.slice(mi),mk=(v,col)=>{const s2=CH.addBaselineSeries({baseValue:{type:'price',price:c.entry},topFillColor1:col,topFillColor2:col,bottomFillColor1:col,bottomFillColor2:col,topLineColor:'rgba(0,0,0,0)',bottomLineColor:'rgba(0,0,0,0)',priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});s2.setData(zone.map(x=>({time:x.time,value:v})))};
    mk(c.tp1,'rgba(74,222,128,.13)');mk(c.stop,'rgba(240,82,90,.15)')}}
- BMK=mi>=0?[{time:data[mi].time,position:isL(c)?'belowBar':'aboveBar',color:amb,shape:isL(c)?'arrowUp':'arrowDown',text:'karta '+hm(new Date(c.firedAt))}]:[];DT=data.map(d=>d.time);OV=[];drawOv();if(!OVC&&!OVS)SER.setMarkers(BMK);
+BMK=mi>=0?[{time:data[mi].time,position:isL(c)?'belowBar':'aboveBar',color:amb,shape:isL(c)?'arrowUp':'arrowDown',text:'karta '+hm(new Date(c.firedAt))}]:[];DT=data.map(d=>d.time);OV=[];drawOv();
  $('#leg').innerHTML=leg.join('')+'<span>Vleci z miško / prstom · kolesce = zoom · dvoklik na os = ponastavi</span>';
  const n=data.length;CH.timeScale().setVisibleLogicalRange({from:Math.max(0,n-120),to:n+8})}
 $('#rk').textContent=RISK+' $';
