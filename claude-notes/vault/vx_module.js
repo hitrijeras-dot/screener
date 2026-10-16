@@ -46,7 +46,7 @@ const PTN={SWEEP:'Sweep nivo',OPEN:'Open HTF',HFVG:'HTF FVG'},ptLab=p=>p.lab||PT
 async function anaSym(sym){
  const [D,H,M]=await Promise.all([kl(sym,'D',40),kl(sym,'60',300),kl(sym,'5',600)]);
  const cl=b=>b.slice(0,-1),pd=D[D.length-2],d=pd?(pd.c>=pd.o?'bull':'bear'):null;
- AL[sym]={d,pd,h:cisdLast(cl(H)),m:cisdLast(cl(M)),t:Date.now()};
+ AL[sym]={d,pd,td:D[D.length-1],Hk:cl(H).slice(-150),h:cisdLast(cl(H)),m:cisdLast(cl(M)),t:Date.now()};
  const now=Date.now(),is6=SWTF==='6H',htf=is6?await kl(sym,'360',40):D,ltf=is6?M:await kl(sym,'15',600),p=ltf[ltf.length-1].c;
  const f6=is6?htfFvg(htf,p):null,fD=htfFvg(D,p);
  const rows=smScan(htf,ltf,is6?6*H1:D1,now).map(x=>{x.sym=sym;x.f6=f6;x.fD=fD;[[f6,'6H FVG'],[fD,'1D FVG']].forEach(([f,l])=>{if(!f)return;x.draw.boxes.push({k:l,lo:f.lo,hi:f.hi,t0:f.t0});if(f.d===0)x.points.push({k:'HFVG',lab:l+' ('+f.kind+')',lvl:f.hi,lo:f.lo,hi:f.hi})});return x});
@@ -55,17 +55,38 @@ async function anaAll(){if(anaBusy||!V.cards.length)return;anaBusy=true;try{awai
  if(!document.querySelector('#vxList :active'))render();if(cur){detailInfo();drawOv()}}
 const cdir=c=>isL(c)?'bull':'bear';
 function suen(c){const a=AL[c.sym];if(!a)return null;const dd=cdir(c),v=[a.d,a.h&&a.h.dir,a.m&&a.m.dir],n=v.filter(x=>x===dd).length;return {a,dd,n,al:!!(v[0]&&v[0]===v[1]&&v[1]===v[2]),ok:n===3,m5:!!(a.m&&a.m.dir===a.d)}}
+// Suenov trade checklist (7 točk): 1–6 izračuna app, 7 (profil seje AMD/ABC) odkljukaš sam (vault_amd_<kartica>)
+const nyH=t=>+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hourCycle:'h23'}).format(new Date(t));
+const KZN={London:'8–11',NY:'13–16',Azija:'2–6'},kzOf=t=>{const h=nyH(t);return h>=2&&h<5?'London':h>=7&&h<10?'NY':h>=20?'Azija':null};
+const amdKey=c=>'amd_'+c.sym+'_'+(c.firedAt||c.time||'');
+function suen7(c){const a=AL[c.sym];if(!a||!a.pd)return null;const L=isL(c),dd=cdir(c),pd=a.pd,td=a.td||pd,ref=c.entry||px(c),it=[];
+ const dol=L?td.h<pd.h:td.l>pd.l;
+ it.push({ok:a.d===dd&&dol,t:'Daily bias jasen (PO3 + DOL)',n:`včeraj ${a.d==='bull'?'zelena':'rdeča'} · cilj ${L?'PDH':'PDL'} ${fmt(L?pd.h:pd.l)} ${dol?'še ni pobran':'že pobran'}`});
+ it.push({ok:!!(a.h&&a.h.dir===dd),t:'H1 orderflow v smeri biasa',n:a.h?`zadnji 1H CISD ${a.h.dir==='bull'?'▲':'▼'} pred ${tfAgo(a.h,H1)}`:'ni 1H CISD'});
+ const eq=(pd.h+pd.l)/2;it.push({ok:L?ref<eq:ref>eq,t:'PD array v smeri biasa',n:`${c.entry?'vstop':'cena'} ${fmt(ref)} ${ref<eq?'pod':'nad'} 50 % včeraj (${fmt(eq)}) → ${ref<eq?'discount':'premium'}`});
+ const tt=c.firedAt?Date.parse(c.firedAt):Date.now(),z=kzOf(tt);it.push({ok:!!z,t:'V killzone / news oknu',n:(c.firedAt?'karta ob '+hm(new Date(tt)):'zdaj')+' · '+(z?z+' ('+KZN[z]+')':'izven killzone (London 8–11, NY 13–16, Azija 2–6)')});
+ let st=null,sn='kartica nima SL';if(c.stop&&a.Hk&&a.Hk.length>60){const H=a.Hk,ft=c.firedAt?Date.parse(c.firedAt):Date.now();let ix=-1,ext=L?Infinity:-Infinity;
+  H.forEach((k,i)=>{if(k.t<=ft&&k.t>=ft-12*H1){if(L?k.l<ext:k.h>ext){ext=L?k.l:k.h;ix=i}}});
+  if(ix>5){let sw=false;for(let j=ix-3;j>=Math.max(2,ix-48);j--){const v=L?H[j].l:H[j].h,piv=L?(H[j-1].l>v&&H[j-2].l>v&&H[j+1].l>v&&H[j+2].l>v):(H[j-1].h<v&&H[j-2].h<v&&H[j+1].h<v&&H[j+2].h<v);if(piv&&(L?v>ext:v<ext)){sw=true;break}}
+   const beyond=L?c.stop<=ext*1.002:c.stop>=ext*0.998;st=sw&&beyond;sn=`1H ${L?'low':'high'} ${fmt(ext)} ${sw?'je posweepal prejšnji swing':'ni sweep'} · SL ${fmt(c.stop)} ${beyond?'za njim':'ni za njim'}`}else sn='premalo 1H sveč'}
+ it.push({ok:st,t:'Strong high/low (≈)',n:sn});
+ it.push({ok:!!(a.m&&a.m.dir===dd&&a.d===dd),t:'5m CISD v smeri dnevnega biasa',n:a.m?`zadnji 5m CISD ${a.m.dir==='bull'?'▲':'▼'} pred ${tfAgo(a.m,3e5)} · nivo ${fmt(a.m.lvl)}`:'ni 5m CISD'});
+ const amd=ls(amdKey(c),'')==='1';it.push({ok:amd,t:'Jasen profil seje (AMD / ABC)',n:amd?'odkljukal ti':'preveri na grafu in odkljukaj',man:true});
+ const n=it.filter(x=>x.ok).length;return {it,n,auto:it.slice(0,6).filter(x=>x.ok).length}}
+const s7b=c=>{const q=suen7(c);return q?`<span class="vb ${q.n>=6?'vL':q.n>=5?'vPR':'vDV'}" title="Suen trade checklist">SUEN ${q.n}/7</span>`:''};
+function s7list(c,edit){const q=suen7(c);if(!q)return '<div class="vxsm mut">računam …</div>';
+ return `<div class="vxchk">`+q.it.map((x,i)=>`<div class="${x.ok?'ok':x.ok===null?'na':'no'}"><span class="ic">${x.ok?'✓':x.ok===null?'–':'✗'}</span><div><b>${i+1}. ${x.t}</b><small>${x.n}</small>${x.man&&edit?`<label class="amd"><input type="checkbox" data-amd="${amdKey(c)}" ${x.ok?'checked':''}> profil seje je jasen</label>`:''}</div></div>`).join('')+`</div><div class="vxsm" style="margin-top:6px"><b>${q.n}/7</b> · Suen: ${q.n===7?'vse izpolnjeno → poln riziko':q.n===6?'ena točka manjka → pol rizika':'premalo točk → ne vstopi'}</div>`}
 const arw=(d,t)=>`<span class="vxar ${d||'no'}">${t?t+' ':''}${d==='bull'?'▲':d==='bear'?'▼':'–'}</span>`;
 const tfAgo=(e,ms)=>e?ago(e.tC+ms):'';
-function suenRow(c){const s=suen(c);if(!s)return '';return `<div class="vxsu"><span class="vb ${s.ok?'vL':'vDV'}">SUEN ${s.ok?'✓':s.n+'/3'}</span>${arw(s.a.d,'1D')} ${arw(s.a.h&&s.a.h.dir,'1H')} ${arw(s.a.m&&s.a.m.dir,'5m')}<span class="mut">5m CISD ${s.a.m?'pred '+tfAgo(s.a.m,3e5):'–'}</span></div>`}
+function suenRow(c){const s=suen(c);if(!s)return '';return `<div class="vxsu">${s7b(c)}${arw(s.a.d,'1D')} ${arw(s.a.h&&s.a.h.dir,'1H')} ${arw(s.a.m&&s.a.m.dir,'5m')}<span class="mut">5m CISD ${s.a.m?'pred '+tfAgo(s.a.m,3e5):'–'}</span></div>`}
 function swMain(c){const s=SWR[c.sym];if(!s||!s.rows.length)return null;const want=isL(c)?'long':'short';return s.rows.find(x=>x.side===want&&!x.hist)||s.rows.find(x=>!x.hist)||s.rows[0]}
 function swRow(c){const x=swMain(c);if(!x)return '';const m=x.side===(isL(c)?'long':'short');return `<div class="vxsu"><span class="vb ${m?'vL':'vDV'}">SWEEP ${SWR[c.sym].tf} ${x.side==='long'?'L':'S'}${m?' ✓':''}</span>${x.points.length?x.points.map(p=>`<span class="hit">${ptLab(p)}</span>`).join(''):'<span class="mut">ni na točki</span>'}</div>`}
 // ---------- seznam
-function filtered(){let cs=V.cards.slice();if(F==='fe')cs=cs.filter(c=>c.type==='FIRST ENTRY');else if(F==='suen')cs=cs.filter(c=>{const s=suen(c);return s&&s.ok});else if(F!=='all')cs=cs.filter(c=>c.sec===F);
- const k={time:c=>-(new Date(c.firedAt||0)),grade:c=>-(GR[c.grade]||0),r:c=>{const g=calc(c);return g?-g.r:99},dist:c=>{const g=calc(c);return g?Math.abs(g.dist):99},sym:c=>c.sym,suen:c=>{const s=suen(c);return s?-(s.n+(s.ok?5:0)):9}}[SO];
+function filtered(){let cs=V.cards.slice();if(F==='fe')cs=cs.filter(c=>c.type==='FIRST ENTRY');else if(F==='suen')cs=cs.filter(c=>{const q=suen7(c);return q&&q.n>=6});else if(F!=='all')cs=cs.filter(c=>c.sec===F);
+ const k={time:c=>-(new Date(c.firedAt||0)),grade:c=>-(GR[c.grade]||0),r:c=>{const g=calc(c);return g?-g.r:99},dist:c=>{const g=calc(c);return g?Math.abs(g.dist):99},sym:c=>c.sym,suen:c=>{const q=suen7(c);return q?-q.n:9}}[SO];
  return cs.sort((a,b)=>{const x=k(a),y=k(b);return x<y?-1:x>y?1:0})}
-function chips(){const opts=[['all','Vse'],['fe','★ First entry'],['suen','✓ Suen'],['IN PLAY','V igri'],['PRIMED','Primed'],['DEVELOPING','Developing']];
- Q('#vxFlt').innerHTML=opts.map(([k,l])=>{const n=k==='all'?V.cards.length:k==='fe'?V.cards.filter(c=>c.type==='FIRST ENTRY').length:k==='suen'?V.cards.filter(c=>{const s=suen(c);return s&&s.ok}).length:V.cards.filter(c=>c.sec===k).length;return `<button class="pt ${F===k?'on':''}" data-f="${k}">${l} ${n}</button>`}).join('')}
+function chips(){const opts=[['all','Vse'],['fe','★ First entry'],['suen','Suen 6+/7'],['IN PLAY','V igri'],['PRIMED','Primed'],['DEVELOPING','Developing']];
+ Q('#vxFlt').innerHTML=opts.map(([k,l])=>{const n=k==='all'?V.cards.length:k==='fe'?V.cards.filter(c=>c.type==='FIRST ENTRY').length:k==='suen'?V.cards.filter(c=>{const q=suen7(c);return q&&q.n>=6}).length:V.cards.filter(c=>c.sec===k).length;return `<button class="pt ${F===k?'on':''}" data-f="${k}">${l} ${n}</button>`}).join('')}
 function badges(c){const L=isL(c);return `<span class="vb ${SEC[c.sec][1]}">${SEC[c.sec][0]}</span><span class="vb ${L?'vL':'vS'}">${L?'LONG ↑':'SHORT ↓'}</span><span class="vb g${c.grade}">${c.grade}-GRADE</span>`+(c.type==='FIRST ENTRY'?'<span class="vb vFE">★ FIRST ENTRY</span>':c.type?'<span class="vb vDV">RE-ENTER</span>':'')+(c.badges||[]).map(b=>`<span class="vb vPR">${b}</span>`).join('')}
 function rsiRow(R){R=R||{};return ['1H','4H','12H','D','W'].filter(k=>R[k]!=null).map(k=>`<span class="vrs ${R[k]>=70?'hi':R[k]<=30?'lo':''}">${k} <b>${R[k]}</b></span>`).join('')}
 function resBox(g){if(!g)return '';const cl=g.r>=0?'up':'dn';return `<div class="vxres"><b class="${cl}">${sg(g.r,2)}R</b><span class="${cl}">${sg(g.pct,2)} %</span><span class="${cl}">${sg(g.usd,2)} $</span><span class="mut" style="margin-left:auto">pri ${RISK} $</span></div>`}
@@ -90,10 +111,10 @@ function table(cs){cs=cs.slice().sort((a,b)=>{const x=tval(a,SK),y=tval(b,SK);if
  return h+'</tbody></table></div>'}
 function alignView(cs){
  const box=(t,d,sub,dd)=>`<div><span class="lab">${t}</span><b>${arw(d)} <span class="${d===dd?'up':'mut'}" style="font-size:10.5px">${d?(d===dd?'kot karta':'proti'):''}</span></b><small>${sub||'&nbsp;'}</small></div>`;
- const rows=cs.map(c=>({c,s:suen(c)})).sort((a,b)=>(b.s?b.s.n+(b.s.ok?5:0):-1)-(a.s?a.s.n+(a.s.ok?5:0):-1));
- return '<p class="sum">Suen (Art of Crypto): vstop, ko so <b>1D, 1H in 5m poravnani</b> in je <b>5m CISD v smeri dnevnega biasa</b>. 1D = barva včerajšnje dnevne sveče, 1H in 5m = smer zadnjega potrjenega CISD (zaprte sveče). ✓ = vsi trije v smeri karte.</p><div class="cards">'+rows.map(({c,s})=>{const L=isL(c),a=s&&s.a;
-  return `<button class="vxc ${L?'L':'S'}" data-s="${c.sym}"><div class="vxh"><span class="coin">${c.sym}</span><div class="px">${s?`<span class="vb ${s.ok?'vL':'vDV'}">${s.ok?'✓ SUEN':'SUEN '+s.n+'/3'}</span>`:''}</div></div><div class="vbd"><span class="vb ${SEC[c.sec][1]}">${SEC[c.sec][0]}</span><span class="vb ${L?'vL':'vS'}">${L?'LONG ↑':'SHORT ↓'}</span><span class="vb g${c.grade}">${c.grade}</span>${c.type==='FIRST ENTRY'?'<span class="vb vFE">★ FIRST ENTRY</span>':''}</div>`+
-  (a?`<div class="vx3">${box('1D · včeraj',a.d,a.pd?(a.pd.c>=a.pd.o?'zelena':'rdeča')+' sveča':'',s.dd)}${box('1H CISD',a.h&&a.h.dir,a.h?'pred '+tfAgo(a.h,H1):'ni',s.dd)}${box('5m CISD',a.m&&a.m.dir,a.m?'pred '+tfAgo(a.m,3e5):'ni',s.dd)}</div><div class="vxsm mut">5m nivo <b>${a.m?fmt(a.m.lvl):'–'}</b> · 1D=1H=5m <b class="${s.al?'up':''}">${s.al?'da':'ne'}</b> · 5m v smeri 1D <b class="${s.m5?'up':''}">${s.m5?'da':'ne'}</b></div>`:'<div class="vxsm mut">računam …</div>')+'</button>'}).join('')+'</div>'}
+ const rows=cs.map(c=>({c,s:suen(c),q:suen7(c)})).sort((a,b)=>(b.q?b.q.n:-1)-(a.q?a.q.n:-1));
+ return '<p class="sum">Suenov trade checklist (Art of Crypto), 7 točk: 1–6 izračuna app, 7. (profil seje AMD/ABC) odkljukaš sam v oknu kovanca. 7/7 = poln riziko, 6/7 = pol rizika, manj = ne vstopi. Spodaj še 1D/1H/5m smeri.</p><div class="cards">'+rows.map(({c,s})=>{const L=isL(c),a=s&&s.a;
+  return `<button class="vxc ${L?'L':'S'}" data-s="${c.sym}"><div class="vxh"><span class="coin">${c.sym}</span><div class="px">${s7b(c)}</div></div><div class="vbd"><span class="vb ${SEC[c.sec][1]}">${SEC[c.sec][0]}</span><span class="vb ${L?'vL':'vS'}">${L?'LONG ↑':'SHORT ↓'}</span><span class="vb g${c.grade}">${c.grade}</span>${c.type==='FIRST ENTRY'?'<span class="vb vFE">★ FIRST ENTRY</span>':''}</div>`+
+  (a?`<div class="vx3">${box('1D · včeraj',a.d,a.pd?(a.pd.c>=a.pd.o?'zelena':'rdeča')+' sveča':'',s.dd)}${box('1H CISD',a.h&&a.h.dir,a.h?'pred '+tfAgo(a.h,H1):'ni',s.dd)}${box('5m CISD',a.m&&a.m.dir,a.m?'pred '+tfAgo(a.m,3e5):'ni',s.dd)}</div><div class="vxsm mut">5m nivo <b>${a.m?fmt(a.m.lvl):'–'}</b> · 1D=1H=5m <b class="${s.al?'up':''}">${s.al?'da':'ne'}</b> · 5m v smeri 1D <b class="${s.m5?'up':''}">${s.m5?'da':'ne'}</b></div>`+s7list(c,false):'<div class="vxsm mut">računam …</div>')+'</button>'}).join('')+'</div>'}
 function render(){if(!started)return;chips();document.querySelectorAll('#vxMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===MODE));Q('#vxSo').value=SO;Q('#vxSo').style.display=MODE==='cards'?'':'none';
  const cs=filtered(),el=Q('#vxList');if(!cs.length){el.innerHTML='<div class="empty">Ni kartic.</div>';return}
  if(MODE==='table'){const sx=(el.querySelector('.tw')||{}).scrollLeft||0;el.innerHTML=table(cs);if(sx)el.querySelector('.tw').scrollLeft=sx;return}
@@ -121,7 +142,7 @@ function detailInd(){const c=cur;if(!c)return;const s=suen(c),x=swMain(c),L=isL(
  else{const a=s.a,box=(t,d,sub)=>`<div><span class="lab">${t}</span><b>${arw(d)} <span class="${d===s.dd?'up':'mut'}" style="font-size:11px">${d===s.dd?'v smeri karte':d?'proti karti':''}</span></b><small>${sub}</small></div>`;
   Q('#vxSu').innerHTML=`<h3>Suen · 1D / 1H / 5m <span class="vb ${s.ok?'vL':'vDV'}" style="float:right">${s.ok?'✓ PORAVNANO S KARTO':s.n+'/3 v smeri karte'}</span></h3><div class="vxdg">`+
   box('1D bias (včeraj)',a.d,a.pd?`O ${fmt(a.pd.o)} → C ${fmt(a.pd.c)}`:'')+box('1H zadnji CISD',a.h&&a.h.dir,a.h?`nivo ${fmt(a.h.lvl)} · pred ${tfAgo(a.h,H1)}`:'ni najden')+box('5m zadnji CISD',a.m&&a.m.dir,a.m?`nivo ${fmt(a.m.lvl)} · pred ${tfAgo(a.m,3e5)}`:'ni najden')+
-  `</div><p style="margin:8px 0 0">${s.m5?'5m CISD je v smeri dnevnega biasa.':'5m CISD <b>ni</b> v smeri dnevnega biasa.'} ${s.al?'Vsi trije okvirji so poravnani.':'Okvirji niso poravnani.'}</p>`}
+  `</div><p style="margin:8px 0 0">${s.m5?'5m CISD je v smeri dnevnega biasa.':'5m CISD <b>ni</b> v smeri dnevnega biasa.'} ${s.al?'Vsi trije okvirji so poravnani.':'Okvirji niso poravnani.'}</p><h3 style="margin-top:14px">Trade checklist (Suen) ${s7b(c)}</h3>`+s7list(c,true)}
  const tfl=SWTF==='6H'?'6H':'1D';
  if(!SWR[c.sym])Q('#vxSw').innerHTML='<h3>Sweep Model</h3><p>Računam …</p>';
  else if(!x)Q('#vxSw').innerHTML=`<h3>Sweep Model · ${tfl}</h3><p>Ni aktivnega ${tfl} sweepa na tem kovancu.</p>`;
@@ -188,6 +209,7 @@ Q('#vxRisk').onclick=()=>{const v=prompt('Riziko na trejd v $ (Vault)',RISK);if(
 Q('#vxRf').onclick=()=>{loadVault();loadTk();anaAll();if(cur&&TF!=='tv')loadK()};
 Q('#vxBk').onclick=()=>{history.length>1?history.back():location.hash='vault'};
 Q('#vxTfs').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;TF=b.dataset.t;ss('tf',TF);Q('#vxTfs').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.t===TF));K=[];killChart();loadK()};
+Q('#vxSu').onchange=e=>{const k=e.target.dataset&&e.target.dataset.amd;if(!k)return;ss(k,e.target.checked?'1':'');detailInd();render()};
 Q('#vxOvs').onclick=e=>{const b=e.target.closest('[data-o]');if(!b)return;OVS=!OVS;ss('ovs',OVS?'1':'0');ovBtns();drawOv()};
 Q('#vxOvs').onchange=e=>{if(e.target.id!=='vxSwtf')return;SWTF=e.target.value;ss('swtf',SWTF);ovBtns();if(cur)anaSym(cur.sym).then(()=>{detailInfo();drawOv()});anaAll()};
 Q('#vxCh')._redraw=()=>{if(cur&&TF!=='tv'){const k=CHkey;killChart();draw(k)}};
@@ -200,4 +222,5 @@ let PEND=null;
 // klic iz show(): sub = simbol (#vault/SYM) ali null
 window.VX={route(on,sub){if(!on){closeCard();return}start();if(sub){if(V.cards.length)openCard(sub);else PEND=sub}else closeCard()},syms:()=>V.cards.map(c=>c.sym),load:async()=>{if(!V.cards.length)await loadVault();return V.cards.map(c=>c.sym)}};
 })();
+(function(){var h=location.hash.slice(1);if(h==='vault'||h.indexOf('vault/')===0)VX.route(true,h.indexOf('vault/')===0?decodeURIComponent(h.slice(6)):null)})();
 /*VAULT-END*/

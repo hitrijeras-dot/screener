@@ -32,3 +32,9 @@ Na Juretovo željo je Vault zdaj **zaslon v Sweep appu**: `sweep/#vault` (kovane
 - **EAX bot** (`claude-notes/eax-bot/`): `BE_AT_R=1` – bot sam premakne SL na BE pri +1R (in po delnem TP1).
 - Dogovor: bot bo v naslednjem koraku bral kartice **neposredno iz EAX** (ne iz vault.json), da ni odvisen od zanke. Ko je Mac spet povezan: preveri, od kod EAX stran dobi podatke (network), sicer bot odpre EAX v svojem oknu (Jure se enkrat prijavi).
 - Posodobljen eax_bot.py še ni na Juretovem Namizju (Mac je bil ugasnjen) – ob naslednji povezavi ga skopiraj v ~/Desktop/EAX-bot in dodaj `BE_AT_R=1` na konec nastavitve.txt (brez branja datoteke).
+
+## Suenov trade checklist 7 točk (16. 10. 2026 zvečer, samo v app – ne v bot)
+Funkcija `suen7(c)` v bloku /*VAULT*/: 1) daily bias = barva včeraj + DOL (PDH/PDL še ni pobran) v smeri karte; 2) zadnji 1H CISD v smeri karte;
+3) PD array: vstop (ali cena) pod/nad 50 % včerajšnjega razpona (discount za long, premium za short); 4) karta sprožena v killzone (NY čas: London 2–5, NY 7–10, Azija 20–24 → pri nas 8–11, 13–16, 2–6);
+5) strong high/low (≈): 1H ekstrem 12 h pred karto je posweepal prejšnji pivot in SL je za njim; 6) 5m CISD v smeri karte in biasa; 7) profil seje AMD/ABC – Jure odkljuka v oknu kovanca (localStorage vault_amd_<sym>_<firedAt>).
+Prikaz: značka SUEN x/7 na karticah, seznam v Poravnavi in v oknu kovanca; filter »Suen 6+/7«; razvrščanje »Suen poravnava«. Risk dial je samo napis (7/7 poln, 6/7 pol, manj ne vstopi) – bot tega ne uporablja (Jure: »samo v app«).
