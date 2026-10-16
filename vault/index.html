@@ -147,7 +147,7 @@ function calc(c){const p=px(c);if(!c.entry||!p)return null;const e=c.entry,s=c.s
  const r=(L?p-e:e-p)/risk,pct=(L?p-e:e-p)/e*100,dist=(p-e)/e*100,toTp=(p-e)/(t1-e);
  const qty=RISK/(risk+e*FEE_M+s*FEE_T),not=qty*e;
  const rr1=Math.abs(t1-e)/risk,rr2=c.tp2?Math.abs(c.tp2-e)/risk:null;
- const lo=Math.min(s,t1,p),hi=Math.max(s,t1,p),span=hi-lo||1,pos=v=>{const q=Math.max(0,Math.min(100,(v-lo)/span*100));return L?q:100-q};
+ const lo=Math.min(s,t1,p),hi=Math.max(s,t1,p),span=hi-lo||1,pos=v=>Math.max(0,Math.min(100,(v-lo)/span*100));
  let st,cl;const hitTp=L?p>=t1:p<=t1,hitSl=L?p<=s:p>=s,beyond=L?p<e:p>e,near=Math.abs(dist)<=.3;
  if(hitSl){st='SL dosežen';cl='bS'}else if(hitTp){st='TP1 dosežen';cl='bL'}else if(near){st='na vstopu';cl='bIP'}else if(beyond){st='v coni vstopa';cl='bX'}else if(toTp>=.7){st='blizu TP1';cl='bL'}else{st=(L?'nad':'pod')+' vstopom · čakaj povratek';cl='bRE'}
  return {p,r,pct,dist,toTp,usd:r*RISK,qty,not,rr1,rr2,st,cl,pE:pos(e),pP:pos(p),L}}
@@ -176,7 +176,7 @@ function card(c){const L=isL(c),g=calc(c),t=TK[c.sym+'USDT']||{};
  let h=`<button class="cd ${L?'L':'S'}" data-s="${c.sym}"><div class="h1"><span class="s">${c.sym}</span><div class="pr n"><b>${fmt(px(c))}</b><span class="${(t.ch!=null?t.ch:parseFloat(c.chg)||0)>=0?'pos':'neg'}">${t.ch!=null?sg(t.ch,2)+' %':c.chg}</span></div></div><div class="bd">${badges(c)}</div>`;
  h+=`<div class="tm"><span>${c.firedAt?dhm(new Date(c.firedAt)):c.time}${c.sec==='IN PLAY'&&c.firedAt?' · teče '+ago(new Date(c.firedAt)):''}</span><span>${c.off||''}</span></div>`;
  if(g){h+=`<div style="margin-top:8px"><span class="b ${g.cl}">${g.st}</span> <span class="mini n">od vstopa ${sg(g.dist,2)} %</span></div>`+resBox(g);
-  h+=`<div class="track" style="--e:${g.pE}%"><span class="f" style="left:${Math.min(g.pE,g.pP)}%;width:${Math.abs(g.pP-g.pE)}%;background:${g.r>=0?'var(--long)':'var(--short)'};box-shadow:0 0 8px ${g.r>=0?'rgba(74,222,128,.55)':'rgba(240,82,90,.55)'}"></span><span class="e" style="left:${g.pE}%"></span><span class="m" style="left:${g.pP}%"></span></div><div class="tl"><span>STOP</span><span>ENTRY</span><span>TP1</span></div>`;
+  h+=`<div class="track" style="--e:${g.pE}%"><span class="f" style="left:${Math.min(g.pE,g.pP)}%;width:${Math.abs(g.pP-g.pE)}%;background:${g.r>=0?'var(--long)':'var(--short)'};box-shadow:0 0 8px ${g.r>=0?'rgba(74,222,128,.55)':'rgba(240,82,90,.55)'}"></span><span class="e" style="left:${g.pE}%"></span><span class="m" style="left:${g.pP}%"></span></div><div class="tl"><span>${L?'STOP':'TP1'}</span><span>ENTRY</span><span>${L?'TP1':'STOP'}</span></div>`;
   h+=`<div class="box3 n"><div><span class="lab">Entry</span><b>${fmt(c.entry)}</b><small>${(c.entryNote||'stamped').replace(' · chasing','').replace('price ','')}</small></div><div><span class="lab">Stop</span><b class="neg">${fmt(c.stop)}</b><small>${(c.risk||'').replace(' risk',' riziko')}</small></div><div><span class="lab">TP1 · ${c.tp1r||''}</span><b class="pos">${fmt(c.tp1)}</b><small>${c.tp1pct||''}</small></div></div>`;
   h+=`<div class="mini n">TP2 ${c.tp2r||''} <b>${fmt(c.tp2)}</b> (${c.tp2pct||''}) · od tu <b>${c.fromHere||'–'}</b> ${c.fromNote?'· '+c.fromNote:''}<br>Pozicija pri ${RISK} $: <b>${+g.qty.toPrecision(4)} ${c.sym}</b> · ${g.not.toFixed(0)} $</div>`;
  }else h+=`<div class="stg">${(c.stage&&c.stage.length?c.stage:['FORMING','PRIMED','READY']).map(x=>`<span class="${x===stageOn(c)?'on':''}">${x}</span>`).join('')}</div><div class="mini">${c.stageNote||SEC[c.sec][2]}</div>`;
