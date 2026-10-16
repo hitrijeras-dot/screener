@@ -7,3 +7,11 @@ App: https://hitrijeras-dot.github.io/screener/vault/
 - Rezultat trejda v živo: R = (cena − vstop)/(vstop − SL) (za short obratno), % od vstopa, $ = R × riziko (gumb zgoraj, privzeto 10 $).
 - Graf: TradingView Lightweight Charts (unpkg, v4.2.0) – premikanje z miško/prstom, zoom; nivoji vstop/SL/TP1/TP2 kot price lines, cona long/short (baseline serije) od časa karte, puščica = čas karte. TF 5m/15m/30m/1H/4H + "TV" = vgrajen pravi TradingView widget (brez nivojev).
 - Ni povezave z Bybit računom (zasebni podatki) – app ne ve, ali je trejd res odprt.
+
+
+## Rubrike, CISD in Sweep (16. 10. 2026)
+- Spodnja navigacija (na računalniku levo): **Vault** (kartice/tabela), **Poravnava** (Suen: 1D/1H/5m), **Sweep** (Sweep Model na kovancih iz Vaulta, 6H·5m ali 1D·15m), **Pravila**.
+- Suen kriterij (Art of Crypto): 1D = barva včerajšnje dnevne sveče, 1H in 5m = smer zadnjega potrjenega CISD (samo zaprte sveče). ✓ = vsi trije v smeri karte. Filter "✓ Suen" in stolpec "Suen" tudi v Vault pogledu.
+- Graf v podrobnostih: gumba **CISD** (turkizno, zadnjih 6 CISD na izbranem TF) in **Sweep** (Sweep Model: posweepan nivo, SL ekstrem, CISD, cone FVG/IFVG/OTE/GP/VI/HTF FVG, dotaknjeni fibi). Izbira se shrani (vault_ovc, vault_ovs).
+- Skupna koda indikatorja: `skupno/indikator.js` (blok SM = dobesedna kopija iz `sweep/index.html`; CISD = logika `cisd()` iz Moj Screener, a vrne vse dogodke). Preveri enakost: `python3 claude-notes/vault/preveri_indikator.py`.
+- Analiza teče vsako minuto (4 sveče na kovanec: D, 1H, 6H, 5m; pri 1D sweepu še 15m).
