@@ -26,7 +26,8 @@ Neizpolnjen limit prekliče, ko kartica izgine iz Vaulta, ko je kartica že na T
 ## Varovalke
 - ob zagonu ne trguje kartic, ki so bile v Vaultu že prej
 - trguje samo FIRST ENTRY v fazi IN PLAY, ne RE-ENTER
-- preskoči, če je cena že čez vstop (Post-Only bi takoj izpolnil), če je SL bližje od 0,3 % ali dlje od 15 %, če je kartica starejša od 30 min
+- če je cena ob novi kartici že **v izgubi od vstopa** (boljša cena), vstopi z **MARKET** naročilom – a samo, če je cena od vstopa proti SL največ 0,5 R (`MARKET_MAX_LOSS_R`); količina se preračuna na dejansko ceno, da je izguba na SL še vedno `RISK_USD`. Izklop: `MARKET_IF_BETTER=0`.
+- preskoči, če je SL bližje od 0,3 % ali dlje od 15 %, če je kartica starejša od 30 min
 - največ `MAX_OPEN` hkrati, vzvod največ `MAX_LEV`
 - ključ brez pravice dviga
 

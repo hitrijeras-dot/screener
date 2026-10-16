@@ -36,6 +36,8 @@ DEFAULTS = {
     "MIN_SL_PCT": "0.3",    # preskoči, če je SL bližje od tega (%)
     "MAX_SL_PCT": "15",     # preskoči, če je SL dlje od tega (%)
     "MAX_LEV": "10",        # največji vzvod, ki ga bot nastavi
+    "MARKET_IF_BETTER": "1",   # 1 = če je cena že v izgubi od vstopa (boljša cena), vstopi z MARKET naročilom
+    "MARKET_MAX_LOSS_R": "0.5",# ... a samo, če je cena od vstopa proti SL največ toliko R (0.5 = pol poti do SL)
     "CHECK_SEC": "60",      # kako pogosto preveri (sekunde)
     "VAULT_URL": "https://hitrijeras-dot.github.io/screener/vault/vault.json",
     "BASE_URL": "",         # samo za test; prazno = samodejno glede na DEMO
@@ -188,12 +190,23 @@ def plan(c, cfg, bb):
     ins = bb.instrument(sym)
     e, s, t1 = round_price(e, ins["tick"]), round_price(s, ins["tick"]), round_price(t1, ins["tick"])
     px = bb.price(sym)
-    if (long and px <= e) or ((not long) and px >= e):
-        return None, f"cena {px} je že čez vstop {e} (Post-Only limit bi takoj izpolnil) – preskočim"
     if (long and px >= t1) or ((not long) and px <= t1):
         return None, "cena je že na TP1"
+    market = (long and px <= e) or ((not long) and px >= e)   # cena je v izgubi od vstopa = boljša cena od vstopa
+    if market:
+        r_now = (px - e) / (e - s) if long else (e - px) / (s - e)
+        if cfg["MARKET_IF_BETTER"] != "1":
+            return None, f"cena {px} je že čez vstop {e} (Post-Only limit bi takoj izpolnil) – preskočim"
+        if (long and px <= s) or ((not long) and px >= s):
+            return None, "cena je že na SL"
+        if r_now < -float(cfg["MARKET_MAX_LOSS_R"]):
+            return None, f"cena je že {r_now:.2f}R od vstopa (meja −{cfg['MARKET_MAX_LOSS_R']}R) – preskočim"
+        if abs(px - s) / px * 100 < float(cfg["MIN_SL_PCT"]):
+            return None, "do SL je premalo prostora za market vstop"
+        e = px
+        sl_pct = abs(e - s) / e * 100
     risk = float(cfg["RISK_USD"])
-    qty = risk / (abs(e - s) + e * FEE_M + s * FEE_T)
+    qty = risk / (abs(e - s) + e * (FEE_T if market else FEE_M) + s * FEE_T)
     qty = math.floor(qty / ins["step"] + 1e-9) * ins["step"]
     if qty < ins["min"]:
         return None, f"količina {qty} je pod minimumom {ins['min']}"
@@ -203,9 +216,12 @@ def plan(c, cfg, bb):
             "qty": fmt_step(qty, ins["step"]), "price": fmt_step(e, ins["tick"]), "timeInForce": "PostOnly",
             "orderLinkId": link, "takeProfit": fmt_step(t1, ins["tick"]), "stopLoss": fmt_step(s, ins["tick"]),
             "tpslMode": "Full", "tpTriggerBy": "LastPrice", "slTriggerBy": "LastPrice", "positionIdx": 0}
-    loss = qty * abs(e - s) + qty * e * FEE_M + qty * s * FEE_T
-    gain = qty * abs(t1 - e) - qty * (e + t1) * FEE_M
-    desc = (f"{c['sym']} {'LONG' if long else 'SHORT'} ({c.get('grade')}) limit {body['price']} · SL {body['stopLoss']} ({sl_pct:.2f} %) · "
+    if market:
+        body["orderType"] = "Market"; body["timeInForce"] = "IOC"; del body["price"]
+    fe = FEE_T if market else FEE_M
+    loss = qty * abs(e - s) + qty * e * fe + qty * s * FEE_T
+    gain = qty * abs(t1 - e) - qty * e * fe - qty * t1 * FEE_M
+    desc = (f"{c['sym']} {'LONG' if long else 'SHORT'} ({c.get('grade')}) {'MARKET ≈' + fmt_step(e, ins['tick']) + ' (cena v izgubi od vstopa ' + fmt_step(float(c['entry']), ins['tick']) + ')' if market else 'limit ' + body['price']} · SL {body['stopLoss']} ({sl_pct:.2f} %) · "
             f"TP1 {body['takeProfit']} · količina {body['qty']} (≈{qty * e:.0f} $) · vzvod {lev}x · izguba na SL −{loss:.2f} $ · TP1 +{gain:.2f} $")
     return (body, lev), desc
 
@@ -336,11 +352,12 @@ def main():
             log(f"✖ Povezava z Bybitom ni uspela: {e}  (preveri ključ, DEMO nastavitev in dovoljenja ključa)")
             sys.exit(1)
     st = load_state()
-    first = not st["seen"]
+    first = not st.get("started")
     while True:
         try:
             cycle(cfg, bb, st, first)
             first = False
+            st["started"] = True
             save_state(st)
         except Exception as e:
             log(f"⚠ napaka v krogu: {e}")

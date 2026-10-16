@@ -29,3 +29,8 @@ ORDER_TTL_H=4
 
 # Največji vzvod, ki ga bot nastavi
 MAX_LEV=10
+
+# Če je cena ob novi kartici že v izgubi od vstopa (boljša cena): 1 = vstopi z MARKET, 0 = preskoči
+MARKET_IF_BETTER=1
+# ... samo, če je cena od vstopa proti SL največ toliko R (0.5 = pol poti do SL)
+MARKET_MAX_LOSS_R=0.5
