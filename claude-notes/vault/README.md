@@ -15,3 +15,14 @@ App: https://hitrijeras-dot.github.io/screener/vault/
 - Graf v podrobnostih: en gumb **Sweep + CISD** (16. 10. 13:20 na Juretovo željo združeno, CISD kot v Sweep appu = CISD sweepa iz bloka SM; risanje kot smChart: posweepan nivo, SL ekstrem, CISD/CISD ?, cone FVG/IFVG/OTE/GP/VI/HTF FVG, dotaknjeni fibi, puščica na ekstremu). Izbira se shrani (vault_ovs). Funkcija cisdEvents (Moj Screener CISD) se uporablja samo še za Suen poravnavo 1H/5m.
 - Skupna koda indikatorja: `skupno/indikator.js` (blok SM = dobesedna kopija iz `sweep/index.html`; CISD = logika `cisd()` iz Moj Screener, a vrne vse dogodke). Preveri enakost: `python3 claude-notes/vault/preveri_indikator.py`.
 - Analiza teče vsako minuto (4 sveče na kovanec: D, 1H, 6H, 5m; pri 1D sweepu še 15m).
+
+
+## ZDRUŽENO S SWEEP APPOM (16. 10. 2026, 13:30)
+Na Juretovo željo je Vault zdaj **zaslon v Sweep appu**: `sweep/#vault` (kovanec: `#vault/SYM`). Videz Repsol (Sweep).
+- Koda: `sweep/index.html`, blok `/*VAULT*/ … /*VAULT-END*/` (ločen `<script>` na koncu, vse v IIFE, ven samo `window.VX`). Izvorna kopija modula: `claude-notes/vault/vx_module.js`.
+- CSS razredi `vx*`, `vb`, `vrs`, `lab`. Nav ima 6 gumbov (Danes, Vault, Screener, Bias, Log, Pravila).
+- Zaslon Vault: Kartice / Tabela / Poravnava (Suen). Podrobnosti = okno `#vxDet` z Lightweight Charts (naložen šele ob odprtju), gumb Sweep + CISD, izbira 6H·5m / 1D·15m, okenci Suen in Sweep Model, kalkulator limita.
+- Screener ima univerzum »Kovanci iz EAX Vaulta« (`VX.load()`).
+- CISD blok (`cisdEvents`, `cisdLast`) je v sweep/index.html takoj za `/*SM-END*/`; enak kot v `skupno/indikator.js` (preveri `python3 claude-notes/vault/preveri_indikator.py`).
+- `vault/index.html` je samo preusmeritev na `../sweep/#vault`. `vault/vault.json` ostane – zanka ga piše kot prej, Sweep ga bere z `../vault/vault.json`.
+- Lokalnih nastavitev ključi ostanejo `vault_*` (riziko 10 $, mode, f, so, tf, ovs, swtf).
