@@ -34,3 +34,8 @@ MAX_LEV=10
 MARKET_IF_BETTER=1
 # ... samo, če je cena od vstopa proti SL največ toliko R (0.5 = pol poti do SL)
 MARKET_MAX_LOSS_R=0.5
+
+# Po TP1: 1 = zapri del na TP1, SL premakni na vstop (BE), ostanek cilja TP2; 0 = celotna pozicija zapre na TP1
+BE_AFTER_TP1=1
+# Koliko % pozicije zapre na TP1
+TP1_CLOSE_PCT=50

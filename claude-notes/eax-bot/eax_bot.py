@@ -37,7 +37,10 @@ DEFAULTS = {
     "MAX_SL_PCT": "15",     # preskoči, če je SL dlje od tega (%)
     "MAX_LEV": "10",        # največji vzvod, ki ga bot nastavi
     "MARKET_IF_BETTER": "1",   # 1 = če je cena že v izgubi od vstopa (boljša cena), vstopi z MARKET naročilom
-    "MARKET_MAX_LOSS_R": "0.5",# ... a samo, če je cena od vstopa proti SL največ toliko R (0.5 = pol poti do SL)
+    "MARKET_MAX_LOSS_R": "0.5",
+    "BE_AFTER_TP1": "1",    # 1 = na TP1 zapre del pozicije, ostalo cilja TP2, SL gre na vstop (BE)
+    "TP1_CLOSE_PCT": "50",  # koliko % pozicije zapre na TP1
+    "BE_OFFSET_PCT": "0.1", # BE malo čez vstop, da pokrije provizije (%)# ... a samo, če je cena od vstopa proti SL največ toliko R (0.5 = pol poti do SL)
     "CHECK_SEC": "60",      # kako pogosto preveri (sekunde)
     "VAULT_URL": "https://hitrijeras-dot.github.io/screener/vault/vault.json",
     "BASE_URL": "",         # samo za test; prazno = samodejno glede na DEMO
@@ -149,6 +152,17 @@ class Bybit:
     def create(self, body):
         return self.ok(self._req("POST", "/v5/order/create", body, True), "oddaja naročila")
 
+    def position(self, sym):
+        r = self.ok(self._req("GET", "/v5/position/list", {"category": "linear", "symbol": sym}, True), "pozicija")
+        for p in r.get("list", []):
+            if float(p.get("size") or 0) > 0:
+                return {"size": float(p["size"]), "avg": float(p.get("avgPrice") or 0), "side": p.get("side")}
+        return {"size": 0.0, "avg": 0.0, "side": ""}
+
+    def set_sl(self, sym, sl):
+        return self.ok(self._req("POST", "/v5/position/trading-stop", {"category": "linear", "symbol": sym, "tpslMode": "Full",
+                                                                       "stopLoss": sl, "slTriggerBy": "LastPrice", "positionIdx": 0}, True), "premik SL")
+
     def cancel(self, sym, link):
         j = self._req("POST", "/v5/order/cancel", {"category": "linear", "symbol": sym, "orderLinkId": link}, True)
         return j.get("retCode") == 0
@@ -219,11 +233,54 @@ def plan(c, cfg, bb):
     if market:
         body["orderType"] = "Market"; body["timeInForce"] = "IOC"; del body["price"]
     fe = FEE_T if market else FEE_M
+    t2 = c.get("tp2")
+    be = cfg["BE_AFTER_TP1"] == "1" and t2 and ((long and float(t2) > t1) or ((not long) and float(t2) < t1))
+    meta = {"long": long, "tp1": fmt_step(t1, ins["tick"]), "step": ins["step"], "tick": ins["tick"], "be": bool(be)}
+    if be:
+        t2 = round_price(float(t2), ins["tick"])
+        body["takeProfit"] = fmt_step(t2, ins["tick"])
+        meta["tp2"] = body["takeProfit"]
     loss = qty * abs(e - s) + qty * e * fe + qty * s * FEE_T
     gain = qty * abs(t1 - e) - qty * e * fe - qty * t1 * FEE_M
     desc = (f"{c['sym']} {'LONG' if long else 'SHORT'} ({c.get('grade')}) {'MARKET ≈' + fmt_step(e, ins['tick']) + ' (cena v izgubi od vstopa ' + fmt_step(float(c['entry']), ins['tick']) + ')' if market else 'limit ' + body['price']} · SL {body['stopLoss']} ({sl_pct:.2f} %) · "
-            f"TP1 {body['takeProfit']} · količina {body['qty']} (≈{qty * e:.0f} $) · vzvod {lev}x · izguba na SL −{loss:.2f} $ · TP1 +{gain:.2f} $")
-    return (body, lev), desc
+            + (f"TP1 {meta['tp1']} ({cfg['TP1_CLOSE_PCT']} %) → SL na BE · TP2 {meta['tp2']} · " if be else f"TP1 {body['takeProfit']} · ") +
+            f"količina {body['qty']} (≈{qty * e:.0f} $) · vzvod {lev}x · izguba na SL −{loss:.2f} $ · TP1 +{gain:.2f} $")
+    return (body, lev, meta), desc
+
+
+def manage(cfg, bb, link, o):
+    """Po vstopu: delni TP1 (reduce-only limit), po TP1 SL na BE, konec ko je pozicija zaprta."""
+    m, sym = o["meta"], o["symbol"]
+    pos = bb.position(sym)
+    if o["phase"] == "open" and not o.get("tp1_link"):
+        if pos["size"] <= 0:
+            return
+        q = math.floor(pos["size"] * float(cfg["TP1_CLOSE_PCT"]) / 100 / m["step"] + 1e-9) * m["step"]
+        o["size0"], o["avg"] = pos["size"], pos["avg"]
+        if q <= 0 or q >= pos["size"]:
+            log(f"   {o['sym']}: pozicija premajhna za delni TP1 – ostane SL + TP2.")
+            o["tp1_link"] = "-"
+        else:
+            tl = (link + "-t1")[:36]
+            bb.create({"category": "linear", "symbol": sym, "side": "Sell" if m["long"] else "Buy", "orderType": "Limit",
+                       "qty": fmt_step(q, m["step"]), "price": m["tp1"], "timeInForce": "GTC", "reduceOnly": True,
+                       "orderLinkId": tl, "positionIdx": 0})
+            o["tp1_link"] = tl
+            log(f"🎯 {o['sym']}: delni TP1 {fmt_step(q, m['step'])} @ {m['tp1']} postavljen (reduce-only).")
+        return
+    if pos["size"] <= 0:
+        if o.get("tp1_link") not in (None, "-"):
+            bb.cancel(sym, o["tp1_link"])
+        log(f"🏁 {o['sym']}: pozicija zaprta ({'po TP1, ostanek na BE ali TP2' if o['phase'] == 'be' else 'SL ali TP2'}).")
+        o["done"] = "closed"
+        return
+    if o["phase"] == "open" and pos["size"] < o.get("size0", pos["size"]) - m["step"] / 2:
+        avg = o.get("avg") or pos["avg"]
+        off = float(cfg["BE_OFFSET_PCT"]) / 100
+        be = round_price(avg * (1 + off) if m["long"] else avg * (1 - off), m["tick"])
+        bb.set_sl(sym, fmt_step(be, m["tick"]))
+        o["phase"] = "be"
+        log(f"🔒 {o['sym']}: TP1 dosežen – SL premaknjen na BE {fmt_step(be, m['tick'])}, ostanek cilja TP2 {m.get('tp2')}.")
 
 
 def cycle(cfg, bb, st, first):
@@ -243,6 +300,12 @@ def cycle(cfg, bb, st, first):
             continue
         if cfg["DRY_RUN"] == "1":
             continue
+        if o.get("phase") in ("open", "be"):
+            try:
+                manage(cfg, bb, link, o)
+            except Exception as e:
+                log(f"   napaka pri upravljanju {o['sym']}: {e}")
+            continue
         try:
             s = bb.order_status(o["symbol"], link)
         except Exception as e:
@@ -250,8 +313,17 @@ def cycle(cfg, bb, st, first):
             continue
         status = (s or {}).get("orderStatus", "?")
         if status == "Filled":
-            log(f"✅ {o['sym']}: limit IZPOLNJEN – pozicija odprta, SL in TP1 sta na Bybitu.")
-            o["done"] = "filled"
+            m = o.get("meta") or {}
+            if m.get("be"):
+                log(f"✅ {o['sym']}: vstop IZPOLNJEN – SL in TP2 sta na Bybitu, postavljam delni TP1 ({cfg['TP1_CLOSE_PCT']} %).")
+                o["phase"] = "open"
+                try:
+                    manage(cfg, bb, link, o)
+                except Exception as e:
+                    log(f"   napaka pri TP1 {o['sym']}: {e}")
+            else:
+                log(f"✅ {o['sym']}: vstop IZPOLNJEN – pozicija odprta, SL in TP1 sta na Bybitu.")
+                o["done"] = "filled"
         elif status in ("Cancelled", "Rejected", "Deactivated"):
             why = (s or {}).get("rejectReason") or (s or {}).get("cancelType") or ""
             log(f"✖ {o['sym']}: naročilo {status} {why}")
@@ -291,7 +363,7 @@ def cycle(cfg, bb, st, first):
     if cfg["DRY_RUN"] != "1":
         try:
             pos = bb.positions()
-            mine = [o for o in bb.open_orders() if (o.get("orderLinkId") or "").startswith("eax-")]
+            mine = [o for o in bb.open_orders() if (o.get("orderLinkId") or "").startswith("eax-") and not o.get("reduceOnly")]
             active = len(pos) + len(mine)
         except Exception as e:
             log(f"⚠ ne morem prebrati računa: {e} – preskočim ta krog.")
@@ -320,7 +392,7 @@ def cycle(cfg, bb, st, first):
         if not res:
             log(f"– {c['sym']}: {desc}")
             continue
-        body, lev = res
+        body, lev, meta = res
         if cfg["DRY_RUN"] == "1":
             log(f"🧪 (DRY_RUN) BI ODDAL: {desc}")
             st["orders"][body["orderLinkId"]] = {"sym": c["sym"], "symbol": body["symbol"], "t": int(now), "done": "dry"}
@@ -329,7 +401,7 @@ def cycle(cfg, bb, st, first):
             bb.set_leverage(body["symbol"], lev)
             bb.create(body)
             log(f"📤 ODDANO: {desc}")
-            st["orders"][body["orderLinkId"]] = {"sym": c["sym"], "symbol": body["symbol"], "t": int(now), "body": body}
+            st["orders"][body["orderLinkId"]] = {"sym": c["sym"], "symbol": body["symbol"], "t": int(now), "body": body, "meta": meta}
             active += 1
         except Exception as e:
             log(f"✖ {c['sym']}: oddaja ni uspela: {e}")

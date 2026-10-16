@@ -7,6 +7,11 @@ Neizpolnjen limit prekliče, ko kartica izgine iz Vaulta, ko je kartica že na T
 **Pomembno:** kartice bere iz datoteke, ki jo osvežuje Claude v zanki (vsakih 5 min). Če zanka ne teče, bot nima novih kartic
 (v dnevniku napiše »Vault ni osvežen«) in ne trguje. Bot teče samo, dokler je Mac prižgan in okno Terminala odprto.
 
+## Po vstopu (BE po TP1)
+Če ima kartica TP2, bot ob vstopu pripne **SL** in **TP2** za celo pozicijo, takoj po izpolnitvi pa postavi še **delni TP1**
+(reduce-only limit, privzeto 50 % pozicije). Ko se TP1 izpolni, premakne **SL na vstop (BE)** + 0,1 % za provizije, ostanek cilja TP2.
+Izklop: `BE_AFTER_TP1=0` (potem celotna pozicija zapre na TP1). Delež: `TP1_CLOSE_PCT`.
+
 ## Prvi zagon (korak za korakom)
 1. Na Bybitu preklopi na **Demo Trading** → profil → **API** → *Create New Key* → *System-generated* →
    dovoljenja **Contract: Orders + Positions** (Read-Write). **Ne** obkljukaj Withdraw/Transfer. Kopiraj *API Key* in *Secret*.
