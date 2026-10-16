@@ -39,3 +39,6 @@ MARKET_MAX_LOSS_R=0.5
 BE_AFTER_TP1=1
 # Koliko % pozicije zapre na TP1
 TP1_CLOSE_PCT=50
+
+# Ko je trejd v plusu toliko R, bot premakne SL na vstop (BE). 0 = izklop
+BE_AT_R=1

@@ -26,3 +26,9 @@ Na Juretovo željo je Vault zdaj **zaslon v Sweep appu**: `sweep/#vault` (kovane
 - CISD blok (`cisdEvents`, `cisdLast`) je v sweep/index.html takoj za `/*SM-END*/`; enak kot v `skupno/indikator.js` (preveri `python3 claude-notes/vault/preveri_indikator.py`).
 - `vault/index.html` je samo preusmeritev na `../sweep/#vault`. `vault/vault.json` ostane – zanka ga piše kot prej, Sweep ga bere z `../vault/vault.json`.
 - Lokalnih nastavitev ključi ostanejo `vault_*` (riziko 10 $, mode, f, so, tf, ovs, swtf).
+
+## Pravilo +1R → BE (16. 10. 2026, Jure)
+- **Zanka:** pri vsakem odprtem trejdu na Bybit demo izračunaj R (vstop, SL s pozicije). Ko je ≥ +1R, Juretu takoj javi »premakni SL na BE« s točno ceno (vstop + 0,1 % za long, − 0,1 % za short). Claude naročil/SL sam ne spreminja.
+- **EAX bot** (`claude-notes/eax-bot/`): `BE_AT_R=1` – bot sam premakne SL na BE pri +1R (in po delnem TP1).
+- Dogovor: bot bo v naslednjem koraku bral kartice **neposredno iz EAX** (ne iz vault.json), da ni odvisen od zanke. Ko je Mac spet povezan: preveri, od kod EAX stran dobi podatke (network), sicer bot odpre EAX v svojem oknu (Jure se enkrat prijavi).
+- Posodobljen eax_bot.py še ni na Juretovem Namizju (Mac je bil ugasnjen) – ob naslednji povezavi ga skopiraj v ~/Desktop/EAX-bot in dodaj `BE_AT_R=1` na konec nastavitve.txt (brez branja datoteke).

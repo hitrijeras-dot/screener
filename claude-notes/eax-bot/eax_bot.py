@@ -40,7 +40,8 @@ DEFAULTS = {
     "MARKET_MAX_LOSS_R": "0.5",
     "BE_AFTER_TP1": "1",    # 1 = na TP1 zapre del pozicije, ostalo cilja TP2, SL gre na vstop (BE)
     "TP1_CLOSE_PCT": "50",  # koliko % pozicije zapre na TP1
-    "BE_OFFSET_PCT": "0.1", # BE malo čez vstop, da pokrije provizije (%)# ... a samo, če je cena od vstopa proti SL največ toliko R (0.5 = pol poti do SL)
+    "BE_OFFSET_PCT": "0.1", # BE malo čez vstop, da pokrije provizije (%)
+    "BE_AT_R": "1",         # ko je trejd v plusu toliko R, SL na BE (0 = izklop)# ... a samo, če je cena od vstopa proti SL največ toliko R (0.5 = pol poti do SL)
     "CHECK_SEC": "60",      # kako pogosto preveri (sekunde)
     "VAULT_URL": "https://hitrijeras-dot.github.io/screener/vault/vault.json",
     "BASE_URL": "",         # samo za test; prazno = samodejno glede na DEMO
@@ -235,7 +236,7 @@ def plan(c, cfg, bb):
     fe = FEE_T if market else FEE_M
     t2 = c.get("tp2")
     be = cfg["BE_AFTER_TP1"] == "1" and t2 and ((long and float(t2) > t1) or ((not long) and float(t2) < t1))
-    meta = {"long": long, "tp1": fmt_step(t1, ins["tick"]), "step": ins["step"], "tick": ins["tick"], "be": bool(be)}
+    meta = {"long": long, "tp1": fmt_step(t1, ins["tick"]), "sl": fmt_step(s, ins["tick"]), "step": ins["step"], "tick": ins["tick"], "be": bool(be)}
     if be:
         t2 = round_price(float(t2), ins["tick"])
         body["takeProfit"] = fmt_step(t2, ins["tick"])
@@ -249,15 +250,17 @@ def plan(c, cfg, bb):
 
 
 def manage(cfg, bb, link, o):
-    """Po vstopu: delni TP1 (reduce-only limit), po TP1 SL na BE, konec ko je pozicija zaprta."""
+    """Po vstopu: (če BE_AFTER_TP1) delni TP1; SL na BE pri +BE_AT_R R ali po TP1; konec, ko je pozicija zaprta."""
     m, sym = o["meta"], o["symbol"]
     pos = bb.position(sym)
-    if o["phase"] == "open" and not o.get("tp1_link"):
+    if not o.get("tp1_link"):
         if pos["size"] <= 0:
             return
-        q = math.floor(pos["size"] * float(cfg["TP1_CLOSE_PCT"]) / 100 / m["step"] + 1e-9) * m["step"]
         o["size0"], o["avg"] = pos["size"], pos["avg"]
-        if q <= 0 or q >= pos["size"]:
+        q = math.floor(pos["size"] * float(cfg["TP1_CLOSE_PCT"]) / 100 / m["step"] + 1e-9) * m["step"]
+        if not m.get("be"):
+            o["tp1_link"] = "-"
+        elif q <= 0 or q >= pos["size"]:
             log(f"   {o['sym']}: pozicija premajhna za delni TP1 – ostane SL + TP2.")
             o["tp1_link"] = "-"
         else:
@@ -271,16 +274,28 @@ def manage(cfg, bb, link, o):
     if pos["size"] <= 0:
         if o.get("tp1_link") not in (None, "-"):
             bb.cancel(sym, o["tp1_link"])
-        log(f"🏁 {o['sym']}: pozicija zaprta ({'po TP1, ostanek na BE ali TP2' if o['phase'] == 'be' else 'SL ali TP2'}).")
+        log(f"🏁 {o['sym']}: pozicija zaprta ({'SL je bil na BE' if o.get('be_done') else 'SL ali TP'}).")
         o["done"] = "closed"
         return
-    if o["phase"] == "open" and pos["size"] < o.get("size0", pos["size"]) - m["step"] / 2:
-        avg = o.get("avg") or pos["avg"]
+    if o.get("be_done"):
+        return
+    avg = o.get("avg") or pos["avg"]
+    reason = None
+    if pos["size"] < o.get("size0", pos["size"]) - m["step"] / 2:
+        reason = "TP1 dosežen"
+    elif m.get("sl") and float(cfg["BE_AT_R"]) > 0:
+        px = bb.price(sym)
+        risk = abs(avg - float(m["sl"]))
+        r = ((px - avg) if m["long"] else (avg - px)) / risk if risk else 0
+        if r >= float(cfg["BE_AT_R"]):
+            reason = f"trejd je +{r:.2f}R"
+    if reason:
         off = float(cfg["BE_OFFSET_PCT"]) / 100
         be = round_price(avg * (1 + off) if m["long"] else avg * (1 - off), m["tick"])
         bb.set_sl(sym, fmt_step(be, m["tick"]))
+        o["be_done"] = True
         o["phase"] = "be"
-        log(f"🔒 {o['sym']}: TP1 dosežen – SL premaknjen na BE {fmt_step(be, m['tick'])}, ostanek cilja TP2 {m.get('tp2')}.")
+        log(f"🔒 {o['sym']}: {reason} – SL premaknjen na BE {fmt_step(be, m['tick'])}.")
 
 
 def cycle(cfg, bb, st, first):
@@ -314,16 +329,13 @@ def cycle(cfg, bb, st, first):
         status = (s or {}).get("orderStatus", "?")
         if status == "Filled":
             m = o.get("meta") or {}
-            if m.get("be"):
-                log(f"✅ {o['sym']}: vstop IZPOLNJEN – SL in TP2 sta na Bybitu, postavljam delni TP1 ({cfg['TP1_CLOSE_PCT']} %).")
-                o["phase"] = "open"
-                try:
-                    manage(cfg, bb, link, o)
-                except Exception as e:
-                    log(f"   napaka pri TP1 {o['sym']}: {e}")
-            else:
-                log(f"✅ {o['sym']}: vstop IZPOLNJEN – pozicija odprta, SL in TP1 sta na Bybitu.")
-                o["done"] = "filled"
+            log(f"✅ {o['sym']}: vstop IZPOLNJEN – " + (f"SL in TP2 sta na Bybitu, postavljam delni TP1 ({cfg['TP1_CLOSE_PCT']} %)." if m.get("be") else "SL in TP1 sta na Bybitu.")
+                + (f" Pri +{cfg['BE_AT_R']}R gre SL na BE." if float(cfg["BE_AT_R"]) > 0 else ""))
+            o["phase"] = "open"
+            try:
+                manage(cfg, bb, link, o)
+            except Exception as e:
+                log(f"   napaka pri upravljanju {o['sym']}: {e}")
         elif status in ("Cancelled", "Rejected", "Deactivated"):
             why = (s or {}).get("rejectReason") or (s or {}).get("cancelType") or ""
             log(f"✖ {o['sym']}: naročilo {status} {why}")

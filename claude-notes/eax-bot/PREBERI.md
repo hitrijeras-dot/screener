@@ -7,7 +7,9 @@ Neizpolnjen limit prekliče, ko kartica izgine iz Vaulta, ko je kartica že na T
 **Pomembno:** kartice bere iz datoteke, ki jo osvežuje Claude v zanki (vsakih 5 min). Če zanka ne teče, bot nima novih kartic
 (v dnevniku napiše »Vault ni osvežen«) in ne trguje. Bot teče samo, dokler je Mac prižgan in okno Terminala odprto.
 
-## Po vstopu (BE po TP1)
+## Po vstopu (BE pri +1R in po TP1)
+Ko je trejd v plusu **1R** (cena je od vstopa naredila toliko, kolikor je razdalja do SL), bot premakne **SL na vstop (BE)** + 0,1 %. Nastavitev `BE_AT_R` (0 = izklop).
+
 Če ima kartica TP2, bot ob vstopu pripne **SL** in **TP2** za celo pozicijo, takoj po izpolnitvi pa postavi še **delni TP1**
 (reduce-only limit, privzeto 50 % pozicije). Ko se TP1 izpolni, premakne **SL na vstop (BE)** + 0,1 % za provizije, ostanek cilja TP2.
 Izklop: `BE_AFTER_TP1=0` (potem celotna pozicija zapre na TP1). Delež: `TP1_CLOSE_PCT`.
