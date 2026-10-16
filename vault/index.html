@@ -52,8 +52,8 @@ button,select{font:inherit;color:var(--ink);cursor:pointer}
 .res{display:flex;align-items:center;gap:10px;margin-top:9px;padding:8px 10px;border-radius:10px;background:var(--p2);border:1px solid var(--line)}
 .res b{font-size:20px}.res span{font-size:12px;color:var(--mut)}
 .pos{color:var(--long)!important}.neg{color:var(--short)!important}
-.track{position:relative;height:6px;border-radius:3px;margin:16px 4px 4px;background:linear-gradient(90deg,var(--shortd) 0 var(--e),var(--longd) var(--e) 100%)}
-.track.S{background:linear-gradient(90deg,var(--longd) 0 var(--e),var(--shortd) var(--e) 100%)}
+.track{position:relative;height:6px;border-radius:3px;margin:16px 4px 4px;background:var(--p3)}
+.track .f{position:absolute;top:0;bottom:0;border-radius:3px}
 .track .m{position:absolute;top:-4px;width:3px;height:14px;border-radius:2px;background:var(--ink);transform:translateX(-50%);box-shadow:0 0 8px rgba(255,255,255,.6)}
 .track .e{position:absolute;top:-3px;width:2px;height:12px;background:var(--blue);transform:translateX(-50%)}
 .tl{display:flex;justify-content:space-between;font-size:9.5px;font-weight:700;letter-spacing:.6px;color:var(--dim)}
@@ -176,7 +176,7 @@ function card(c){const L=isL(c),g=calc(c),t=TK[c.sym+'USDT']||{};
  let h=`<button class="cd ${L?'L':'S'}" data-s="${c.sym}"><div class="h1"><span class="s">${c.sym}</span><div class="pr n"><b>${fmt(px(c))}</b><span class="${(t.ch!=null?t.ch:parseFloat(c.chg)||0)>=0?'pos':'neg'}">${t.ch!=null?sg(t.ch,2)+' %':c.chg}</span></div></div><div class="bd">${badges(c)}</div>`;
  h+=`<div class="tm"><span>${c.firedAt?dhm(new Date(c.firedAt)):c.time}${c.sec==='IN PLAY'&&c.firedAt?' · teče '+ago(new Date(c.firedAt)):''}</span><span>${c.off||''}</span></div>`;
  if(g){h+=`<div style="margin-top:8px"><span class="b ${g.cl}">${g.st}</span> <span class="mini n">od vstopa ${sg(g.dist,2)} %</span></div>`+resBox(g);
-  h+=`<div class="track ${L?'':'S'}" style="--e:${g.pE}%"><span class="e" style="left:${g.pE}%"></span><span class="m" style="left:${g.pP}%"></span></div><div class="tl"><span>${L?'STOP':'TP1'}</span><span>ENTRY</span><span>${L?'TP1':'STOP'}</span></div>`;
+  h+=`<div class="track ${L?'':'S'}" style="--e:${g.pE}%"><span class="f" style="left:${Math.min(g.pE,g.pP)}%;width:${Math.abs(g.pP-g.pE)}%;background:${g.r>=0?'var(--long)':'var(--short)'};box-shadow:0 0 8px ${g.r>=0?'rgba(74,222,128,.55)':'rgba(240,82,90,.55)'}"></span><span class="e" style="left:${g.pE}%"></span><span class="m" style="left:${g.pP}%"></span></div><div class="tl"><span>${L?'STOP':'TP1'}</span><span>ENTRY</span><span>${L?'TP1':'STOP'}</span></div>`;
   h+=`<div class="box3 n"><div><span class="lab">Entry</span><b>${fmt(c.entry)}</b><small>${(c.entryNote||'stamped').replace(' · chasing','').replace('price ','')}</small></div><div><span class="lab">Stop</span><b class="neg">${fmt(c.stop)}</b><small>${(c.risk||'').replace(' risk',' riziko')}</small></div><div><span class="lab">TP1 · ${c.tp1r||''}</span><b class="pos">${fmt(c.tp1)}</b><small>${c.tp1pct||''}</small></div></div>`;
   h+=`<div class="mini n">TP2 ${c.tp2r||''} <b>${fmt(c.tp2)}</b> (${c.tp2pct||''}) · od tu <b>${c.fromHere||'–'}</b> ${c.fromNote?'· '+c.fromNote:''}<br>Pozicija pri ${RISK} $: <b>${+g.qty.toPrecision(4)} ${c.sym}</b> · ${g.not.toFixed(0)} $</div>`;
  }else h+=`<div class="stg">${(c.stage&&c.stage.length?c.stage:['FORMING','PRIMED','READY']).map(x=>`<span class="${x===stageOn(c)?'on':''}">${x}</span>`).join('')}</div><div class="mini">${c.stageNote||SEC[c.sec][2]}</div>`;
