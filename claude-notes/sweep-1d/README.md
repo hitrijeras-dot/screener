@@ -173,3 +173,7 @@ Pravila iz opisa, potrjena na 30 kovancih in vgrajena v `/*SM*/`:
 Rezultat: setupi enaki pri 22/30 kovancih (prej ~6/30), škatle 55/56. Preostalih 8 (ADA, ARB, AVAX, BNB, NEAR, DOGE, ETH, SOL) – mi najdemo short, indikator nima oznake (ARB/BNB/ADA cone sicer riše). Razloga ne poznam – počakam PDF navodila.
 Pine "Sweep·C" posodobljen z istimi pravili (TV različica 5, 14. 10. 2026 zvečer).
 - 14. 10. zvečer: screener ima stolpca **Do 6H FVG / Do 1D FVG** (najbližji nepokrit HTF FVG, delno zapolnjen šteje s preostankom, odprta sveča FVG ne tvori, ga pa zapolni) + točko "HTF FVG", ko je cena v coni. Jure želel videti oddaljenost od HTF FVG.
+
+### Screener: linije + graf (17. 10. 2026, na Juretovo željo)
+- Screener privzeto pokaže **vse aktivne setupe**: najprej kovance **na točki**, nato tiste **samo z linijami** (stolpec/vrstica »Linije« = FVG, IFVG, VI, OTE, GP, 6H/1D FVG, CISD, Sweep, FIB, Open) z razdaljo do najbližje (»najbližja: …«). Gumb »Samo na točki« je zdaj privzeto izklopljen. Logika `/*SM*/` je ostala nespremenjena.
+- Graf: privzeto **5m** (tudi pri setupu 1D), vse cone in linije polno narisane z oznakami kot na indikatorju (točke, kjer je cena, z ●), razpon od sweep sveče naprej. Gumb »TV graf« vstavi pravi TradingView graf (samo cena – indikator je zaklenjen in se ga ne da vgraditi).

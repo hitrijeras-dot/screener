@@ -69,6 +69,9 @@ select{border:1px solid var(--line);background:var(--s1);border-radius:var(--r2)
 .side.long{background:var(--longbg);color:var(--long)}.side.short{background:var(--shortbg);color:var(--short)}
 .hit{display:inline-block;margin:2px 4px 2px 0;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px;background:var(--buoybg);color:var(--ink);border:1px solid var(--buoy)}
 .none{color:var(--mut);font-size:12.5px}
+.ln{display:inline-block;margin:2px 4px 2px 0;font-size:11px;font-weight:600;border-radius:6px;padding:1px 7px;border:1px solid var(--line);color:var(--mut)}
+.lns{margin:2px 0 4px}
+#smList .t td.lc{white-space:normal;min-width:170px;max-width:260px}
 .score{font-weight:700;font-variant-numeric:tabular-nums}.score small{display:block;font-weight:500;color:var(--mut);font-size:11px;letter-spacing:.02em}
 .px{text-align:right;font-variant-numeric:tabular-nums}.px small{display:block;color:var(--mut);font-size:11.5px}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
@@ -221,7 +224,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
       <select id="smNear" title="Največja razdalja do SL"><option value="99">Do SL: vse</option><option value="5">Do SL ≤ 5 %</option><option value="3" selected>Do SL ≤ 3 %</option><option value="2">Do SL ≤ 2 %</option></select>
       <button class="btn" id="smGo">Skeniraj</button>
     </div>
-    <div class="pts" id="smPts"><button class="pt tog on" id="smBias" title="Pokaži samo smer, ki jo kaže bias trga (pri neodločenem obe)">V smeri biasa</button><button class="pt tog on" id="smOnly">Samo na točki</button></div>
+    <div class="pts" id="smPts"><button class="pt tog on" id="smBias" title="Pokaži samo smer, ki jo kaže bias trga (pri neodločenem obe)">V smeri biasa</button><button class="pt tog" id="smOnly">Samo na točki</button></div>
     <p class="sum" id="smSum"></p>
     <div class="list" id="smList"><div class="empty">Skeniram trg…</div></div>
   </section>
@@ -588,7 +591,7 @@ window.addEventListener('hashchange',function(){show(location.hash.slice(1))});
 $('theme').onclick=function(){var c=document.documentElement.dataset.theme,dark=c?c==='dark':true,n=dark?'light':'dark';document.documentElement.dataset.theme=n;try{localStorage.setItem(k,n)}catch(e){};document.querySelectorAll('.chart').forEach(function(el){if(el._redraw)el._redraw()})}})();
 
 // ================= SCREENER =================
-var smBiasOn=true,SMLAST=null,smSide='all',smOnly=true,smSel={},smOpen={},KC={},smView='card';
+var smBiasOn=true,SMLAST=null,smSide='all',smOnly=false,smSel={},smOpen={},KC={},smView='card';
 try{smView=localStorage.getItem('sweep_view')||'card'}catch(e){}
 document.querySelectorAll('#smView button').forEach(function(b){b.classList.toggle('on',b.dataset.view===smView);b.onclick=function(){smView=b.dataset.view;try{localStorage.setItem('sweep_view',smView)}catch(e){}document.querySelectorAll('#smView button').forEach(function(x){x.classList.toggle('on',x===b)});smRender()}});
 var PTNAME={SWEEP:'Sweep nivo',OPEN:'Open HTF',HFVG:'HTF FVG'};
@@ -621,6 +624,16 @@ async function smRun(){
 }
 function smMatch(x){return x.points.filter(function(p){return smSel[p.k]})}
 function ptLabel(p){return p.lab||PTNAME[p.k]||p.k}
+// vse linije/cone, ki jih indikator nariše za ta setup (tudi ko cena ni na točki) + najbližja ceni
+function lineSet(x){
+  if(x._ls)return x._ls;var nm=[],nd=null,add=function(n,d){if(nm.indexOf(n)<0)nm.push(n);if(d!=null&&(!nd||d<nd.d))nd={k:n,d:d}};
+  x.draw.boxes.forEach(function(b){add(b.k,x.px>b.hi?(x.px-b.hi)/x.px*100:x.px<b.lo?(b.lo-x.px)/x.px*100:0)});
+  x.draw.lines.forEach(function(l){if(/Ekstrem/.test(l.k))return;if(/^FIB/.test(l.k)&&!l.touched)return;
+    var n=/Posweepan/.test(l.k)?'Sweep':/^FIB/.test(l.k)?'FIB':/^CISD/.test(l.k)?(l.k==='CISD'?'CISD':'CISD ?'):l.k==='Open HTF'?'Open':l.k;add(n,Math.abs(x.px-l.y)/x.px*100)});
+  return x._ls={names:nm,near:nd};
+}
+function lineChips(x){var s=lineSet(x);return s.names.length?s.names.map(function(n){return '<span class="ln">'+esc(n)+'</span>'}).join(''):'<span class="none">–</span>'}
+function nearTxt(x){var s=lineSet(x);return s.near?'najbližja: '+s.near.k+' '+s.near.d.toFixed(2).replace('.',',')+' %':''}
 function smRender(){
   if(!SMLAST)return;
   var near=+$('smNear').value||99,all=SMLAST.rows.filter(function(x){return ((x.px-x.ext)/x.px*100*(x.side==='long'?1:-1))<=near}),rows=all;
@@ -628,25 +641,26 @@ function smRender(){
   if(smSide!=='all')rows=rows.filter(function(x){return x.side===smSide});
   var hits=rows.filter(function(x){return smMatch(x).length});
   if(smOnly)rows=hits;
-  rows.sort(function(a,b){return (smMatch(b).length>0)-(smMatch(a).length>0)||a.sym.localeCompare(b.sym)});
-  var tfl=SMLAST.tf==='D'?'1D':'6H';
-  $('smSum').textContent=hits.length+' na točki od '+SMLAST.rows.length+' aktivnih '+tfl+' setupov · '+SMLAST.n+' kovancev · '+fmtH(SMLAST.now);
+  var nd=function(x){var s=lineSet(x);return s.near?s.near.d:99};
+  rows.sort(function(a,b){return (smMatch(b).length>0)-(smMatch(a).length>0)||nd(a)-nd(b)||a.sym.localeCompare(b.sym)});
+  var tfl=SMLAST.tf==='D'?'1D':'6H',restN=rows.filter(function(x){return !smMatch(x).length}).length;
+  $('smSum').textContent=smOnly?hits.length+' na točki od '+SMLAST.rows.length+' aktivnih '+tfl+' setupov · '+SMLAST.n+' kovancev · '+fmtH(SMLAST.now):hits.length+' na točki · '+restN+' samo z linijami · od '+SMLAST.rows.length+' aktivnih '+tfl+' setupov · '+SMLAST.n+' kovancev · '+fmtH(SMLAST.now);
   if(hidB)$('smSum').textContent+=' · '+hidB+' '+(bd==='short'?'longov':'shortov')+' skritih (bias '+(bd==='short'?'Bearish':'Bullish')+' – izklopi »V smeri biasa«)';
-  if(!rows.length){$('smList').className='list';$('smList').innerHTML='<div class="empty">'+(smOnly?'Noben kovanec ni na izbranih točkah. Izberi več točk ali izklopi "Samo na točki".':'Ni aktivnih sweep setupov.')+'</div>';return}
+  if(!rows.length){$('smList').className='list';$('smList').innerHTML='<div class="empty">'+(smOnly?'Noben kovanec ni na izbranih točkah. Izberi več točk ali izklopi "Samo na točki".':'Ni aktivnih sweep setupov (poskusi »Do SL: vse« ali izklopi »V smeri biasa«).')+'</div>';return}
   var dots=function(x){return [['D',x.div],['F',x.fvg],['R',x.retest],['C',x.cisd],['1',x.zone]].map(function(c){return '<span style="opacity:'+(c[1]?1:.28)+'">'+c[0]+'</span>'}).join(' ')};
-  var html='',mode=smView,hitsH=function(m){return m.length?m.map(function(p){return '<span class="hit">'+esc(ptLabel(p))+'</span>'}).join(''):'<span class="none">ni na točki</span>'};
+  var html='',mode=smView,hitsH=function(m,x){return m.length?m.map(function(p){return '<span class="hit">'+esc(ptLabel(p))+'</span>'}).join(''):'<span class="none">ni na točki</span>'+(x&&nearTxt(x)?' <span class="none">· '+esc(nearTxt(x))+'</span>':'')};
   if(mode==='table'){
-    html='<table class="t"><thead><tr><th>Kovanec</th><th class="tl">Smer</th><th class="tl">Na točki</th><th>Cena</th><th>Do SL</th><th>CISD</th><th>Sweep</th>'+(SMLAST.tf==='D'?'':'<th>Do 6H FVG</th>')+'<th>Do 1D FVG</th></tr></thead><tbody>';
+    html='<table class="t"><thead><tr><th>Kovanec</th><th class="tl">Smer</th><th class="tl">Na točki</th><th class="tl">Linije</th><th>Cena</th><th>Do SL</th><th>CISD</th><th>Sweep</th>'+(SMLAST.tf==='D'?'':'<th>Do 6H FVG</th>')+'<th>Do 1D FVG</th></tr></thead><tbody>';
     rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
-      html+='<tr class="rw" data-id="'+id+'"><td><b>'+esc(x.sym)+'</b></td><td class="tl"><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>'+(x.hist?' <span class="mut">prejšnji</span>':'')+'</td><td class="tl">'+hitsH(smMatch(x))+'</td><td>'+fmtP(x.px)+'</td><td>'+dist.toFixed(2)+' %</td><td>'+(x.lvl==null?'–':fmtP(x.lvl)+(x.cisd?' <span class="up">✓</span>':' <span class="mut">čaka</span>'))+'</td><td>'+fmtT(x.extT)+'</td>'+(SMLAST.tf==='D'?'':'<td>'+fvgTxt(x.f6)+'</td>')+'<td>'+fvgTxt(x.fD)+'</td></tr>';
-      if(smOpen[id])html+='<tr class="dr"><td colspan="9"><div class="det" id="d_'+id+'"></div></td></tr>'});
+      html+='<tr class="rw" data-id="'+id+'"><td><b>'+esc(x.sym)+'</b></td><td class="tl"><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>'+(x.hist?' <span class="mut">prejšnji</span>':'')+'</td><td class="tl">'+hitsH(smMatch(x),x)+'</td><td class="tl lc">'+lineChips(x)+'</td><td>'+fmtP(x.px)+'</td><td>'+dist.toFixed(2)+' %</td><td>'+(x.lvl==null?'–':fmtP(x.lvl)+(x.cisd?' <span class="up">✓</span>':' <span class="mut">čaka</span>'))+'</td><td>'+fmtT(x.extT)+'</td>'+(SMLAST.tf==='D'?'':'<td>'+fvgTxt(x.f6)+'</td>')+'<td>'+fvgTxt(x.fD)+'</td></tr>';
+      if(smOpen[id])html+='<tr class="dr"><td colspan="10"><div class="det" id="d_'+id+'"></div></td></tr>'});
     html+='</tbody></table>';
     $('smList').className='list tbl';$('smList').innerHTML=html;
     $('smList').querySelectorAll('tr.rw').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
   } else {
     rows.forEach(function(x){var id=x.sym+'_'+x.side,sg=x.side==='long'?1:-1,dist=(x.px-x.ext)/x.px*100*sg;
       html+='<div class="card'+(smOpen[id]?' open':'')+'" data-id="'+id+'"><div class="ch"><div><div class="coin">'+esc(x.sym)+'</div><span class="side '+x.side+'">'+(x.side==='long'?'LONG':'SHORT')+'</span>'+(x.hist?' <small class="mut">prejšnji setup</small>':'')+'</div><div class="px">'+fmtP(x.px)+'<small>'+dist.toFixed(2)+' % do SL</small></div></div>'+
-        '<div>'+hitsH(smMatch(x))+'</div><div class="cf"><span>CISD '+(x.lvl==null?'–':(x.cisd?'potrjen':'čaka'))+'</span>'+(x.f6?'<span>6H FVG '+fvgTxt(x.f6)+'</span>':'')+(x.fD?'<span>1D FVG '+fvgTxt(x.fD)+'</span>':'')+'</div></div>';
+        '<div>'+hitsH(smMatch(x),x)+'</div><div class="lns">'+lineChips(x)+'</div><div class="cf"><span>CISD '+(x.lvl==null?'–':(x.cisd?'potrjen':'čaka'))+'</span>'+(x.f6?'<span>6H FVG '+fvgTxt(x.f6)+'</span>':'')+(x.fD?'<span>1D FVG '+fvgTxt(x.fD)+'</span>':'')+'</div></div>';
       if(smOpen[id])html+='<div class="det" id="d_'+id+'"></div>'});
     $('smList').className='cards';$('smList').innerHTML=html;
     $('smList').querySelectorAll('.card').forEach(function(r){r.onclick=function(){smOpen[r.dataset.id]=!smOpen[r.dataset.id];smRender()}});
@@ -655,13 +669,14 @@ function smRender(){
 }
 var TFS=[['1','1m',60000],['5','5m',300000],['15','15m',900000],['60','1H',HOUR],['240','4H',4*HOUR],['D','1D',DAY]];
 function smDetail(el,x){
-  var def=SMLAST.ltfIv,tv='https://www.tradingview.com/chart/?symbol=BYBIT:'+x.sym+'USDT.P';
-  el.innerHTML='<div class="tfs">'+TFS.map(function(t){return '<button data-tf="'+t[0]+'"'+(t[0]===(el._tf||def)?' class="on"':'')+'>'+t[1]+'</button>'}).join('')+'<a href="'+tv+'" target="_blank" rel="noopener">TradingView ↗</a></div><div class="chart"></div>'+smFacts(x);
+  var def='5',tv='https://www.tradingview.com/chart/?symbol=BYBIT:'+x.sym+'USDT.P&interval=5';
+  el.innerHTML='<div class="tfs">'+TFS.map(function(t){return '<button data-tf="'+t[0]+'"'+(t[0]===(el._tf||def)?' class="on"':'')+'>'+t[1]+'</button>'}).join('')+'<button data-tf="TV" title="Pravi TradingView graf (brez indikatorja – ta je zaklenjen)">TV graf</button><a href="'+tv+'" target="_blank" rel="noopener">TradingView ↗</a></div><div class="chart"></div>'+smFacts(x);
   var ch=el.querySelector('.chart');
   var load=async function(tf){
     el._tf=tf;el.querySelectorAll('.tfs button').forEach(function(b){b.classList.toggle('on',b.dataset.tf===tf)});
-    var key=x.sym+'|'+tf,bars=tf===def?SMLAST.bars[x.sym].l:KC[key];
-    if(!bars){ch.innerHTML='<div class="empty">Nalagam '+tf+'…</div>';try{bars=mapK((await jget(API+'kline?category=linear&symbol='+x.sym+'USDT&interval='+tf+'&limit=200')).list);KC[key]=bars}catch(e){ch.innerHTML='<div class="empty">Graf se ni naložil: '+esc(e.message)+'</div>';return}}
+    if(tf==='TV'){var dk=document.documentElement.dataset.theme?document.documentElement.dataset.theme==='dark':true;ch._redraw=null;ch.innerHTML='<iframe title="TradingView" style="width:100%;height:460px;border:0;border-radius:inherit" src="https://s.tradingview.com/widgetembed/?symbol='+encodeURIComponent('BYBIT:'+x.sym+'USDT.P')+'&interval=5&theme='+(dk?'dark':'light')+'&style=1&timezone=Europe%2FLjubljana&locale=en&hide_side_toolbar=1"></iframe>';return}
+    var key=x.sym+'|'+tf,bars=tf===SMLAST.ltfIv?SMLAST.bars[x.sym].l:KC[key];
+    if(!bars){ch.innerHTML='<div class="empty">Nalagam '+tf+'…</div>';try{bars=mapK((await jget(API+'kline?category=linear&symbol='+x.sym+'USDT&interval='+tf+'&limit=600')).list);KC[key]=bars}catch(e){ch.innerHTML='<div class="empty">Graf se ni naložil: '+esc(e.message)+'</div>';return}}
     ch._redraw=function(){smChart(ch,x,bars,TFS.filter(function(t){return t[0]===tf})[0][2])};ch._redraw();
   };
   el.querySelectorAll('.tfs button').forEach(function(b){b.onclick=function(ev){ev.stopPropagation();load(b.dataset.tf)}});
@@ -677,7 +692,9 @@ var ZCOL={'6H FVG':'#4dd0a8','1D FVG':'#4da3ff','FVG':'#00d9ff','IFVG':'#b56bff'
 function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
 function smChart(el,x,all,dt){
   var W=Math.max(320,Math.round(el.clientWidth||800)),H=Math.round(W>=900?Math.min(560,W*0.4):Math.min(440,Math.max(250,W*0.52))),gut=Math.min(118,Math.max(92,W*0.13)),pb=22,pt=10,right=12;
-  var n=Math.min(all.length,Math.max(60,Math.round((W-gut)/7))),bars=all.slice(-n),cw=(W-gut)/(n+right);
+  // razpon: od sweep sveče (+ nekaj sveč pred njo), a najmanj običajen pogled in največ ~3,5 px na svečo
+  var sIdx=0;for(var si=0;si<all.length;si++){if(all[si].t>=x.sT){sIdx=si;break}}
+  var n=Math.min(all.length,Math.max(Math.round((W-gut)/7),Math.min(Math.round((W-gut)/3.5),all.length-sIdx+14)),600),bars=all.slice(-n),cw=(W-gut)/(n+right);
   var C={ink:cssv('--ink'),mut:cssv('--mut'),long:cssv('--long'),short:cssv('--short'),buoy:cssv('--buoy'),grid:cssv('--grid'),line:cssv('--line'),s1:cssv('--s1')};
   var lo=Infinity,hi=-Infinity;bars.forEach(function(b){lo=Math.min(lo,b.l);hi=Math.max(hi,b.h)});
   [x.ext,x.sweptLvl,x.px].forEach(function(v){if(v!=null){lo=Math.min(lo,v);hi=Math.max(hi,v)}});
@@ -695,14 +712,14 @@ function smChart(el,x,all,dt){
   var hitK={};smMatch(x).forEach(function(p){hitK[p.k]=1});
   var tags=[];
   x.draw.boxes.forEach(function(b){if(b.hi<lo||b.lo>hi)return;var on=!!hitK[b.k],c=ZCOL[b.k]||C.buoy,xs=Math.max(0,X(b.t0)),y1=Y(Math.min(hi,b.hi)),y2=Y(Math.max(lo,b.lo));
-    o+='<rect x="'+xs+'" y="'+y1+'" width="'+Math.max(2,plotR-xs)+'" height="'+Math.max(1.5,y2-y1)+'" fill="'+c+'" fill-opacity="'+(on?.22:.07)+'"'+(on?' stroke="'+c+'" stroke-opacity=".8" stroke-width="1"':'')+'/>';
-    if(on)tags.push({y:(y1+y2)/2,t:b.k,c:c})});
+    o+='<rect x="'+xs+'" y="'+y1+'" width="'+Math.max(2,plotR-xs)+'" height="'+Math.max(1.5,y2-y1)+'" fill="'+c+'" fill-opacity="'+(on?.3:.18)+'" stroke="'+c+'" stroke-opacity="'+(on?.9:.55)+'" stroke-width="1"/>';
+    tags.push({y:(y1+y2)/2,t:b.k+(on?' ●':''),c:c})});
   // sveče
   bars.forEach(function(b,i){var up=b.c>=b.o,c=up?C.long:C.short,cx=i*cw+cw/2,yo=Y(b.o),yc=Y(b.c);
     o+='<line x1="'+cx+'" x2="'+cx+'" y1="'+Y(b.h)+'" y2="'+Y(b.l)+'" stroke="'+c+'"/><rect x="'+(i*cw+cw*.18)+'" y="'+Math.min(yo,yc)+'" width="'+Math.max(1,cw*.64)+'" height="'+Math.max(1,Math.abs(yc-yo))+'" fill="'+c+'" rx="'+(cw>6?1:0)+'"/>'});
   // črte: ključne tri vedno, fib le dva najbližja ceni, open le če je točka
   var hitF=smMatch(x).filter(function(p){return p.k==='FIB'}).map(function(p){return p.lvl});var fibs=x.draw.lines.filter(function(l){return /^FIB/.test(l.k)&&inR(l.y)&&(l.touched||hitF.indexOf(l.y)>=0)});
-  var key=x.draw.lines.filter(function(l){return /Posweepan|Ekstrem|CISD/.test(l.k)||(l.k==='Open HTF'&&hitK.OPEN)}).concat(fibs);
+  var key=x.draw.lines.filter(function(l){return /Posweepan|Ekstrem|CISD/.test(l.k)||l.k==='Open HTF'}).concat(fibs);
   key.forEach(function(l){if(!inR(l.y))return;var c=/Ekstrem/.test(l.k)?(x.side==='long'?C.short:C.long):/CISD/.test(l.k)?'#00d9ff':/Posweepan/.test(l.k)?C.buoy:C.mut,xs=Math.max(0,X(l.t0)),y=Y(l.y);
     o+='<line x1="'+xs+'" x2="'+plotR+'" y1="'+y+'" y2="'+y+'" stroke="'+c+'" stroke-width="'+(/Posweepan|Ekstrem/.test(l.k)?1.4:1)+'" stroke-dasharray="'+(/FIB|Open/.test(l.k)?'2 3':'6 4')+'"/>';
     var nm=/Ekstrem/.test(l.k)?'SL':/Posweepan/.test(l.k)?'Sweep':l.k==='Open HTF'?'Open':l.k.replace('FIB ','Fib ');
@@ -1059,6 +1076,8 @@ var EN_RX=[
 [/^Včeraj je dnevna sveča šla nad predvčerajšnji high (\S+) \(do (\S+)\) in zaprla nazaj pod njim\. (.*)$/,function(m,a,b,c){return 'Yesterday the daily candle went above the previous high '+a+' (to '+b+') and closed back below it. '+trStory(c)}],
 [/^Dnevna sveča je posweepala (low|high) (\S+) in zaprla nazaj\. (.*)$/,function(m,a,b,c){return 'The daily candle swept the '+a+' '+b+' and closed back. '+trStory(c)}],
 [/^(\S+) \(1D\)$/,'$1 (1D)'],
+[/^(\d+) na točki · (\d+) samo z linijami · od (\d+) aktivnih (\S+) setupov · (\d+) kovancev · (.+)$/,'$1 at a point · $2 with lines only · of $3 active $4 setups · $5 coins · $6'],
+[/^najbližja: (.+) (\d+[.,]\d+) %$/,'nearest: $1 $2 %'],
 [/^(\d+) na točki od (\d+) aktivnih (\S+) setupov · (\d+) kovancev · (.+)$/,'$1 at a point out of $2 active $3 setups · $4 coins · $5'],
 [/^Skeniram (\d+) kovancev…$/,'Scanning $1 coins…'],
 [/^(.+) · (\d+) (longov|shortov) skritih \(bias (\w+) – izklopi »V smeri biasa«\)$/,function(m,a,n,w,b){return trText(a)+' · '+n+' '+(w==='longov'?'longs':'shorts')+' hidden (bias '+b+' – turn off “With the bias”)'}],
