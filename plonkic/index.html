@@ -22,7 +22,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 .brand{font-weight:800;font-size:21px;letter-spacing:.02em}
 .brand i{font-style:normal;color:var(--accent)}
 .store{font-size:12px;color:var(--muted)}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:4px;margin-top:10px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:4px;margin-top:10px}
 .tabs button{border:0;background:transparent;padding:8px 2px;border-radius:8px;font-weight:600;font-size:14.5px;color:var(--muted)}
 .tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.4)}
 h2.sec{font-weight:800;font-size:19px;margin:20px 0 8px;letter-spacing:.01em}
@@ -46,6 +46,7 @@ h2.sec{font-weight:800;font-size:19px;margin:20px 0 8px;letter-spacing:.01em}
 .presets{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-top:12px}
 .presets button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-weight:600;font-size:13.5px}
 .presets button:hover{border-color:var(--accent)}
+.presets button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .plan{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;touch-action:none}
 .plan svg{display:block;width:100%;height:auto}
 .plan .cap{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);gap:8px;flex-wrap:wrap}
@@ -103,6 +104,15 @@ h2.sec{font-weight:800;font-size:19px;margin:20px 0 8px;letter-spacing:.01em}
 .sv input{background:transparent;border:0;border-bottom:1px dashed var(--line);padding:2px 0;font-weight:600;font-size:15px;min-width:0;width:100%}
 .sv .meta{grid-column:1}
 .sv .acts{grid-row:1 / span 2;grid-column:2;display:flex;gap:6px}
+.fl-intro{margin-top:12px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fgrid label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.fgrid input,.fgrid select{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:7px 8px;width:100%;color:var(--ink)}
+.fres{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fres .ro b{font-size:20px;color:var(--accent)}
+.fres .ro b.bad{color:var(--bad);font-size:15px}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink)}
+.chk input{width:18px;height:18px;accent-color:var(--accent)}
 .empty{color:var(--muted);font-size:14.5px;padding:14px;background:var(--surface);border:1px dashed var(--line);border-radius:12px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
@@ -150,7 +160,9 @@ const PRESETS=[
   {n:"Low key",tip:"Temno ozadje, glavna luč vstran, obrisna luč zadaj loči ramena in lase od ozadja.",
    lights:()=>[L("key","softbox",-55,1.2,.4,4),L("rim","strip",145,1.3,.35,4)],wall:"crna"},
   {n:"High key",tip:"Svetlo ozadje osvetljeno z ločeno lučjo, mehka glavna luč skoraj spredaj in nizko razmerje. Svetla, čista slika.",
-   lights:()=>[L("key","softbox",-15,1.4,.3,4),L("fill","umbrella",30,2.0,0,4),L("bg","bare",180,1.2,-.1,6)],wall:"bela"}
+   lights:()=>[L("key","softbox",-15,1.4,.3,4),L("fill","umbrella",30,2.0,0,4),L("bg","bare",180,1.2,-.1,6)],wall:"bela"},
+  {n:"Direktni flash",tip:"Bliskavica na fotoaparatu, naravnost v osebo, tik nad objektivom. Močne barve in kontrast. Odmakni osebo od stene ali vzemi temno ozadje, da senca izgine. Več v zavihku Flash.",
+   lights:()=>[L("key","bare",0,1.9,.12,5)],wall:"bela"}
 ];
 
 // ================= Stanje =================
@@ -191,7 +203,8 @@ function analysis(){
   const ratio=fill?(Lk+lumOf(fill))/lumOf(fill):null;
   const rel=((key.ang-sc.turn)+540)%360-180, a=Math.abs(rel), h=key.h;
   let pattern,note;
-  if(h<-.2){pattern="Od spodaj";note="Luč od spodaj deluje grozljivo. Kot polnilo je v redu (clamshell), kot glavna luč redko.";}
+  if(key.mod==="bare"&&a<14&&h<.3){pattern="Direktni flash";note="Trda svetloba z mesta kamere: malo senc na obrazu, ostra senca na ozadju tik za osebo.";}
+  else if(h<-.2){pattern="Od spodaj";note="Luč od spodaj deluje grozljivo. Kot polnilo je v redu (clamshell), kot glavna luč redko.";}
   else if(a<14&&h>.3){pattern="Butterfly";note="Senca metulja pod nosom.";}
   else if(a<14){pattern="Ploska";note="Malo senc, obraz deluje ploščat. Dvigni luč ali jo premakni vstran.";}
   else if(a<42){pattern="Loop";note="Majhna senca nosu na licu.";}
@@ -298,10 +311,10 @@ function loop(){if(R&&R.renderer.domElement.isConnected){resize3d();if(R.need){R
 // ================= Izris =================
 function renderTop(){const el=document.getElementById("storeLbl");if(el)el.textContent=STANDALONE?"Shranjeno v telefonu":S.store==="cloud"?"Shranjeno v oblaku":S.store==="local"?"Samo na tej napravi":"";}
 function render(){
-  const tabs=[["studio","Studio"],["cheat","Plonkič"],["mine","Moje"]];
+  const tabs=[["studio","Studio"],["cheat","Plonkič"],["flash","Flash"],["mine","Moje"]];
   let h=`<div class="top"><div class="brand">Plonk<i>i</i>č</div><div class="store" id="storeLbl"></div></div>
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button type="button" role="tab" aria-selected="${S.view===k}" data-act="tab" data-v="${k}">${l}</button>`).join("")}</div>`;
-  h+=S.view==="studio"?viewStudio():S.view==="cheat"?viewCheat():viewMine();
+  h+=S.view==="studio"?viewStudio():S.view==="cheat"?viewCheat():S.view==="flash"?viewFlash():viewMine();
   const app=document.getElementById("app");
   // ohrani platno 3D, da se ne ustvarja znova
   const keep=R?R.renderer.domElement:null;
@@ -324,7 +337,7 @@ function viewStudio(){
   const sc=S.scene,l=sc.lights.find(x=>x.id===S.sel);
   let h=`<div class="lcd" id="lcd"><div class="badge" id="pattern"></div><button type="button" class="reset" data-act="camreset">Pogled kamere</button><div class="hud" id="hud"></div></div>
   <div class="readout" id="readout"></div>
-  <div class="presets" role="group" aria-label="Postavitve">${PRESETS.map((p,i)=>`<button type="button" data-act="preset" data-v="${i}">${esc(p.n)}</button>`).join("")}</div>
+  <div class="presets" role="group" aria-label="Postavitve">${PRESETS.map((p,i)=>`<button type="button" aria-pressed="${sc.preset===p.n}" data-act="preset" data-v="${i}">${esc(p.n)}</button>`).join("")}</div>
   <div class="tip" style="margin-top:10px" id="ptip"></div>
   <div class="plan"><svg id="plan" viewBox="0 0 340 330" aria-label="Tloris studia: povleci luči">${planSvg()}</svg>
    <div class="cap"><span>Povleci luč. Kamera je spodaj.</span><div class="addrow">${Object.keys(ROLES).map(r=>`<button type="button" data-act="add" data-v="${r}">+ ${ROLES[r].n}</button>`).join("")}</div></div></div>`;
@@ -456,16 +469,19 @@ const RULES=[
  ["Najdaljši čas iz roke","1 / (goriščna × crop). Pri 85 mm na APS-C (1,5×) to je približno 1/125."],
  ["Sončno 16","Na soncu: f/16, čas = 1/ISO. Pri ISO 100 torej f/16 in 1/100."],
  ["Sinhronizacija bliskavice","Največ 1/160–1/250 (odvisno od fotoaparata). Hitreje samo s HSS."],
- ["Velikost luči","Večja luč glede na osebo = mehkejše sence. Softbox blizu je mehak, isti softbox daleč je trd."]
+ ["Velikost luči","Večja luč glede na osebo = mehkejše sence. Softbox blizu je mehak, isti softbox daleč je trd."],
+ ["Premalo svetlobe – kaj najprej?","1. več prave svetlobe (okno, odprta senca, odbojnik, bliskavica), 2. odpri zaslonko, 3. daljši čas (ne pod mejo iz roke), 4. šele nato ISO. Ostra slika s šumom je boljša od zamegljene."]
 ];
-function viewCheat(){
-  let h=`<h2 class="sec">Nastavitve po situacijah</h2><div class="cards">`;
-  CHEAT.forEach((c,i)=>{const open=S.openCard===i;
-    h+=`<article class="card"><button type="button" data-act="card" data-v="${i}" aria-expanded="${open}"><h3>${esc(c.n)}</h3><span class="sub">${esc(c.s)}</span><span class="chev">${open?"−":"+"}</span></button>
+function cardsHtml(list,pre){let h=`<div class="cards">`;
+  list.forEach((c,i)=>{const key=pre+i,open=S.openCard===key;
+    h+=`<article class="card"><button type="button" data-act="card" data-v="${key}" aria-expanded="${open}"><h3>${esc(c.n)}</h3><span class="sub">${esc(c.s)}</span><span class="chev">${open?"−":"+"}</span></button>
     <div class="exif">${Object.entries(c.ex).map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}</div>`;
     if(open)h+=`<div class="more"><div class="kv">${c.kv.map(([k,v])=>`<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")}</div><ul>${c.tips.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`;
     h+=`</article>`;});
-  h+=`</div><h2 class="sec">Hitri izračun: najdaljši čas iz roke</h2>
+  return h+`</div>`;}
+function viewCheat(){
+  let h=`<h2 class="sec">Nastavitve po situacijah</h2>`+cardsHtml(CHEAT,"c");
+  h+=`<h2 class="sec">Hitri izračun: najdaljši čas iz roke</h2>
   <div class="calc"><div class="row2"><label class="meta" for="cf">Goriščna</label><input id="cf" type="number" min="8" max="800" value="${S.cf||85}" style="width:90px"> <span class="meta" style="align-self:center">mm</span>
    <label class="meta" for="cc" style="margin-left:8px">Senzor</label><select id="cc">${[["1","polni format"],["1.5","APS-C (Nikon, Sony, Fuji)"],["1.6","APS-C (Canon)"],["2","MFT"]].map(([v,n])=>`<option value="${v}" ${String(S.cc||"1")===v?"selected":""}>${n}</option>`).join("")}</select></div>
    <div class="res" id="cres"></div><div class="meta">S stabilizacijo lahko greš 2–3 zaslonke daljše, a oseba se mora tudi sama ne premikati.</div></div>
@@ -475,6 +491,74 @@ function viewCheat(){
 function calcShutter(){const f=+(document.getElementById("cf")||{}).value||85,c=+(document.getElementById("cc")||{}).value||1;S.cf=f;S.cc=String(c);
   const t=1/(f*c),std=[30,40,50,60,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000];const d=std.find(x=>x>=1/t)||Math.ceil(1/t);
   const el=document.getElementById("cres");if(el)el.textContent=`1/${d} s ali hitreje`;}
+// ================= Direktni flash =================
+const FLASH=[
+ {n:"Direktni flash ponoči",s:"Editorial / paparazzi videz, temno ozadje",ex:{Zaslonka:"f/5.6–8",Čas:"1/200",ISO:"200–400",Objektiv:"28–35 mm"},
+  kv:[["Bliskavica","M 1/8–1/4 ali TTL ±0"],["Glava","naravnost v osebo, zoom 24–35 mm"],["Sinhronizacija","prva zavesa"],["Beli balans","bliskavica (5500 K)"],["Fokus","AF-C ali AF-S + pomožna lučka"]],
+  tips:["Kratek čas in zaprta zaslonka »ubijeta« ambient: ozadje gre v črno, oseba izstopi.","Stoj 2–3 m stran. Bliže = prežgana koža, dlje = zmanjka moči.","Ta videz ima rad kontrast: v urejanju dodaj kontrast in malo zrnatosti."]},
+ {n:"Dragging shutter",s:"Oseba ostra, luči v ozadju se vlečejo",ex:{Zaslonka:"f/4–5.6",Čas:"1/8–1/30",ISO:"400–1600",Objektiv:"24–35 mm"},
+  kv:[["Sinhronizacija","zadnja zavesa (rear)"],["Bliskavica","TTL −0,3 do −0,7"],["Gibanje","med posnetkom zasukaj fotoaparat ali stopi korak"],["Fokus","AF-S, zakleni pred gibanjem"]],
+  tips:["Bliskavica zamrzne osebo, dolg čas pobere luči in ustvari sledi.","Začni pri 1/15 in prilagodi: daljši čas = več sledi in več ambienta.","Zadnja zavesa postavi sled za osebo, ne pred njo, zato deluje naravno."]},
+ {n:"Direktni flash podnevi",s:"Podosvetljeno nebo, oseba »popne«",ex:{Zaslonka:"f/8–11",Čas:"1/200–1/250",ISO:"100",Objektiv:"35–50 mm"},
+  kv:[["Bliskavica","M 1/2–1/1, blizu (1,5–2 m)"],["Ambient","podosvetli za 1–1,5 EV"],["HSS","samo če rabiš f/2,8 – izgubiš veliko moči"],["Sonce","za osebo ali ob strani"]],
+  tips:["Najprej brez bliskavice nastavi ozadje 1 EV pretemno, nato dodaj flash na osebo.","Sonce je močno, zato mora bliskavica biti blizu in na visoki moči.","Na soncu difuzor skoraj nič ne pomaga, samo pobere moč."]},
+ {n:"Poroka: plesišče",s:"Energija, zabava, prvi ples",ex:{Zaslonka:"f/2.8–4",Čas:"1/60–1/100",ISO:"800–1600",Objektiv:"24–35 mm"},
+  kv:[["Bliskavica","TTL ±0, FEC po potrebi"],["Glava","naravnost ali rahlo navzgor (»bounce + direkt«)"],["Beli balans","bliskavica + CTO gel pri toplih lučeh"],["Fokus","AF-C + pomožna AF lučka"]],
+  tips:["Višji ISO in daljši čas pobereta luči dvorane, da ozadje ni črna luknja.","Ne hodi bliže kot 1,5 m z direktno glavo, koža se prežge.","Za portrete raje odbij v strop, za ples in akcijo direktni flash."]},
+ {n:"Portret z direktnim flashom v zaprtem",s:"Čisto, trdo, modno",ex:{Zaslonka:"f/4–5.6",Čas:"1/125–1/160",ISO:"400–800",Objektiv:"35–50 mm"},
+  kv:[["Bliskavica","M 1/16–1/8, tik nad objektivom"],["Oseba","vsaj 1–2 m od stene"],["Ozadje","temno = brez sence, svetlo = senca je del sloga"],["Fokus","AF-S na bližnje oko"]],
+  tips:["Senca pade za osebo. Dlje od stene = nižja in manjša senca.","Pri pokončnem kadru senca skoči vstran. Pomaga nosilec, ki drži bliskavico nad objektivom.","Poglej postavitev »Direktni flash« v Studiu."]},
+ {n:"Flash v modri uri",s:"Modro nebo, naravna koža",ex:{Zaslonka:"f/4",Čas:"1/60–1/100",ISO:"400–800",Objektiv:"35–50 mm"},
+  kv:[["Beli balans","ročno 3200 K"],["Bliskavica","s polnim CTO gelom"],["Ambient","−0,7 EV"],["Čas","20–30 min po sončnem zahodu"]],
+  tips:["Gel naredi bliskavico oranžno, 3200 K jo popravi nazaj v normalno kožo.","Isti 3200 K naredi nebo in ozadje izrazito modro.","Deluje tudi v mestu z uličnimi lučmi."]}
+];
+const FRULES=[
+ ["Razdalja × 1,4 = 1 zaslonka manj","V M načinu: oseba stopi z 2 m na 2,8 m in je pol temnejša. Pri gibanju zato raje TTL."],
+ ["Čas ureja ozadje, zaslonka in moč osebo","Daljši čas = svetlejše ozadje, oseba ostane enaka. Zaslonka ali moč spremenita osebo."],
+ ["TTL ali M?","TTL ko se razdalja spreminja (zabava, ples). M ko je razdalja ista (portret, editorial) – vsaka slika enaka."],
+ ["Popravek bliskavice (FEC)","−0,3 do −0,7 za naravno polnilo, 0 do +0,3 za izrazit »flash look«."],
+ ["Rdeče oči","Nastanejo v temi, ko je flash tik ob objektivu. Prižgi luči v prostoru ali dvigni bliskavico višje."],
+ ["Bleščanje kože in očala","Mastna koža sije: matiran puder ali zoom glave širše. Pri očalih naj oseba glavo rahlo nagne ali obrne."],
+ ["Polnjenje bliskavice","Pri 1/1 polni 2–3 s. Za zaporedje dvigni ISO in pojdi na 1/4 ali manj."],
+ ["Sinhronizacija","Brez HSS največ 1/160–1/250. S HSS hitreje, a bliskavica izgubi 1–2 zaslonki moči."]
+];
+const FSTOPS3=[1,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16,18,20,22,25,29,32];
+const fStr=f=>String(f).replace(".",",");
+S.fl={gn:36,pw:4,iso:400,d:2.5,diff:false,tf:5.6};
+function viewFlash(){
+  const F=S.fl;
+  let h=`<div class="tip fl-intro"><b>Direktni flash</b> pomeni bliskavico na fotoaparatu, usmerjeno naravnost v osebo, brez odboja. Da trdo, kontrastno svetlobo z ostro senco, »editorial« ali »paparazzi« videz.</div>
+  <h2 class="sec">Kalkulator za ročni flash (M)</h2>
+  <div class="calc"><div class="fgrid">
+   <label>Vodilno število (GN, m)<input type="number" min="5" max="80" step="1" value="${F.gn}" data-fl="gn"></label>
+   <label>ISO<select data-fl="iso">${[100,200,400,800,1600,3200,6400].map(v=>`<option ${F.iso===v?"selected":""}>${v}</option>`).join("")}</select></label>
+   <label>Razdalja do osebe (m)<input type="number" min="0.5" max="15" step="0.1" value="${F.d}" data-fl="d"></label>
+   <label>Želena zaslonka<select data-fl="tf">${[2,2.8,4,5.6,8,11,16].map(v=>`<option value="${v}" ${F.tf===v?"selected":""}>f/${fStr(v)}</option>`).join("")}</select></label>
+  </div>
+  <div class="ctl" style="grid-template-columns:96px 1fr"><label>Moč</label><div class="stepper"><button type="button" data-act="fpw-" aria-label="Manj moči">−</button><output class="mono" id="fpwOut">${pwLabel(F.pw)}</output><button type="button" data-act="fpw+" aria-label="Več moči">+</button></div></div>
+  <label class="chk"><input type="checkbox" data-fl="diff" ${F.diff?"checked":""}> Difuzor ali kupola (−1 zaslonka)</label>
+  <div class="fres" id="fres"></div>
+  <div class="meta">GN najdeš v navodilih bliskavice, za zoom glave, ki ga uporabljaš. Velika sistemska bliskavica ima pri 35 mm približno GN 35–40. Izračun je izhodišče: naredi poskusni posnetek in poglej histogram.</div></div>
+  <h2 class="sec">Nastavitve po situacijah</h2>`+cardsHtml(FLASH,"f")+
+  `<h2 class="sec">Pravila za flash</h2><div class="rules">${FRULES.map(([a,b])=>`<div class="rule"><b>${esc(a)}</b><span>${esc(b)}</span></div>`).join("")}</div>`;
+  return h;
+}
+function readFlash(){const F=S.fl;document.querySelectorAll("[data-fl]").forEach(el=>{const k=el.dataset.fl;
+  if(k==="diff")F.diff=el.checked;else{const v=parseFloat(String(el.value).replace(",","."));if(isFinite(v)&&v>0)F[k]=v;}});}
+function calcFlash(){const el=document.getElementById("fres");if(!el)return;const F=S.fl;
+  const k=Math.sqrt(F.iso/100)*(F.diff?Math.SQRT1_2:1),d=clamp(F.d,.3,30);
+  const f=F.gn*k*Math.sqrt(POWERS[F.pw])/d;
+  let fTxt,fSub,fCls="";
+  if(f<1.2){fTxt="Premalo moči";fSub="dvigni moč ali ISO, ali pojdi bliže";fCls="bad";}
+  else if(f>33){fTxt="Preveč moči";fSub="zmanjšaj moč ali ISO, ali pojdi dlje";fCls="bad";}
+  else{const n=FSTOPS3.reduce((b,x)=>Math.abs(Math.log(x/f))<Math.abs(Math.log(b/f))?x:b,FSTOPS3[0]);fTxt="f/"+fStr(n);fSub=`pri ${pwLabel(F.pw)} na ${fmt1(d)} m`;}
+  // potrebna moč za želeno zaslonko
+  const need=Math.pow(F.tf*d/(F.gn*k),2);let pTxt,pSub,pCls="";
+  if(need>1.19){pTxt="Ni dovolj moči";pSub=`pojdi na ${fmt1(F.gn*k/F.tf)} m ali dvigni ISO`;pCls="bad";}
+  else if(need<POWERS[0]/1.41){pTxt="Pod 1/128";pSub="zapri zaslonko ali znižaj ISO";pCls="bad";}
+  else{const i=POWERS.reduce((b,x,j)=>Math.abs(Math.log(x/need))<Math.abs(Math.log(POWERS[b]/need))?j:b,0);pTxt=pwLabel(i);pSub=`za f/${fStr(F.tf)} na ${fmt1(d)} m`;}
+  el.innerHTML=`<div class="ro"><span>Zaslonka</span><b class="${fCls}">${fTxt}</b><small>${fSub}</small></div>
+   <div class="ro"><span>Potrebna moč</span><b class="${pCls}">${pTxt}</b><small>${pSub}</small></div>`;}
 function viewMine(){
   let h=`<h2 class="sec">Moje postavitve</h2>`;
   if(!S.saved.setups.length)h+=`<div class="empty">Tukaj se shranijo postavitve luči iz Studia. V Studiu nastavi luči in pritisni <b>Shrani postavitev</b>.</div>`;
@@ -489,13 +573,14 @@ function cur(){return S.scene.lights.find(x=>x.id===S.sel);}
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act,v=b.dataset.v,sc=S.scene,l=cur();
   const refresh=()=>{sc.preset=sc.preset||"";render();};
-  if(a==="tab"){S.view=v;S.msg="";render();if(v==="cheat")calcShutter();window.scrollTo(0,0);return;}
+  if(a==="tab"){S.view=v;S.msg="";render();if(v==="cheat")calcShutter();if(v==="flash")calcFlash();window.scrollTo(0,0);return;}
   if(a==="preset"){const p=PRESETS[+v];sc.lights=p.lights();sc.wall=p.wall;sc.turn=0;sc.preset=p.n;S.sel=sc.lights[0].id;S.msg="";render();return;}
   if(a==="add"){if(sc.lights.length>=5){S.msg="Največ 5 luči.";render();return;}
     const d={key:[-40,1.2,.35,4,"softbox"],fill:[40,2,.05,2,"umbrella"],rim:[145,1.3,.35,3,"strip"],bg:[180,1.2,-.1,4,"bare"]}[v];
     const n=L(v,d[4],d[0],d[1],d[2],d[3]);sc.lights.push(n);S.sel=n.id;sc.preset="";render();return;}
   if(a==="camreset"){if(R){R.yaw=0;R.pitch=0;placeCam();R.need=true;}return;}
-  if(a==="card"){S.openCard=S.openCard===+v?null:+v;render();calcShutter();return;}
+  if(a==="card"){S.openCard=S.openCard===v?null:v;render();calcShutter();calcFlash();return;}
+  if(a==="fpw-"||a==="fpw+"){S.fl.pw=clamp(S.fl.pw+(a==="fpw+"?1:-1),0,POWERS.length-1);document.getElementById("fpwOut").textContent=pwLabel(S.fl.pw);calcFlash();return;}
   if(a==="load"){const s=S.saved.setups.find(x=>x.id===v);if(!s)return;sc.lights=s.lights.map(x=>Object.assign({},x,{id:uid++}));sc.fstop=s.fstop;sc.turn=s.turn;sc.wall=s.wall;sc.skin=s.skin;sc.preset="";S.sel=sc.lights[0]?sc.lights[0].id:null;S.view="studio";render();window.scrollTo(0,0);return;}
   if(a==="delsave"){S.saved.setups=S.saved.setups.filter(x=>x.id!==v);saveSaved();render();return;}
   if(a==="save"){const A=analysis(),n=S.saved.setups.length+1,d=new Date();
@@ -516,9 +601,10 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   if(e.target.id==="cf"||e.target.id==="cc"){calcShutter();return;}
+  if(e.target.dataset&&e.target.dataset.fl){readFlash();calcFlash();return;}
   if(e.target.id==="importFile"&&e.target.files[0]){const fr=new FileReader();fr.onload=()=>{try{const d=JSON.parse(fr.result);if(!d||d.v!==1||!Array.isArray(d.setups))throw 0;S.saved=d;saveSaved();S.msg=`Naloženo: ${d.setups.length} postavitev.`;}catch(err){S.msg="Te datoteke ne morem prebrati.";}render();};fr.readAsText(e.target.files[0]);}
 });
-document.addEventListener("keyup",e=>{if(e.target.id==="cf")calcShutter();});
+document.addEventListener("keyup",e=>{if(e.target.id==="cf")calcShutter();if(e.target.dataset&&e.target.dataset.fl){readFlash();calcFlash();}});
 if(STANDALONE&&"serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 render();requestAnimationFrame(loop);
 })();

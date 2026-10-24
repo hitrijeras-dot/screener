@@ -1,6 +1,6 @@
 {
   "name": "Plonkič", "short_name": "Plonkič",
-  "description": "Nastavitve fotoaparata in studijska svetloba na lutki.",
+  "description": "Nastavitve fotoaparata, direktni flash in studijska svetloba na lutki.",
   "lang": "sl", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "portrait",
   "background_color": "#0F0F10", "theme_color": "#0F0F10",
   "icons": [
