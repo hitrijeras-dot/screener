@@ -1422,14 +1422,15 @@ async function loadTk(){const r=await (await fetch(API2+'tickers?category=linear
 /*HTF-CORE*/
 // b = naraščajoče sveče okvirja: [.., predprejšnja, prejšnja (zaprta), trenutna (odprta)]; p = trenutna cena
 function evalTf(b,tf,p){const out=[];if(!b||b.length<3)return out;const n=b.length,cur=b[n-1],pr=b[n-2],pp=b[n-3];
- const hi=Math.max(cur.h,p),lo=Math.min(cur.l,p),far=v=>Math.abs(p-v)/v*100>(tf==='D'?2.5:tf==='W'?4:6);
- // sweep, od katerega je cena že odšla (D > 2,5 %, W > 4 %, M > 6 % od nivoja), ni več vstop → ga ne kažemo
+ const hi=Math.max(cur.h,p),lo=Math.min(cur.l,p),far=v=>Math.abs(p-v)/v*100>(tf==='D'?2.5:tf==='W'?4:6),deep=(e,v)=>Math.abs(e-v)/v*100>(tf==='D'?5:tf==='W'?8:12);
+ // sweep, od katerega je cena že odšla (D > 2,5 %, W > 4 %, M > 6 % od nivoja), ni več vstop → ga ne kažemo;
+ // prav tako ne, če je sveča šla predaleč čez nivo (D > 5 %, W > 8 %, M > 12 %) – to je pump/dump, ne sweep
  // 1) sweep v odprti sveči: šla je čez prejšnji high/low; "live" = cena je spet na drugi strani, "above" = še čez
- if(hi>pr.h&&!far(pr.h))out.push({tf,side:'short',kind:p<pr.h?'live':'above',lvl:pr.h,name:NAME[tf][0],ext:hi,t0:cur.t,t1:null,sc:pr});
- if(lo<pr.l&&!far(pr.l))out.push({tf,side:'long',kind:p>pr.l?'live':'above',lvl:pr.l,name:NAME[tf][1],ext:lo,t0:cur.t,t1:null,sc:pr});
+ if(hi>pr.h&&!far(pr.h)&&!deep(hi,pr.h))out.push({tf,side:'short',kind:p<pr.h?'live':'above',lvl:pr.h,name:NAME[tf][0],ext:hi,t0:cur.t,t1:null,sc:pr});
+ if(lo<pr.l&&!far(pr.l)&&!deep(lo,pr.l))out.push({tf,side:'long',kind:p>pr.l?'live':'above',lvl:pr.l,name:NAME[tf][1],ext:lo,t0:cur.t,t1:null,sc:pr});
  // 2) potrjen: prejšnja (zaprta) sveča je vzela high/low predprejšnje in zaprla nazaj (ICT X "2"); odprta sveča ekstrema ni presegla
- if(pr.h>pp.h&&pr.c<pp.h&&hi<=pr.h&&!far(pp.h))out.push({tf,side:'short',kind:'conf',lvl:pp.h,name:NAME[tf][0],ext:pr.h,t0:pr.t,t1:cur.t,sc:pp});
- if(pr.l<pp.l&&pr.c>pp.l&&lo>=pr.l&&!far(pp.l))out.push({tf,side:'long',kind:'conf',lvl:pp.l,name:NAME[tf][1],ext:pr.l,t0:pr.t,t1:cur.t,sc:pp});
+ if(pr.h>pp.h&&pr.c<pp.h&&hi<=pr.h&&!far(pp.h)&&!deep(pr.h,pp.h))out.push({tf,side:'short',kind:'conf',lvl:pp.h,name:NAME[tf][0],ext:pr.h,t0:pr.t,t1:cur.t,sc:pp});
+ if(pr.l<pp.l&&pr.c>pp.l&&lo>=pr.l&&!far(pp.l)&&!deep(pr.l,pp.l))out.push({tf,side:'long',kind:'conf',lvl:pp.l,name:NAME[tf][1],ext:pr.l,t0:pr.t,t1:cur.t,sc:pp});
  // 3) blizu nivoja, še brez sweepa (D 0,5 %, W 1 %, M 1,5 %)
  const nz=tf==='D'?0.5:tf==='W'?1:1.5;
  if(hi<=pr.h&&(pr.h-p)/p*100<=nz)out.push({tf,side:'short',kind:'near',lvl:pr.h,name:NAME[tf][0],ext:null,dist:(pr.h-p)/p*100,sc:pr});
@@ -1455,14 +1456,15 @@ function rowsFor(sym){const B=BARS[sym],tk=TKM[sym];if(!B||!tk||!tk.p)return[];c
  const by={};hits.forEach(h=>{(by[h.side]=by[h.side]||[]).push(h)});
  return Object.keys(by).map(side=>{const hs=by[side].sort((a,b)=>KW[b.kind]-KW[a.kind]||TFW[b.tf]-TFW[a.tf]);
   const sw=hs.filter(h=>h.kind==='live'||h.kind==='conf'||h.kind==='above'),top=hs[0];
-  // glavni zadetek = najmočnejše stanje; med enakimi najbolj skrajen ekstrem, pri enakem manjši okvir (svežje okno za CISD)
+  // glavni zadetek = najmočnejše stanje; med enakimi najmanjši okvir (najsvežji sweep, okno za CISD), nato najbolj skrajen ekstrem
   const tops=sw.length?sw.filter(h=>h.kind===top.kind):[top];
-  const main=tops.slice().sort((a,b)=>(side==='short'?b.ext-a.ext:a.ext-b.ext)||TFW[a.tf]-TFW[b.tf])[0];
+  const main=tops.slice().sort((a,b)=>TFW[a.tf]-TFW[b.tf]||(side==='short'?b.ext-a.ext:a.ext-b.ext))[0];
   const key=sym+'|'+side,c=CIS[key]||null;
   const r={key,sym,base:sym.replace(/USDT$/,''),side,hits:hs,kind:top.kind,main,ext:main.ext,p,ch:tk.ch,to:tk.to,cisd:c};
   r.depth=sw.length?Math.abs(main.ext-main.lvl)/main.lvl*100:null;
   r.toC=c&&c.lvl?(p-c.lvl)/p*100:null;
-  r.score=KW[r.kind]*10+(c&&c.ok?15:0)+hs.filter(h=>h.kind!=='near').reduce((s,h)=>s+TFW[h.tf]*3,0);
+  if(c&&c.ok)c.lost=side==='short'?p>c.lvl:p<c.lvl;
+  r.score=KW[r.kind]*10+(c&&c.ok&&!c.lost?15:0)+hs.filter(h=>h.kind!=='near').reduce((s,h)=>s+TFW[h.tf]*3,0);
   return r})}
 function rebuild(){const out=[];UNIV.forEach(s=>out.push(...rowsFor(s)));ROWS=out.sort((a,b)=>b.score-a.score||b.to-a.to)}
 
@@ -1487,16 +1489,16 @@ function filt(){return ROWS.filter(r=>{if(SIDE!=='all'&&r.side!==SIDE)return fal
  if(STF==='live'&&r.kind!=='live')return false;if(STF==='conf'&&r.kind!=='conf'&&!r.hits.some(h=>h.kind==='conf'))return false;
  if(STF==='near'&&r.kind!=='near')return false;
  if(STF==='all'&&r.kind==='near'&&!NEAR)return false;
- if(ONLYC&&!(r.cisd&&r.cisd.ok))return false;return true})}
+ if(ONLYC&&!(r.cisd&&r.cisd.ok&&!r.cisd.lost))return false;return true})}
 function bar(msg){const el=Q('#hxBar');if(msg){el.innerHTML=msg;return}
- const sw=ROWS.filter(r=>r.kind==='live'||r.kind==='conf'),okc=sw.filter(r=>r.cisd&&r.cisd.ok).length,left=Math.max(0,180-Math.round((Date.now()-lastScan)/1000));
+ const sw=ROWS.filter(r=>r.kind==='live'||r.kind==='conf'),okc=sw.filter(r=>r.cisd&&r.cisd.ok&&!r.cisd.lost).length,left=Math.max(0,180-Math.round((Date.now()-lastScan)/1000));
  el.innerHTML=lastScan?`<span><b>${UNIV.length}</b> kovancev</span><span><b>${sw.length}</b> sweepov · <b>${okc}</b> s CISD</span><span>skenirano ${hm(lastScan)}</span><span>naslednje čez ${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}</span>`:'nalagam …'}
 function lvChips(r){return r.hits.filter(h=>r.kind==='near'||h.kind!=='near').map(h=>`<span class="hit${h.kind==='above'?' ab':''}" title="${TFN[h.tf]} sveča · ${KN[h.kind]}">${h.name}${h.kind==='conf'?' ✓':''} ${fmt(h.lvl)}</span>`).join('')}
-function cisdTxt(r){const c=r.cisd;if(r.kind==='near')return ['–','mut'];if(!c)return ['…','mut'];if(c.na)return ['ni v obsegu','mut'];return [fmt(c.lvl)+(c.ok?' ✓':' · čaka'),c.ok?'up':'mut']}
+function cisdTxt(r){const c=r.cisd;if(r.kind==='near')return ['–','mut'];if(!c)return ['…','mut'];if(c.na)return ['ni v obsegu','mut'];if(c.ok&&c.lost)return [fmt(c.lvl)+' · izgubljen','dn'];return [fmt(c.lvl)+(c.ok?' ✓':' · čaka'),c.ok?'up':'mut']}
 function card(r){const S=r.side==='short',ct=cisdTxt(r),nw=NEWK.has(r.key+'|'+r.kind);
  const stc=r.kind,lab=r.kind==='near'?'Blizu '+r.hits[0].name+' ('+r.hits[0].dist.toFixed(2)+' %)':KN[r.kind];
  return `<button class="hxc ${S?'S':'L'}${openK===r.key?' on':''}" data-k="${r.key}">${nw?'<span class="hxnew">NOVO</span>':''}
- <div class="hxh"><div><div class="coin">${r.base}</div><span class="side ${r.side}">${S?'SHORT':'LONG'}</span> <span class="hxst ${stc}">${lab}</span>${r.cisd&&r.cisd.ok?' <span class="hxst ok">CISD ✓</span>':''}</div>
+ <div class="hxh"><div><div class="coin">${r.base}</div><span class="side ${r.side}">${S?'SHORT':'LONG'}</span> <span class="hxst ${stc}">${lab}</span>${r.cisd&&r.cisd.ok&&!r.cisd.lost?' <span class="hxst ok">CISD ✓</span>':''}</div>
  <div class="px"><b>${fmt(r.p)}</b><small class="${r.ch>=0?'up':'dn'}">${pc(r.ch)}</small></div></div>
  <div class="vbd">${lvChips(r)}</div>
  <div class="hxk"><div><span>${r.kind==='near'?'Nivo':'Ekstrem (za SL)'}</span><b>${fmt(r.kind==='near'?r.hits[0].lvl:r.ext)}</b></div><div><span>CISD ${LTF}m</span><b class="${ct[1]}">${ct[0]}</b></div><div><span>${r.kind==='near'?'Do nivoja':'Cena do CISD'}</span><b>${r.kind==='near'?r.hits[0].dist.toFixed(2)+' %':pc(r.toC)}</b></div></div>
@@ -1513,7 +1515,7 @@ function render(soft){bar();const L=filt(),el=Q('#hxList');
 let lwP2=null;const lw=()=>window.LightweightCharts?Promise.resolve():(lwP2||(lwP2=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js';s.onload=res;s.onerror=()=>{lwP2=null;rej()};document.head.appendChild(s)})));
 const TZ=-new Date().getTimezoneOffset()*60;
 function plan(r){const S=r.side==='short',sg=S?-1:1,c=r.cisd,m=r.main;if(r.kind==='near'||!m||!m.sc)return null;
- const sl=r.ext*(1+(S?0.001:-0.001)),entry=c&&c.lvl&&c.ok?c.lvl:null,mid=(m.sc.h+m.sc.l)/2,opp=S?m.sc.l:m.sc.h;
+ const sl=r.ext*(1+(S?0.001:-0.001)),entry=c&&c.lvl&&c.ok&&!c.lost?c.lvl:null,mid=(m.sc.h+m.sc.l)/2,opp=S?m.sc.l:m.sc.h;
  const rr=t=>entry?((t-entry)*sg)/((entry-sl)*sg):null;return {sl,entry,mid,opp,rr1:rr(mid),rr2:rr(opp),risk:entry?Math.abs(entry-sl)/entry*100:null}}
 function openDet(r,keep){openK=r.key;const el=Q('#hxList'),btn=el.querySelector(`.hxc[data-k="${CSS.escape(r.key)}"]`);if(!btn)return;
  el.querySelectorAll('.hxdet').forEach(x=>x.remove());el.querySelectorAll('.hxc.on').forEach(x=>x.classList.remove('on'));btn.classList.add('on');
@@ -1524,7 +1526,7 @@ function openDet(r,keep){openK=r.key;const el=Q('#hxList'),btn=el.querySelector(
  const tfb=[['5','5m'],['15','15m'],['60','1H'],['240','4H']].map(t=>`<button data-t="${t[0]}" class="${CTF===t[0]?'on':''}">${t[1]}</button>`).join('');
  const story=r.kind==='near'?`Cena je ${r.hits[0].dist.toFixed(2)} % od ${r.hits[0].name}. Sweepa še ni – čakaj, da sveča gre čez nivo in se vrne.`:
   `${r.hits.filter(h=>h.kind!=='near').map(h=>`${TFN[h.tf][0].toUpperCase()+TFN[h.tf].slice(1)} sveča je vzela ${h.name} ${fmt(h.lvl)}${h.kind==='conf'?' in zaprla nazaj (potrjeno, ICT X »2«)':h.kind==='live'?', cena je spet '+(S?'pod':'nad')+' nivojem':', cena je še '+(S?'nad':'pod')+' nivojem'}`).join('. ')}. Ekstrem ${fmt(r.ext)}.`+
-  (c&&!c.na?` CISD ${LTF}m je ${fmt(c.lvl)}${c.ok?' – potrjen ob '+dhm(c.tC):' – še ni potrjen (čakaj zaprtje sveče '+(S?'pod':'nad')+' njim)'}.`:'');
+  (c&&!c.na?` CISD ${LTF}m je ${fmt(c.lvl)}${c.ok?' – potrjen ob '+dhm(c.tC)+(c.lost?', a cena je spet '+(S?'nad':'pod')+' njim (CISD izgubljen)':''):' – še ni potrjen (čakaj zaprtje sveče '+(S?'pod':'nad')+' njim)'}.`:'');
  d.innerHTML=`<h3>${r.base} · ${S?'SHORT':'LONG'} · ${KN[r.kind]}</h3><p class="story" style="margin:0 0 6px">${story}</p>
   <div class="tfs">${tfb}<a href="https://www.tradingview.com/chart/?symbol=BYBIT%3A${r.sym}.P" target="_blank" rel="noopener">TradingView ↗</a></div>
   <div id="hxCh"><div class="empty">Nalagam graf …</div></div><div class="hxleg" id="hxLeg"></div>
