@@ -186,6 +186,26 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
 .vxlinks{display:flex;gap:8px;margin-top:12px}.vxlinks a{flex:1;text-align:center;text-decoration:none;color:var(--ink);background:var(--s1);border:1px solid var(--line);border-radius:var(--r2);padding:10px;font-weight:700;font-size:13px}
 @media (min-width:900px){#vxDet{left:92px;top:57px}.vxdtop{padding-top:10px}}
 @media (prefers-reduced-motion:no-preference){.det{animation:op .18s ease-out}@keyframes op{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}}
+/* ===== HTF sweep (PDH/PDL, PWH/PWL, PMH/PML) – zaslon #htf, 25. 10. 2026 ===== */
+@media (max-width:899px){.tabs{grid-template-columns:repeat(7,1fr)}.tabs button{font-size:10px}}
+.hxbar{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12.5px;color:var(--mut);margin:-4px 0 10px}.hxbar b{color:var(--ink)}
+.hxprog{height:3px;border-radius:2px;background:var(--s2);overflow:hidden;margin:0 0 10px}.hxprog i{display:block;height:100%;width:0;background:var(--buoy);transition:width .3s}
+#hxList .cards{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.hxc{border:1px solid var(--line);border-radius:var(--r1);background:var(--s1);padding:12px 13px;cursor:pointer;display:flex;flex-direction:column;gap:7px;text-align:left;width:100%;position:relative;color:var(--ink)}
+.hxc:hover{border-color:var(--mut)}.hxc.S{box-shadow:inset 3px 0 0 var(--short)}.hxc.L{box-shadow:inset 3px 0 0 var(--long)}.hxc.on{border-color:var(--buoy);box-shadow:var(--glow)}
+.hxh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.hxh .px b{display:block;font-size:15px}
+.hxst{display:inline-block;border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:700;border:1px solid var(--line);color:var(--mut)}
+.hxst.live{color:var(--buoy);border-color:var(--buoy);background:var(--buoybg)}.hxst.conf{color:var(--ink);border-color:var(--ink)}.hxst.above{color:var(--mut)}.hxst.near{color:var(--mut);border-style:dashed}
+.hit.ab{background:none;border-style:dashed;color:var(--mut)}
+.hxst.ok{color:var(--long);border-color:var(--long);background:var(--longbg)}.hxst.wt{color:var(--mut)}
+.hxnew{position:absolute;top:-7px;right:10px;background:var(--buoy);color:var(--btnink);font-size:10px;font-weight:800;border-radius:5px;padding:1px 6px;letter-spacing:.04em}
+.hxk{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.hxk>div{background:var(--s2);border:1px solid var(--line);border-radius:var(--r2);padding:5px 8px;font-variant-numeric:tabular-nums;min-width:0}
+.hxk span{display:block;font-size:10.5px;color:var(--mut)}.hxk b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.hxdet{grid-column:1/-1;border:1px solid var(--buoy);border-radius:var(--r1);background:var(--s1);padding:12px 14px}
+.hxdet h3{margin:0 0 4px;font:700 18px/1.2 var(--hd)}
+#hxCh{height:min(58vh,500px);min-height:300px;overflow:hidden;border-radius:var(--r2);border:1px solid var(--line);background:var(--s1)}#hxCh iframe{width:100%;height:100%;border:0;display:block}
+.hxleg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--mut);margin:6px 0 0}.hxleg i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.hxplan{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px}.hxplan>div{background:var(--s2);border:1px solid var(--line);border-radius:var(--r2);padding:6px 9px;font-variant-numeric:tabular-nums}.hxplan span{display:block;font-size:11px;color:var(--mut)}.hxplan b{font-size:14px}
 </style>
 </head>
 <body>
@@ -277,6 +297,23 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
     <div class="tw"><div id="logTbl"><div class="empty">Nalagam…</div></div></div>
   </section>
 
+  <section class="view" id="v-htf">
+    <h2>Sweep PDH / PWH</h2>
+    <p class="lead">Kovanci, kjer je dnevna, tedenska ali mesečna sveča vzela prejšnji high ali low (PDH/PDL, PWH/PWL, PMH/PML) in se je cena vrnila čez nivo. Pri vsakem je še CISD na nižjem okvirju. Tapni kovanec za graf in načrt.</p>
+    <div class="ctl">
+      <div class="seg" id="hxSide"><button data-v="all">Oba</button><button data-v="short">Short</button><button data-v="long">Long</button></div>
+      <select id="hxTf" title="Okvir nivoja"><option value="all">D + W + M</option><option value="D">Samo dnevni (PDH/PDL)</option><option value="W">Samo tedenski (PWH/PWL)</option><option value="M">Samo mesečni (PMH/PML)</option></select>
+      <select id="hxSt" title="Stanje"><option value="all">Vsa stanja</option><option value="sweep">Samo sweep (zdaj + včeraj)</option><option value="live">Sweep zdaj</option><option value="conf">Potrjen (zaprta sveča)</option><option value="near">Blizu nivoja</option></select>
+      <select id="hxUni" title="Kovanci po prometu 24h"><option value="2">Promet ≥ 2 M $</option><option value="5">Promet ≥ 5 M $</option><option value="10">Promet ≥ 10 M $</option><option value="50">Promet ≥ 50 M $</option></select>
+      <select id="hxLtf" title="Okvir za CISD"><option value="5">CISD 5m</option><option value="15">CISD 15m</option></select>
+      <button class="ib" id="hxRf" title="Skeniraj zdaj">↻</button>
+    </div>
+    <div class="pts"><button class="pt tog" id="hxCisd" title="Pokaži samo kovance s potrjenim CISD v smeri sweepa">Samo s CISD</button><button class="pt tog" id="hxNear" title="Pokaži tudi kovance, ki so blizu nivoja (še brez sweepa)">Tudi blizu nivoja</button></div>
+    <div class="hxbar" id="hxBar">nalagam …</div>
+    <div class="hxprog"><i id="hxProg"></i></div>
+    <div id="hxList"><div class="empty">Skeniram trg …</div></div>
+    <p class="foot">Nivoji so iz zaprtih Bybit sveč (dan od polnoči UTC = 1:00 pozimi, 2:00 poleti; teden od ponedeljka; mesec od 1.). Sweep = sveča je šla čez prejšnji high/low, cena pa je spet na drugi strani. Sweepov, od katerih je cena že odšla (dnevni več kot 2,5 %, tedenski 4 %, mesečni 6 % od nivoja), ne kažemo. CISD = zaprtje sveče skozi odprtje serije sveč, ki je naredila ekstrem. Skener se osveži vsake 3 min, cene vsakih 20 s. Ni finančni nasvet.</p>
+  </section>
   <section class="view" id="v-rules">
     <div class="rules">
       <h2>Pravila</h2>
@@ -344,6 +381,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
   <button data-v="screener"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>Screener</button>
   <button data-v="bias"><svg viewBox="0 0 24 24"><path d="M2 15c2.5 0 3.5-3 6-3s3.5 3 6 3 3.5-3 6-3"/><path d="M2 20c2.5 0 3.5-3 6-3s3.5 3 6 3 3.5-3 6-3"/><path d="M12 3v6"/></svg>Bias</button>
   <button data-v="log"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M9 12h6M9 16h6"/></svg>Log</button>
+  <button data-v="htf"><svg viewBox="0 0 24 24"><path d="M3 7h18" stroke-dasharray="2.5 2.5"/><path d="M5 20V12l3-3v-5M12 20v-6M16 20V9l3-3"/><path d="M8 4l1.5 1.5"/></svg>HTF</button>
   <button data-v="rules"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>Pravila</button>
 </nav>
 <script>
@@ -577,12 +615,13 @@ async function tickers(){if(TK&&Date.now()-TKT<60000)return TK;TK=(await jget(AP
 async function topCrypto(n){var cs=await cryptoSet(),tk=await tickers();return tk.filter(function(x){return cs[x.symbol]&&+x.lastPrice>0}).sort(function(a,b){return +b.turnover24h-(+a.turnover24h)}).slice(0,n).map(function(x){return x.symbol.replace(/USDT$/,'')})}
 
 // ---------- navigacija (vsak zaslon je svoje "okno", tudi z gumbom nazaj)
-var VIEWS=['limits','vault','screener','bias','log','rules'],started={};
+var VIEWS=['limits','vault','screener','bias','log','htf','rules'],started={};
 function show(v){var vsub=null;if(v&&v.indexOf('vault/')===0){vsub=decodeURIComponent(v.slice(6));v='vault'}if(VIEWS.indexOf(v)<0)v='limits';
   if(window.VX)VX.route(v==='vault',vsub);
   VIEWS.forEach(function(x){$('v-'+x).classList.toggle('on',x===v)});
   document.querySelectorAll('.tabs button').forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});
   if(!started[v]){started[v]=1;if(v==='limits'||v==='log')run();}
+  if(v==='htf'&&window.HTF)HTF.start();
   window.scrollTo(0,0);}
 document.querySelectorAll('.tabs button').forEach(function(b){b.onclick=function(){location.hash=b.dataset.v}});
 $('biasPill').onclick=function(){location.hash='bias'};
@@ -1350,6 +1389,184 @@ window.VX={route(on,sub){if(!on){closeCard();return}start();if(sub){if(V.cards.l
 })();
 (function(){var h=location.hash.slice(1);if(h==='vault'||h.indexOf('vault/')===0)VX.route(true,h.indexOf('vault/')===0?decodeURIComponent(h.slice(6)):null)})();
 /*VAULT-END*/
+</script>
+<script>
+/*HTF*/
+// Sweep PDH/PWH skener (zaslon #htf, 25. 10. 2026). Išče kovance, kjer je D/W/M sveča vzela prejšnji high/low
+// (PDH/PDL, PWH/PWL, PMH/PML) in je cena spet na drugi strani nivoja (= sweep). Zaprta sveča s sweepom = "potrjen" (ICT X "2").
+// CISD: odprtje PRVE sveče v seriji, ki je pripeljala do ekstrema; potrjen, ko ZAPRTA sveča nižjega okvirja zapre čez nivo.
+// Uporablja globalni cryptoSet() iz te datoteke. Vse je v IIFE, ven gre samo window.HTF.
+(function(){
+const Q=s=>document.querySelector(s),API2='https://api.bybit.com/v5/market/';
+const ls=(k,d)=>{try{const v=localStorage.getItem('htf_'+k);return v==null?d:v}catch(e){return d}},ss=(k,v)=>{try{localStorage.setItem('htf_'+k,v)}catch(e){}};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const dec=v=>{const a=Math.abs(v);return a>=1000?1:a>=100?2:a>=1?3:a>=0.01?5:7};
+const fmt=v=>v==null||isNaN(v)?'–':(+v).toFixed(dec(v));
+const pc=(v,d)=>v==null||isNaN(v)?'–':(v>0?'+':'')+v.toFixed(d==null?2:d)+' %';
+const big=v=>v>=1e9?(v/1e9).toFixed(2)+' B':v>=1e6?(v/1e6).toFixed(1)+' M':v>=1e3?(v/1e3).toFixed(0)+' K':(+v).toFixed(0);
+const hm=t=>new Date(t).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
+const dhm=t=>{const d=new Date(t),n=new Date();return (d.toDateString()===n.toDateString()?'danes ':d.getDate()+'. '+(d.getMonth()+1)+'. ')+hm(t)};
+const esc2=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const NAME={D:['PDH','PDL'],W:['PWH','PWL'],M:['PMH','PML']},TFW={D:1,W:2,M:3},TFN={D:'dnevna',W:'tedenska',M:'mesečna'};
+const KW={live:4,conf:3,above:1,near:0},KN={live:'Sweep zdaj',conf:'Potrjen sweep',above:'Čez nivo – še ni nazaj',near:'Blizu nivoja'};
+const IVMS={'5':3e5,'15':9e5,'60':36e5,'240':144e5};
+let SIDE=ls('side','all'),TFF=ls('tf','all'),STF=ls('st','sweep'),UNI=ls('uni','5'),LTF=ls('ltf','15'),ONLYC=ls('oc','0')==='1',NEAR=ls('near','0')==='1',CTF=ls('ctf','15');
+let BARS={},TKM={},CIS={},ROWS=[],UNIV=[],busy=false,lastScan=0,started=false,openK=null,tScan=null,tPx=null,tBar=null;
+let SEEN=new Set(),NEWK=new Set();try{SEEN=new Set(JSON.parse(ls('seen','[]')))}catch(e){}
+let CH=null,SER=null,CK=[],chartKey='';
+
+async function kl(sym,iv,lim){const r=await (await fetch(API2+'kline?category=linear&symbol='+sym+'&interval='+iv+'&limit='+lim,{cache:'no-store'})).json();if(r.retCode!==0)throw new Error(r.retMsg);return r.result.list.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4]})).reverse()}
+async function pool(items,n,fn,prog){let i=0,d=0;const w=async()=>{while(i<items.length){const k=items[i++];try{await fn(k)}catch(e){}d++;if(prog)prog(d/items.length)}};await Promise.all(Array.from({length:n},w))}
+async function loadTk(){const r=await (await fetch(API2+'tickers?category=linear',{cache:'no-store'})).json();if(r.retCode!==0)return;const m={};r.result.list.forEach(t=>{m[t.symbol]={p:+t.lastPrice,ch:+t.price24hPcnt*100,to:+t.turnover24h}});TKM=m}
+
+/*HTF-CORE*/
+// b = naraščajoče sveče okvirja: [.., predprejšnja, prejšnja (zaprta), trenutna (odprta)]; p = trenutna cena
+function evalTf(b,tf,p){const out=[];if(!b||b.length<3)return out;const n=b.length,cur=b[n-1],pr=b[n-2],pp=b[n-3];
+ const hi=Math.max(cur.h,p),lo=Math.min(cur.l,p),far=v=>Math.abs(p-v)/v*100>(tf==='D'?2.5:tf==='W'?4:6);
+ // sweep, od katerega je cena že odšla (D > 2,5 %, W > 4 %, M > 6 % od nivoja), ni več vstop → ga ne kažemo
+ // 1) sweep v odprti sveči: šla je čez prejšnji high/low; "live" = cena je spet na drugi strani, "above" = še čez
+ if(hi>pr.h&&!far(pr.h))out.push({tf,side:'short',kind:p<pr.h?'live':'above',lvl:pr.h,name:NAME[tf][0],ext:hi,t0:cur.t,t1:null,sc:pr});
+ if(lo<pr.l&&!far(pr.l))out.push({tf,side:'long',kind:p>pr.l?'live':'above',lvl:pr.l,name:NAME[tf][1],ext:lo,t0:cur.t,t1:null,sc:pr});
+ // 2) potrjen: prejšnja (zaprta) sveča je vzela high/low predprejšnje in zaprla nazaj (ICT X "2"); odprta sveča ekstrema ni presegla
+ if(pr.h>pp.h&&pr.c<pp.h&&hi<=pr.h&&!far(pp.h))out.push({tf,side:'short',kind:'conf',lvl:pp.h,name:NAME[tf][0],ext:pr.h,t0:pr.t,t1:cur.t,sc:pp});
+ if(pr.l<pp.l&&pr.c>pp.l&&lo>=pr.l&&!far(pp.l))out.push({tf,side:'long',kind:'conf',lvl:pp.l,name:NAME[tf][1],ext:pr.l,t0:pr.t,t1:cur.t,sc:pp});
+ // 3) blizu nivoja, še brez sweepa (D 0,5 %, W 1 %, M 1,5 %)
+ const nz=tf==='D'?0.5:tf==='W'?1:1.5;
+ if(hi<=pr.h&&(pr.h-p)/p*100<=nz)out.push({tf,side:'short',kind:'near',lvl:pr.h,name:NAME[tf][0],ext:null,dist:(pr.h-p)/p*100,sc:pr});
+ if(lo>=pr.l&&(p-pr.l)/p*100<=nz)out.push({tf,side:'long',kind:'near',lvl:pr.l,name:NAME[tf][1],ext:null,dist:(p-pr.l)/p*100,sc:pr});
+ return out}
+// CISD na nižjem okvirju k (naraščajoče): ekstrem v oknu [t0,t1); nivo = odprtje prve sveče v seriji, ki je pripeljala do ekstrema
+function cisdOf(k,side,t0,t1,now,ivMs,want0){const S=side==='short';let e=-1,ex=S?-Infinity:Infinity;
+ if(!k.length)return {na:true};
+ for(let i=0;i<k.length;i++){const b=k[i];if(b.t<t0||(t1&&b.t>=t1))continue;if(S?b.h>ex:b.l<ex){ex=S?b.h:b.l;e=i}}
+ if(e<0)return {na:true};
+ // ekstrem starejši od naloženih sveč nižjega okvirja (npr. mesečni) → CISD ni v obsegu
+ if(want0!=null&&Math.abs(ex-want0)/want0>0.0008)return {na:true};
+ const up=b=>b.c>=b.o,want=b=>S?up(b):!up(b);
+ let j=e;if(!want(k[j]))j=e-1;
+ if(j<0||!want(k[j]))j=e;else while(j>0&&want(k[j-1]))j--;
+ const lvl=k[j].o;let ci=-1;
+ for(let q=e;q<k.length;q++){const b=k[q];if(b.t+ivMs>now)break;if(S?b.c<lvl:b.c>lvl){ci=q;break}}
+ return {lvl,ok:ci>=0,tC:ci>=0?k[ci].t:null,tE:k[e].t,tS:k[j].t,ext:ex,cut:k[0].t>t0}}
+/*HTF-CORE-END*/
+
+function rowsFor(sym){const B=BARS[sym],tk=TKM[sym];if(!B||!tk||!tk.p)return[];const p=tk.p,hits=[];
+ ['D','W','M'].forEach(tf=>hits.push(...evalTf(B[tf],tf,p)));
+ const by={};hits.forEach(h=>{(by[h.side]=by[h.side]||[]).push(h)});
+ return Object.keys(by).map(side=>{const hs=by[side].sort((a,b)=>KW[b.kind]-KW[a.kind]||TFW[b.tf]-TFW[a.tf]);
+  const sw=hs.filter(h=>h.kind==='live'||h.kind==='conf'||h.kind==='above'),top=hs[0];
+  // glavni zadetek = najmočnejše stanje; med enakimi najbolj skrajen ekstrem, pri enakem manjši okvir (svežje okno za CISD)
+  const tops=sw.length?sw.filter(h=>h.kind===top.kind):[top];
+  const main=tops.slice().sort((a,b)=>(side==='short'?b.ext-a.ext:a.ext-b.ext)||TFW[a.tf]-TFW[b.tf])[0];
+  const key=sym+'|'+side,c=CIS[key]||null;
+  const r={key,sym,base:sym.replace(/USDT$/,''),side,hits:hs,kind:top.kind,main,ext:main.ext,p,ch:tk.ch,to:tk.to,cisd:c};
+  r.depth=sw.length?Math.abs(main.ext-main.lvl)/main.lvl*100:null;
+  r.toC=c&&c.lvl?(p-c.lvl)/p*100:null;
+  r.score=KW[r.kind]*10+(c&&c.ok?15:0)+hs.filter(h=>h.kind!=='near').reduce((s,h)=>s+TFW[h.tf]*3,0);
+  return r})}
+function rebuild(){const out=[];UNIV.forEach(s=>out.push(...rowsFor(s)));ROWS=out.sort((a,b)=>b.score-a.score||b.to-a.to)}
+
+async function scan(force){if(busy)return;if(!force&&Date.now()-lastScan<170000)return;busy=true;const pr=Q('#hxProg');pr.style.width='2%';
+ try{await loadTk();const cs=await cryptoSet(),min=+UNI*1e6;
+  UNIV=Object.keys(TKM).filter(s=>cs[s]&&TKM[s].p>0&&TKM[s].to>=min).sort((a,b)=>TKM[b].to-TKM[a].to);
+  bar('pregledujem '+UNIV.length+' kovancev …');
+  await pool(UNIV,8,async s=>{const [D,W,M]=await Promise.all([kl(s,'D',3),kl(s,'W',3),kl(s,'M',3)]);BARS[s]={D,W,M}},f=>{pr.style.width=(2+f*78)+'%'});
+  CIS={};rebuild();
+  const need=ROWS.filter(r=>r.kind==='live'||r.kind==='conf'||r.kind==='above'),now=Date.now(),iv=IVMS[LTF];
+  await pool(need,6,async r=>{const k=await kl(r.sym,LTF,1000),m=r.main;CIS[r.key]=cisdOf(k,r.side,m.t0,m.t1,now,iv,m.ext)},f=>{pr.style.width=(80+f*20)+'%'});
+  rebuild();lastScan=Date.now();
+  const keys=ROWS.filter(r=>r.kind==='live'||r.kind==='conf').map(r=>r.key+'|'+r.kind);
+  NEWK=new Set(SEEN.size?keys.filter(k=>!SEEN.has(k)):[]);SEEN=new Set(keys);ss('seen',JSON.stringify(keys));
+  render()}catch(e){bar('<span class="dn">Napaka pri branju Bybita: '+esc2(e.message||e)+'</span>')}
+ finally{busy=false;setTimeout(()=>{pr.style.width='0'},600)}}
+async function pxTick(){if(busy||!UNIV.length||location.hash!=='#htf'||document.hidden)return;try{await loadTk();rebuild();render(true)}catch(e){}}
+
+function filt(){return ROWS.filter(r=>{if(SIDE!=='all'&&r.side!==SIDE)return false;
+ if(TFF!=='all'&&!r.hits.some(h=>h.tf===TFF&&(r.kind==='near'||h.kind!=='near')))return false;
+ if(STF==='sweep'&&!(r.kind==='live'||r.kind==='conf'))return false;
+ if(STF==='live'&&r.kind!=='live')return false;if(STF==='conf'&&r.kind!=='conf'&&!r.hits.some(h=>h.kind==='conf'))return false;
+ if(STF==='near'&&r.kind!=='near')return false;
+ if(STF==='all'&&r.kind==='near'&&!NEAR)return false;
+ if(ONLYC&&!(r.cisd&&r.cisd.ok))return false;return true})}
+function bar(msg){const el=Q('#hxBar');if(msg){el.innerHTML=msg;return}
+ const sw=ROWS.filter(r=>r.kind==='live'||r.kind==='conf'),okc=sw.filter(r=>r.cisd&&r.cisd.ok).length,left=Math.max(0,180-Math.round((Date.now()-lastScan)/1000));
+ el.innerHTML=lastScan?`<span><b>${UNIV.length}</b> kovancev</span><span><b>${sw.length}</b> sweepov · <b>${okc}</b> s CISD</span><span>skenirano ${hm(lastScan)}</span><span>naslednje čez ${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}</span>`:'nalagam …'}
+function lvChips(r){return r.hits.filter(h=>r.kind==='near'||h.kind!=='near').map(h=>`<span class="hit${h.kind==='above'?' ab':''}" title="${TFN[h.tf]} sveča · ${KN[h.kind]}">${h.name}${h.kind==='conf'?' ✓':''} ${fmt(h.lvl)}</span>`).join('')}
+function cisdTxt(r){const c=r.cisd;if(r.kind==='near')return ['–','mut'];if(!c)return ['…','mut'];if(c.na)return ['ni v obsegu','mut'];return [fmt(c.lvl)+(c.ok?' ✓':' · čaka'),c.ok?'up':'mut']}
+function card(r){const S=r.side==='short',ct=cisdTxt(r),nw=NEWK.has(r.key+'|'+r.kind);
+ const stc=r.kind,lab=r.kind==='near'?'Blizu '+r.hits[0].name+' ('+r.hits[0].dist.toFixed(2)+' %)':KN[r.kind];
+ return `<button class="hxc ${S?'S':'L'}${openK===r.key?' on':''}" data-k="${r.key}">${nw?'<span class="hxnew">NOVO</span>':''}
+ <div class="hxh"><div><div class="coin">${r.base}</div><span class="side ${r.side}">${S?'SHORT':'LONG'}</span> <span class="hxst ${stc}">${lab}</span>${r.cisd&&r.cisd.ok?' <span class="hxst ok">CISD ✓</span>':''}</div>
+ <div class="px"><b>${fmt(r.p)}</b><small class="${r.ch>=0?'up':'dn'}">${pc(r.ch)}</small></div></div>
+ <div class="vbd">${lvChips(r)}</div>
+ <div class="hxk"><div><span>${r.kind==='near'?'Nivo':'Ekstrem (za SL)'}</span><b>${fmt(r.kind==='near'?r.hits[0].lvl:r.ext)}</b></div><div><span>CISD ${LTF}m</span><b class="${ct[1]}">${ct[0]}</b></div><div><span>${r.kind==='near'?'Do nivoja':'Cena do CISD'}</span><b>${r.kind==='near'?r.hits[0].dist.toFixed(2)+' %':pc(r.toC)}</b></div></div>
+ <div class="cf" style="display:flex;justify-content:space-between;font-size:12px;color:var(--mut)"><span>${r.depth!=null?'čez nivo '+r.depth.toFixed(2)+' %':''}</span><span>promet ${big(r.to)} $</span></div></button>`}
+function render(soft){bar();const L=filt(),el=Q('#hxList');
+ if(soft&&document.querySelector('#hxList .hxdet')){// med odprtim grafom osveži samo številke na karticah
+  L.forEach(r=>{const b=el.querySelector(`.hxc[data-k="${CSS.escape(r.key)}"]`);if(b){const t=document.createElement('div');t.innerHTML=card(r);b.replaceWith(t.firstElementChild)}});return}
+ if(!lastScan&&!ROWS.length){el.innerHTML='<div class="empty">Skeniram trg …</div>';return}
+ if(!L.length){el.innerHTML='<div class="empty">Trenutno ni kovancev s tem filtrom. Poskusi »Vsa stanja« ali nižji promet.</div>';return}
+ el.innerHTML='<div class="cards">'+L.map(card).join('')+'</div>';
+ if(openK){const r=ROWS.find(x=>x.key===openK);if(r)openDet(r,true);else openK=null}}
+
+// ---------- podrobnosti + graf
+let lwP2=null;const lw=()=>window.LightweightCharts?Promise.resolve():(lwP2||(lwP2=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js';s.onload=res;s.onerror=()=>{lwP2=null;rej()};document.head.appendChild(s)})));
+const TZ=-new Date().getTimezoneOffset()*60;
+function plan(r){const S=r.side==='short',sg=S?-1:1,c=r.cisd,m=r.main;if(r.kind==='near'||!m||!m.sc)return null;
+ const sl=r.ext*(1+(S?0.001:-0.001)),entry=c&&c.lvl&&c.ok?c.lvl:null,mid=(m.sc.h+m.sc.l)/2,opp=S?m.sc.l:m.sc.h;
+ const rr=t=>entry?((t-entry)*sg)/((entry-sl)*sg):null;return {sl,entry,mid,opp,rr1:rr(mid),rr2:rr(opp),risk:entry?Math.abs(entry-sl)/entry*100:null}}
+function openDet(r,keep){openK=r.key;const el=Q('#hxList'),btn=el.querySelector(`.hxc[data-k="${CSS.escape(r.key)}"]`);if(!btn)return;
+ el.querySelectorAll('.hxdet').forEach(x=>x.remove());el.querySelectorAll('.hxc.on').forEach(x=>x.classList.remove('on'));btn.classList.add('on');
+ const grid=btn.parentElement,cols=getComputedStyle(grid).gridTemplateColumns.split(' ').length,idx=[...grid.children].indexOf(btn);
+ let after=btn;for(let i=idx+1;i<grid.children.length&&(i%cols)!==0;i++)after=grid.children[i];
+ const d=document.createElement('div');d.className='hxdet';after.after(d);
+ const S=r.side==='short',P=plan(r),c=r.cisd;
+ const tfb=[['5','5m'],['15','15m'],['60','1H'],['240','4H']].map(t=>`<button data-t="${t[0]}" class="${CTF===t[0]?'on':''}">${t[1]}</button>`).join('');
+ const story=r.kind==='near'?`Cena je ${r.hits[0].dist.toFixed(2)} % od ${r.hits[0].name}. Sweepa še ni – čakaj, da sveča gre čez nivo in se vrne.`:
+  `${r.hits.filter(h=>h.kind!=='near').map(h=>`${TFN[h.tf][0].toUpperCase()+TFN[h.tf].slice(1)} sveča je vzela ${h.name} ${fmt(h.lvl)}${h.kind==='conf'?' in zaprla nazaj (potrjeno, ICT X »2«)':h.kind==='live'?', cena je spet '+(S?'pod':'nad')+' nivojem':', cena je še '+(S?'nad':'pod')+' nivojem'}`).join('. ')}. Ekstrem ${fmt(r.ext)}.`+
+  (c&&!c.na?` CISD ${LTF}m je ${fmt(c.lvl)}${c.ok?' – potrjen ob '+dhm(c.tC):' – še ni potrjen (čakaj zaprtje sveče '+(S?'pod':'nad')+' njim)'}.`:'');
+ d.innerHTML=`<h3>${r.base} · ${S?'SHORT':'LONG'} · ${KN[r.kind]}</h3><p class="story" style="margin:0 0 6px">${story}</p>
+  <div class="tfs">${tfb}<a href="https://www.tradingview.com/chart/?symbol=BYBIT%3A${r.sym}.P" target="_blank" rel="noopener">TradingView ↗</a></div>
+  <div id="hxCh"><div class="empty">Nalagam graf …</div></div><div class="hxleg" id="hxLeg"></div>
+  ${P?`<div class="hxplan"><div><span>Vstop (retest CISD)</span><b>${P.entry?fmt(P.entry):'čakaj CISD'}</b></div><div><span>SL (za ekstremom)</span><b class="dn">${fmt(P.sl)}</b></div><div><span>TP1 · 50 % sveče</span><b class="up">${fmt(P.mid)}</b>${P.rr1!=null?`<span>${P.rr1.toFixed(2)} R</span>`:''}</div><div><span>TP2 · ${S?'low':'high'} sveče</span><b class="up">${fmt(P.opp)}</b>${P.rr2!=null?`<span>${P.rr2.toFixed(2)} R</span>`:''}</div>${P.risk!=null?`<div><span>Razdalja do SL</span><b>${P.risk.toFixed(2)} %</b></div>`:''}</div>
+  <p class="foot">Načrt po SMC X: vstop na retestu CISD, SL za svečo, ki je naredila sweep, tarča 50 % in nasprotni rob posweepane sveče. Pred vstopom preveri na TradingViewu.</p>`:''}`;
+ d.querySelectorAll('.tfs button').forEach(b=>b.onclick=e=>{e.stopPropagation();CTF=b.dataset.t;ss('ctf',CTF);d.querySelectorAll('.tfs button').forEach(x=>x.classList.toggle('on',x===b));chart(r)});
+ if(!keep)d.scrollIntoView({behavior:'smooth',block:'nearest'});chart(r)}
+function killChart(){if(CH){try{CH.remove()}catch(e){}}CH=null;SER=null;chartKey=''}
+async function chart(r){const key=r.key+'|'+CTF;try{await lw();const k=await kl(r.sym,CTF,500);if(openK!==r.key)return;const box=Q('#hxCh');if(!box)return;
+ killChart();box.innerHTML='';chartKey=key;CK=k;
+ const up=css('--long'),dn=css('--short'),mut=css('--mut'),line=css('--line'),bg=css('--s1'),buoy=css('--buoy'),p=dec(r.p);
+ CH=LightweightCharts.createChart(box,{autoSize:true,layout:{background:{type:'solid',color:bg},textColor:mut,fontSize:11,fontFamily:'Figtree, system-ui, sans-serif'},grid:{vertLines:{color:css('--grid')},horzLines:{color:css('--grid')}},rightPriceScale:{borderColor:line},timeScale:{borderColor:line,timeVisible:true,secondsVisible:false,rightOffset:6},crosshair:{mode:LightweightCharts.CrosshairMode.Normal},localization:{locale:'sl-SI',priceFormatter:v=>v.toFixed(p)}});
+ SER=CH.addCandlestickSeries({upColor:up,downColor:dn,borderUpColor:up,borderDownColor:dn,wickUpColor:up,wickDownColor:dn,priceFormat:{type:'price',precision:p,minMove:Math.pow(10,-p)}});
+ SER.setData(k.map(b=>({time:b.t/1000+TZ,open:b.o,high:b.h,low:b.l,close:b.c})));
+ const leg=[],ln=(v,col,t,st,w)=>{if(v==null)return;SER.createPriceLine({price:v,color:col,lineWidth:w||1,lineStyle:st||0,axisLabelVisible:true,title:t});leg.push(`<span><i style="background:${col}"></i>${t} ${fmt(v)}</span>`)};
+ const B=BARS[r.sym],col={D:'#00d1ff',W:'#ffc400',M:'#c86bff'};
+ ['D','W','M'].forEach(tf=>{const b=B&&B[tf];if(!b||b.length<2)return;const pr=b[b.length-2],hit=r.hits.find(h=>h.tf===tf&&h.kind!=='conf');
+  ln(pr.h,col[tf],NAME[tf][0],hit&&hit.side==='short'?0:2,hit&&hit.side==='short'?2:1);ln(pr.l,col[tf],NAME[tf][1],hit&&hit.side==='long'?0:2,hit&&hit.side==='long'?2:1)});
+ r.hits.filter(h=>h.kind==='conf').forEach(h=>ln(h.lvl,col[h.tf],h.name+' (prej)',0,2));
+ if(r.kind!=='near'){ln(r.ext,dn,'Ekstrem',2,1);const c=r.cisd;if(c&&c.lvl)ln(c.lvl,buoy,'CISD '+LTF+'m'+(c.ok?' ✓':''),1,2);
+  const mk=[];if(c&&c.tE)mk.push({time:Math.floor(c.tE/1000/(+CTF*60))*(+CTF*60)+TZ,position:r.side==='short'?'aboveBar':'belowBar',color:buoy,shape:r.side==='short'?'arrowDown':'arrowUp',text:'sweep'});
+  if(c&&c.tC)mk.push({time:Math.floor(c.tC/1000/(+CTF*60))*(+CTF*60)+TZ,position:r.side==='short'?'belowBar':'aboveBar',color:r.side==='short'?dn:up,shape:'circle',text:'CISD'});
+  const t0=k[0].t;SER.setMarkers(mk.filter(m=>m.time>=t0/1000+TZ).sort((a,b)=>a.time-b.time))}
+ Q('#hxLeg').innerHTML=leg.join('');CH.timeScale().scrollToRealTime()}catch(e){const box=Q('#hxCh');if(box&&!CH)box.innerHTML='<div class="empty">Graf se ni naložil.</div>'}}
+
+// ---------- kontrole
+function seg(id,val,set){const el=Q(id);el.querySelectorAll('button').forEach(b=>{b.classList.toggle('on',b.dataset.v===val);b.onclick=()=>{set(b.dataset.v);el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));render()}})}
+function wire(){seg('#hxSide',SIDE,v=>{SIDE=v;ss('side',v)});
+ const sel=(id,v,set)=>{const e=Q(id);e.value=v;e.onchange=()=>set(e.value)};
+ sel('#hxTf',TFF,v=>{TFF=v;ss('tf',v);render()});sel('#hxSt',STF,v=>{STF=v;ss('st',v);render()});
+ sel('#hxUni',UNI,v=>{UNI=v;ss('uni',v);scan(true)});sel('#hxLtf',LTF,v=>{LTF=v;ss('ltf',v);scan(true)});
+ const tog=(id,v,set)=>{const e=Q(id);e.classList.toggle('on',v);e.onclick=()=>{const n=!e.classList.contains('on');e.classList.toggle('on',n);set(n);render()}};
+ tog('#hxCisd',ONLYC,v=>{ONLYC=v;ss('oc',v?'1':'0')});tog('#hxNear',NEAR,v=>{NEAR=v;ss('near',v?'1':'0')});
+ Q('#hxRf').onclick=()=>scan(true);
+ Q('#hxList').onclick=e=>{if(e.target.closest('.hxdet'))return;const b=e.target.closest('.hxc');if(!b)return;const r=ROWS.find(x=>x.key===b.dataset.k);if(!r)return;
+  if(openK===r.key){openK=null;killChart();Q('#hxList').querySelectorAll('.hxdet').forEach(x=>x.remove());b.classList.remove('on');return}openDet(r)};
+ new MutationObserver(()=>{if(openK){const r=ROWS.find(x=>x.key===openK);if(r)chart(r)}}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']})}
+window.HTF={start(){if(!started){started=true;wire();tScan=setInterval(()=>{if(location.hash==='#htf'&&!document.hidden)scan(false)},20000);tPx=setInterval(pxTick,20000);tBar=setInterval(()=>{if(location.hash==='#htf'&&!busy&&lastScan)bar()},1000)}scan(false)},
+ _t:{evalTf,cisdOf}};
+if(location.hash==='#htf')window.HTF.start();
+})();
+/*HTF-END*/
 </script>
 </body>
 </html>
