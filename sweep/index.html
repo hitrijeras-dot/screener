@@ -196,6 +196,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
 .hxh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.hxh .px b{display:block;font-size:15px}
 .hxst{display:inline-block;border-radius:6px;padding:2px 8px;font-size:11.5px;font-weight:700;border:1px solid var(--line);color:var(--mut)}
 .hxst.live{color:var(--buoy);border-color:var(--buoy);background:var(--buoybg)}.hxst.conf{color:var(--ink);border-color:var(--ink)}.hxst.above{color:var(--mut)}.hxst.near{color:var(--mut);border-style:dashed}
+#hxList table.t td.l,#hxList table.t th.l{text-align:left}#hxList table.t td small{display:block;color:var(--mut);font-size:11px}#hxList table.t td .hit{font-size:11px;padding:1px 6px;margin:1px 3px 1px 0}#hxList table.t td .side{font-size:11px}#hxList table.t tr.dr .hxdet{border:0;border-radius:0;border-top:1px solid var(--buoy)}#hxList table.t td.coin b{font:700 14px var(--hd)}
 .hit.ab{background:none;border-style:dashed;color:var(--mut)}
 .hxst.ok{color:var(--long);border-color:var(--long);background:var(--longbg)}.hxst.wt{color:var(--mut)}
 .hxnew{position:absolute;top:-7px;right:10px;background:var(--buoy);color:var(--btnink);font-size:10px;font-weight:800;border-radius:5px;padding:1px 6px;letter-spacing:.04em}
@@ -306,6 +307,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
       <select id="hxSt" title="Stanje"><option value="all">Vsa stanja</option><option value="sweep">Samo sweep (zdaj + včeraj)</option><option value="live">Sweep zdaj</option><option value="conf">Potrjen (zaprta sveča)</option><option value="near">Blizu nivoja</option></select>
       <select id="hxUni" title="Kovanci po prometu 24h"><option value="2">Promet ≥ 2 M $</option><option value="5">Promet ≥ 5 M $</option><option value="10">Promet ≥ 10 M $</option><option value="50">Promet ≥ 50 M $</option></select>
       <select id="hxLtf" title="Okvir za CISD"><option value="5">CISD 5m</option><option value="15">CISD 15m</option></select>
+      <div class="seg" id="hxView"><button data-v="card">Kartice</button><button data-v="table">Tabela</button></div>
       <button class="ib" id="hxRf" title="Skeniraj zdaj">↻</button>
     </div>
     <div class="pts"><button class="pt tog" id="hxCisd" title="Pokaži samo kovance s potrjenim CISD v smeri sweepa">Samo s CISD</button><button class="pt tog" id="hxNear" title="Pokaži tudi kovance, ki so blizu nivoja (še brez sweepa)">Tudi blizu nivoja</button></div>
@@ -1410,6 +1412,7 @@ const esc2=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const NAME={D:['PDH','PDL'],W:['PWH','PWL'],M:['PMH','PML']},TFW={D:1,W:2,M:3},TFN={D:'dnevna',W:'tedenska',M:'mesečna'};
 const KW={live:4,conf:3,above:1,near:0},KN={live:'Sweep zdaj',conf:'Potrjen sweep',above:'Čez nivo – še ni nazaj',near:'Blizu nivoja'};
 const IVMS={'5':3e5,'15':9e5,'60':36e5,'240':144e5};
+let VIEW=ls('view','card'),SORT=ls('sort','score'),DIR=+ls('dir','-1');
 let SIDE=ls('side','all'),TFF=ls('tf','all'),STF=ls('st','sweep'),UNI=ls('uni','5'),LTF=ls('ltf','15'),ONLYC=ls('oc','0')==='1',NEAR=ls('near','0')==='1',CTF=ls('ctf','15');
 let BARS={},TKM={},CIS={},ROWS=[],UNIV=[],busy=false,lastScan=0,started=false,openK=null,tScan=null,tPx=null,tBar=null;
 let SEEN=new Set(),NEWK=new Set();try{SEEN=new Set(JSON.parse(ls('seen','[]')))}catch(e){}
@@ -1451,6 +1454,9 @@ function cisdOf(k,side,t0,t1,now,ivMs,want0){const S=side==='short';let e=-1,ex=
  return {lvl,ok:ci>=0,tC:ci>=0?k[ci].t:null,tE:k[e].t,tS:k[j].t,ext:ex,cut:k[0].t>t0}}
 /*HTF-CORE-END*/
 
+// prvi bar nižjega okvirja v oknu [t0,t1), ki je šel čez nivo = čas sweepa; če podatki ne sežejo do začetka okna in je čez že prvi bar → neznano (starejše)
+function firstCross(k,side,lvl,t0,t1){let first=true;for(const b of k){if(b.t<t0||(t1&&b.t>=t1))continue;if(side==='short'?b.h>lvl:b.l<lvl){if(first&&k[0].t>t0)return {old:true};return {t:b.t}}first=false}return null}
+const ago=t=>{const m=Math.round((Date.now()-t)/6e4);return m<60?'pred '+m+' min':m<1440?'pred '+Math.floor(m/60)+' h '+(m%60?m%60+' min':''):'pred '+Math.floor(m/1440)+' d'};
 function rowsFor(sym){const B=BARS[sym],tk=TKM[sym];if(!B||!tk||!tk.p)return[];const p=tk.p,hits=[];
  ['D','W','M'].forEach(tf=>hits.push(...evalTf(B[tf],tf,p)));
  const by={};hits.forEach(h=>{(by[h.side]=by[h.side]||[]).push(h)});
@@ -1464,6 +1470,7 @@ function rowsFor(sym){const B=BARS[sym],tk=TKM[sym];if(!B||!tk||!tk.p)return[];c
   r.depth=sw.length?Math.abs(main.ext-main.lvl)/main.lvl*100:null;
   r.toC=c&&c.lvl?(p-c.lvl)/p*100:null;
   if(c&&c.ok)c.lost=side==='short'?p>c.lvl:p<c.lvl;
+  hs.forEach(h=>{h.ts=c&&c.tm?c.tm[h.tf+h.kind]||null:null});r.tSw=main.ts&&main.ts.t?main.ts.t:null;r.swOld=!!(main.ts&&main.ts.old);
   r.score=KW[r.kind]*10+(c&&c.ok&&!c.lost?15:0)+hs.filter(h=>h.kind!=='near').reduce((s,h)=>s+TFW[h.tf]*3,0);
   return r})}
 function rebuild(){const out=[];UNIV.forEach(s=>out.push(...rowsFor(s)));ROWS=out.sort((a,b)=>b.score-a.score||b.to-a.to)}
@@ -1475,7 +1482,7 @@ async function scan(force){if(busy)return;if(!force&&Date.now()-lastScan<170000)
   await pool(UNIV,8,async s=>{const [D,W,M]=await Promise.all([kl(s,'D',3),kl(s,'W',3),kl(s,'M',3)]);BARS[s]={D,W,M}},f=>{pr.style.width=(2+f*78)+'%'});
   CIS={};rebuild();
   const need=ROWS.filter(r=>r.kind==='live'||r.kind==='conf'||r.kind==='above'),now=Date.now(),iv=IVMS[LTF];
-  await pool(need,6,async r=>{const k=await kl(r.sym,LTF,1000),m=r.main;CIS[r.key]=cisdOf(k,r.side,m.t0,m.t1,now,iv,m.ext)},f=>{pr.style.width=(80+f*20)+'%'});
+  await pool(need,6,async r=>{const k=await kl(r.sym,LTF,1000),m=r.main;const c=CIS[r.key]=cisdOf(k,r.side,m.t0,m.t1,now,iv,m.ext);c.tm={};r.hits.filter(h=>h.kind!=='near').forEach(h=>{c.tm[h.tf+h.kind]=firstCross(k,r.side,h.lvl,h.t0,h.t1)})},f=>{pr.style.width=(80+f*20)+'%'});
   rebuild();lastScan=Date.now();
   const keys=ROWS.filter(r=>r.kind==='live'||r.kind==='conf').map(r=>r.key+'|'+r.kind);
   NEWK=new Set(SEEN.size?keys.filter(k=>!SEEN.has(k)):[]);SEEN=new Set(keys);ss('seen',JSON.stringify(keys));
@@ -1483,13 +1490,15 @@ async function scan(force){if(busy)return;if(!force&&Date.now()-lastScan<170000)
  finally{busy=false;setTimeout(()=>{pr.style.width='0'},600)}}
 async function pxTick(){if(busy||!UNIV.length||location.hash!=='#htf'||document.hidden)return;try{await loadTk();rebuild();render(true)}catch(e){}}
 
-function filt(){return ROWS.filter(r=>{if(SIDE!=='all'&&r.side!==SIDE)return false;
+const SK={coin:r=>r.base,side:r=>r.side,kind:r=>KW[r.kind],tsw:r=>r.tSw||(r.swOld?1:0),cisd:r=>r.cisd&&r.cisd.ok?(r.cisd.lost?-1:1):0,toc:r=>r.toC==null?1e9:Math.abs(r.toC),depth:r=>r.depth==null?-1:r.depth,ch:r=>r.ch,to:r=>r.to};
+function srt(L){if(SORT==='score'||!SK[SORT])return L;const f=SK[SORT];return L.slice().sort((a,b)=>{const x=f(a),y=f(b);return (x<y?-1:x>y?1:0)*DIR||b.score-a.score})}
+function filt(){return srt(ROWS.filter(r=>{if(SIDE!=='all'&&r.side!==SIDE)return false;
  if(TFF!=='all'&&!r.hits.some(h=>h.tf===TFF&&(r.kind==='near'||h.kind!=='near')))return false;
  if(STF==='sweep'&&!(r.kind==='live'||r.kind==='conf'))return false;
  if(STF==='live'&&r.kind!=='live')return false;if(STF==='conf'&&r.kind!=='conf'&&!r.hits.some(h=>h.kind==='conf'))return false;
  if(STF==='near'&&r.kind!=='near')return false;
  if(STF==='all'&&r.kind==='near'&&!NEAR)return false;
- if(ONLYC&&!(r.cisd&&r.cisd.ok&&!r.cisd.lost))return false;return true})}
+ if(ONLYC&&!(r.cisd&&r.cisd.ok&&!r.cisd.lost))return false;return true}))}
 function bar(msg){const el=Q('#hxBar');if(msg){el.innerHTML=msg;return}
  const sw=ROWS.filter(r=>r.kind==='live'||r.kind==='conf'),okc=sw.filter(r=>r.cisd&&r.cisd.ok&&!r.cisd.lost).length,left=Math.max(0,180-Math.round((Date.now()-lastScan)/1000));
  el.innerHTML=lastScan?`<span><b>${UNIV.length}</b> kovancev</span><span><b>${sw.length}</b> sweepov · <b>${okc}</b> s CISD</span><span>skenirano ${hm(lastScan)}</span><span>naslednje čez ${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}</span>`:'nalagam …'}
@@ -1502,13 +1511,20 @@ function card(r){const S=r.side==='short',ct=cisdTxt(r),nw=NEWK.has(r.key+'|'+r.
  <div class="px"><b>${fmt(r.p)}</b><small class="${r.ch>=0?'up':'dn'}">${pc(r.ch)}</small></div></div>
  <div class="vbd">${lvChips(r)}</div>
  <div class="hxk"><div><span>${r.kind==='near'?'Nivo':'Ekstrem (za SL)'}</span><b>${fmt(r.kind==='near'?r.hits[0].lvl:r.ext)}</b></div><div><span>CISD ${LTF}m</span><b class="${ct[1]}">${ct[0]}</b></div><div><span>${r.kind==='near'?'Do nivoja':'Cena do CISD'}</span><b>${r.kind==='near'?r.hits[0].dist.toFixed(2)+' %':pc(r.toC)}</b></div></div>
- <div class="cf" style="display:flex;justify-content:space-between;font-size:12px;color:var(--mut)"><span>${r.depth!=null?'čez nivo '+r.depth.toFixed(2)+' %':''}</span><span>promet ${big(r.to)} $</span></div></button>`}
+ <div class="cf" style="display:flex;justify-content:space-between;font-size:12px;color:var(--mut)"><span>${r.tSw?'sweep '+dhm(r.tSw)+' · ':r.swOld?'sweep starejši · ':''}${r.depth!=null?'čez nivo '+r.depth.toFixed(2)+' %':''}</span><span>promet ${big(r.to)} $</span></div></button>`}
+const COLS=[['coin','Kovanec','l'],['side','Smer','l'],['kind','Stanje','l'],[null,'Nivoji','l'],['tsw','Sweep ob',''],[null,'Ekstrem',''],['cisd','CISD',''],['toc','Do CISD',''],['depth','Čez nivo',''],['ch','24h',''],['to','Promet','']];
+function trow(r){const S=r.side==='short',ct=cisdTxt(r),nw=NEWK.has(r.key+'|'+r.kind),nr=r.kind==='near';
+ const sw=r.tSw?`${dhm(r.tSw)}<small>${r.main.name} · ${ago(r.tSw)}</small>`:r.swOld?'<span class="mut">starejši</span>':'–';
+ return `<tr class="rw${openK===r.key?' on':''}" data-k="${r.key}"><td class="l coin"><b>${r.base}</b>${nw?' <span class="hxnew" style="position:static;margin-left:4px">NOVO</span>':''}</td><td class="l"><span class="side ${r.side}">${S?'SHORT':'LONG'}</span></td>
+ <td class="l"><span class="hxst ${r.kind}">${nr?'Blizu '+r.hits[0].dist.toFixed(2)+' %':KN[r.kind]}</span></td><td class="l">${lvChips(r)}</td><td>${sw}</td><td>${nr?'–':fmt(r.ext)}</td>
+ <td class="${ct[1]}">${ct[0]}</td><td>${nr?'–':pc(r.toC)}</td><td>${r.depth!=null?r.depth.toFixed(2)+' %':'–'}</td><td class="${r.ch>=0?'up':'dn'}">${pc(r.ch)}</td><td>${big(r.to)}</td></tr>`}
+function table(L){return `<div class="tw"><table class="t"><thead><tr>${COLS.map(c=>c[0]?`<th class="srt ${c[2]}" data-s="${c[0]}" data-ar="${SORT===c[0]?(DIR<0?' ↓':' ↑'):''}">${c[1]}</th>`:`<th class="${c[2]}">${c[1]}</th>`).join('')}</tr></thead><tbody>${L.map(trow).join('')}</tbody></table></div>`}
 function render(soft){bar();const L=filt(),el=Q('#hxList');
  if(soft&&document.querySelector('#hxList .hxdet')){// med odprtim grafom osveži samo številke na karticah
-  L.forEach(r=>{const b=el.querySelector(`.hxc[data-k="${CSS.escape(r.key)}"]`);if(b){const t=document.createElement('div');t.innerHTML=card(r);b.replaceWith(t.firstElementChild)}});return}
+  L.forEach(r=>{const b=el.querySelector(`.hxc[data-k="${CSS.escape(r.key)}"],tr.rw[data-k="${CSS.escape(r.key)}"]`);if(b){if(b.tagName==='TR'){const t=document.createElement('tbody');t.innerHTML=trow(r);b.replaceWith(t.firstElementChild)}else{const t=document.createElement('div');t.innerHTML=card(r);b.replaceWith(t.firstElementChild)}}});return}
  if(!lastScan&&!ROWS.length){el.innerHTML='<div class="empty">Skeniram trg …</div>';return}
  if(!L.length){el.innerHTML='<div class="empty">Trenutno ni kovancev s tem filtrom. Poskusi »Vsa stanja« ali nižji promet.</div>';return}
- el.innerHTML='<div class="cards">'+L.map(card).join('')+'</div>';
+ el.innerHTML=VIEW==='table'?table(L):'<div class="cards">'+L.map(card).join('')+'</div>';
  if(openK){const r=ROWS.find(x=>x.key===openK);if(r)openDet(r,true);else openK=null}}
 
 // ---------- podrobnosti + graf
@@ -1517,15 +1533,16 @@ const TZ=-new Date().getTimezoneOffset()*60;
 function plan(r){const S=r.side==='short',sg=S?-1:1,c=r.cisd,m=r.main;if(r.kind==='near'||!m||!m.sc)return null;
  const sl=r.ext*(1+(S?0.001:-0.001)),entry=c&&c.lvl&&c.ok&&!c.lost?c.lvl:null,mid=(m.sc.h+m.sc.l)/2,opp=S?m.sc.l:m.sc.h;
  const rr=t=>entry?((t-entry)*sg)/((entry-sl)*sg):null;return {sl,entry,mid,opp,rr1:rr(mid),rr2:rr(opp),risk:entry?Math.abs(entry-sl)/entry*100:null}}
-function openDet(r,keep){openK=r.key;const el=Q('#hxList'),btn=el.querySelector(`.hxc[data-k="${CSS.escape(r.key)}"]`);if(!btn)return;
- el.querySelectorAll('.hxdet').forEach(x=>x.remove());el.querySelectorAll('.hxc.on').forEach(x=>x.classList.remove('on'));btn.classList.add('on');
- const grid=btn.parentElement,cols=getComputedStyle(grid).gridTemplateColumns.split(' ').length,idx=[...grid.children].indexOf(btn);
- let after=btn;for(let i=idx+1;i<grid.children.length&&(i%cols)!==0;i++)after=grid.children[i];
- const d=document.createElement('div');d.className='hxdet';after.after(d);
+function closeDet(){const el=Q('#hxList');el.querySelectorAll('tr.dr,.hxdet').forEach(x=>x.remove());el.querySelectorAll('.hxc.on,tr.rw.on').forEach(x=>x.classList.remove('on'))}
+function openDet(r,keep){openK=r.key;const el=Q('#hxList'),btn=el.querySelector(`.hxc[data-k="${CSS.escape(r.key)}"],tr.rw[data-k="${CSS.escape(r.key)}"]`);if(!btn)return;
+ closeDet();btn.classList.add('on');const d=document.createElement('div');d.className='hxdet';
+ if(btn.tagName==='TR'){const tr=document.createElement('tr');tr.className='dr';const td=document.createElement('td');td.colSpan=COLS.length;td.appendChild(d);tr.appendChild(td);btn.after(tr);const wr=btn.closest('.tw');d.style.cssText=`position:sticky;left:0;width:${wr.clientWidth}px`}
+ else{const grid=btn.parentElement,cols=getComputedStyle(grid).gridTemplateColumns.split(' ').length,idx=[...grid.children].indexOf(btn);
+ let after=btn;for(let i=idx+1;i<grid.children.length&&(i%cols)!==0;i++)after=grid.children[i];after.after(d)}
  const S=r.side==='short',P=plan(r),c=r.cisd;
  const tfb=[['5','5m'],['15','15m'],['60','1H'],['240','4H']].map(t=>`<button data-t="${t[0]}" class="${CTF===t[0]?'on':''}">${t[1]}</button>`).join('');
  const story=r.kind==='near'?`Cena je ${r.hits[0].dist.toFixed(2)} % od ${r.hits[0].name}. Sweepa še ni – čakaj, da sveča gre čez nivo in se vrne.`:
-  `${r.hits.filter(h=>h.kind!=='near').map(h=>`${TFN[h.tf][0].toUpperCase()+TFN[h.tf].slice(1)} sveča je vzela ${h.name} ${fmt(h.lvl)}${h.kind==='conf'?' in zaprla nazaj (potrjeno, ICT X »2«)':h.kind==='live'?', cena je spet '+(S?'pod':'nad')+' nivojem':', cena je še '+(S?'nad':'pod')+' nivojem'}`).join('. ')}. Ekstrem ${fmt(r.ext)}.`+
+  `${r.hits.filter(h=>h.kind!=='near').map(h=>`${TFN[h.tf][0].toUpperCase()+TFN[h.tf].slice(1)} sveča je vzela ${h.name} ${fmt(h.lvl)}${h.kind==='conf'?' in zaprla nazaj (potrjeno, ICT X »2«)':h.kind==='live'?', cena je spet '+(S?'pod':'nad')+' nivojem':', cena je še '+(S?'nad':'pod')+' nivojem'}${h.ts&&h.ts.t?' (sweep '+dhm(h.ts.t)+')':''}`).join('. ')}. Ekstrem ${fmt(r.ext)}.`+
   (c&&!c.na?` CISD ${LTF}m je ${fmt(c.lvl)}${c.ok?' – potrjen ob '+dhm(c.tC)+(c.lost?', a cena je spet '+(S?'nad':'pod')+' njim (CISD izgubljen)':''):' – še ni potrjen (čakaj zaprtje sveče '+(S?'pod':'nad')+' njim)'}.`:'');
  d.innerHTML=`<h3>${r.base} · ${S?'SHORT':'LONG'} · ${KN[r.kind]}</h3><p class="story" style="margin:0 0 6px">${story}</p>
   <div class="tfs">${tfb}<a href="https://www.tradingview.com/chart/?symbol=BYBIT%3A${r.sym}.P" target="_blank" rel="noopener">TradingView ↗</a></div>
@@ -1561,8 +1578,11 @@ function wire(){seg('#hxSide',SIDE,v=>{SIDE=v;ss('side',v)});
  const tog=(id,v,set)=>{const e=Q(id);e.classList.toggle('on',v);e.onclick=()=>{const n=!e.classList.contains('on');e.classList.toggle('on',n);set(n);render()}};
  tog('#hxCisd',ONLYC,v=>{ONLYC=v;ss('oc',v?'1':'0')});tog('#hxNear',NEAR,v=>{NEAR=v;ss('near',v?'1':'0')});
  Q('#hxRf').onclick=()=>scan(true);
- Q('#hxList').onclick=e=>{if(e.target.closest('.hxdet'))return;const b=e.target.closest('.hxc');if(!b)return;const r=ROWS.find(x=>x.key===b.dataset.k);if(!r)return;
-  if(openK===r.key){openK=null;killChart();Q('#hxList').querySelectorAll('.hxdet').forEach(x=>x.remove());b.classList.remove('on');return}openDet(r)};
+ seg('#hxView',VIEW,v=>{VIEW=v;ss('view',v)});
+ Q('#hxList').onclick=e=>{if(e.target.closest('.hxdet'))return;const th=e.target.closest('th.srt');
+  if(th){const k=th.dataset.s;if(SORT===k){if(DIR<0)DIR=1;else{SORT='score';DIR=-1}}else{SORT=k;DIR=(k==='coin'||k==='side'||k==='toc')?1:-1}ss('sort',SORT);ss('dir',String(DIR));killChart();render();return}
+  const b=e.target.closest('.hxc,tr.rw');if(!b)return;const r=ROWS.find(x=>x.key===b.dataset.k);if(!r)return;
+  if(openK===r.key){openK=null;killChart();closeDet();return}openDet(r)};
  new MutationObserver(()=>{if(openK){const r=ROWS.find(x=>x.key===openK);if(r)chart(r)}}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']})}
 window.HTF={start(){if(!started){started=true;wire();tScan=setInterval(()=>{if(location.hash==='#htf'&&!document.hidden)scan(false)},20000);tPx=setInterval(pxTick,20000);tBar=setInterval(()=>{if(location.hash==='#htf'&&!busy&&lastScan)bar()},1000)}scan(false)},
  _t:{evalTf,cisdOf}};
