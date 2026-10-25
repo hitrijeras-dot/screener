@@ -310,7 +310,7 @@ table.t th:first-child,table.t td:first-child,table.t .tl{text-align:left}
       <div class="seg" id="hxView"><button data-v="card">Kartice</button><button data-v="table">Tabela</button></div>
       <button class="ib" id="hxRf" title="Skeniraj zdaj">↻</button>
     </div>
-    <div class="pts"><button class="pt tog" id="hxCisd" title="Pokaži samo kovance s potrjenim CISD v smeri sweepa">Samo s CISD</button><button class="pt tog" id="hxNear" title="Pokaži tudi kovance, ki so blizu nivoja (še brez sweepa)">Tudi blizu nivoja</button></div>
+    <div class="pts"><button class="pt tog" id="hxCisd" title="Pokaži samo kovance s potrjenim CISD v smeri sweepa">Samo s CISD</button><button class="pt tog" id="hxNear" title="Pokaži tudi kovance, ki so blizu nivoja (še brez sweepa)">Tudi blizu nivoja</button><button class="pt tog" id="hxRt" title="Samo kovanci s potrjenim CISD, kjer se cena še ni vrnila na CISD (vstop z limitom na CISD še možen)">Čaka retest</button></div>
     <div class="hxbar" id="hxBar">nalagam …</div>
     <div class="hxprog"><i id="hxProg"></i></div>
     <div id="hxList"><div class="empty">Skeniram trg …</div></div>
@@ -1413,6 +1413,7 @@ const NAME={D:['PDH','PDL'],W:['PWH','PWL'],M:['PMH','PML']},TFW={D:1,W:2,M:3},T
 const KW={live:4,conf:3,above:1,near:0},KN={live:'Sweep zdaj',conf:'Potrjen sweep',above:'Čez nivo – še ni nazaj',near:'Blizu nivoja'};
 const IVMS={'5':3e5,'15':9e5,'60':36e5,'240':144e5};
 let VIEW=ls('view','card'),SORT=ls('sort','score'),DIR=+ls('dir','-1');
+let ONLYRT=ls('rt','0')==='1';
 let SIDE=ls('side','all'),TFF=ls('tf','all'),STF=ls('st','sweep'),UNI=ls('uni','5'),LTF=ls('ltf','15'),ONLYC=ls('oc','0')==='1',NEAR=ls('near','0')==='1',CTF=ls('ctf','15');
 let BARS={},TKM={},CIS={},ROWS=[],UNIV=[],busy=false,lastScan=0,started=false,openK=null,tScan=null,tPx=null,tBar=null;
 let SEEN=new Set(),NEWK=new Set();try{SEEN=new Set(JSON.parse(ls('seen','[]')))}catch(e){}
@@ -1451,7 +1452,9 @@ function cisdOf(k,side,t0,t1,now,ivMs,want0){const S=side==='short';let e=-1,ex=
  if(j<0||!want(k[j]))j=e;else while(j>0&&want(k[j-1]))j--;
  const lvl=k[j].o;let ci=-1;
  for(let q=e;q<k.length;q++){const b=k[q];if(b.t+ivMs>now)break;if(S?b.c<lvl:b.c>lvl){ci=q;break}}
- return {lvl,ok:ci>=0,tC:ci>=0?k[ci].t:null,tE:k[e].t,tS:k[j].t,ext:ex,cut:k[0].t>t0}}
+ // retest: po zaprtju CISD se cena (katerakoli kasnejša sveča, tudi odprta) vrne do nivoja CISD
+ let ri=-1;if(ci>=0)for(let q=ci+1;q<k.length;q++){const b=k[q];if(S?b.h>=lvl:b.l<=lvl){ri=q;break}}
+ return {lvl,ok:ci>=0,tC:ci>=0?k[ci].t:null,tR:ri>=0?k[ri].t:null,tE:k[e].t,tS:k[j].t,ext:ex,cut:k[0].t>t0}}
 /*HTF-CORE-END*/
 
 // prvi bar nižjega okvirja v oknu [t0,t1), ki je šel čez nivo = čas sweepa; če podatki ne sežejo do začetka okna in je čez že prvi bar → neznano (starejše)
@@ -1490,7 +1493,7 @@ async function scan(force){if(busy)return;if(!force&&Date.now()-lastScan<170000)
  finally{busy=false;setTimeout(()=>{pr.style.width='0'},600)}}
 async function pxTick(){if(busy||!UNIV.length||location.hash!=='#htf'||document.hidden)return;try{await loadTk();rebuild();render(true)}catch(e){}}
 
-const SK={coin:r=>r.base,side:r=>r.side,kind:r=>KW[r.kind],tsw:r=>r.tSw||(r.swOld?1:0),cisd:r=>r.cisd&&r.cisd.ok?(r.cisd.lost?-1:1):0,toc:r=>r.toC==null?1e9:Math.abs(r.toC),depth:r=>r.depth==null?-1:r.depth,ch:r=>r.ch,to:r=>r.to};
+const SK={coin:r=>r.base,side:r=>r.side,kind:r=>KW[r.kind],tsw:r=>r.tSw||(r.swOld?1:0),cisd:r=>r.cisd&&r.cisd.ok?(r.cisd.lost?-1:1):0,rt:r=>{const c=r.cisd;return !c||!c.ok||c.lost?-1:c.tR?c.tR:9e15},toc:r=>r.toC==null?1e9:Math.abs(r.toC),depth:r=>r.depth==null?-1:r.depth,ch:r=>r.ch,to:r=>r.to};
 function srt(L){if(SORT==='score'||!SK[SORT])return L;const f=SK[SORT];return L.slice().sort((a,b)=>{const x=f(a),y=f(b);return (x<y?-1:x>y?1:0)*DIR||b.score-a.score})}
 function filt(){return srt(ROWS.filter(r=>{if(SIDE!=='all'&&r.side!==SIDE)return false;
  if(TFF!=='all'&&!r.hits.some(h=>h.tf===TFF&&(r.kind==='near'||h.kind!=='near')))return false;
@@ -1498,26 +1501,28 @@ function filt(){return srt(ROWS.filter(r=>{if(SIDE!=='all'&&r.side!==SIDE)return
  if(STF==='live'&&r.kind!=='live')return false;if(STF==='conf'&&r.kind!=='conf'&&!r.hits.some(h=>h.kind==='conf'))return false;
  if(STF==='near'&&r.kind!=='near')return false;
  if(STF==='all'&&r.kind==='near'&&!NEAR)return false;
- if(ONLYC&&!(r.cisd&&r.cisd.ok&&!r.cisd.lost))return false;return true}))}
+ if(ONLYC&&!(r.cisd&&r.cisd.ok&&!r.cisd.lost))return false;if(ONLYRT&&!(r.cisd&&r.cisd.ok&&!r.cisd.lost&&!r.cisd.tR))return false;return true}))}
 function bar(msg){const el=Q('#hxBar');if(msg){el.innerHTML=msg;return}
  const sw=ROWS.filter(r=>r.kind==='live'||r.kind==='conf'),okc=sw.filter(r=>r.cisd&&r.cisd.ok&&!r.cisd.lost).length,left=Math.max(0,180-Math.round((Date.now()-lastScan)/1000));
  el.innerHTML=lastScan?`<span><b>${UNIV.length}</b> kovancev</span><span><b>${sw.length}</b> sweepov · <b>${okc}</b> s CISD</span><span>skenirano ${hm(lastScan)}</span><span>naslednje čez ${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}</span>`:'nalagam …'}
 function lvChips(r){return r.hits.filter(h=>r.kind==='near'||h.kind!=='near').map(h=>`<span class="hit${h.kind==='above'?' ab':''}" title="${TFN[h.tf]} sveča · ${KN[h.kind]}">${h.name}${h.kind==='conf'?' ✓':''} ${fmt(h.lvl)}</span>`).join('')}
+function rtPill(r){const c=r.cisd;if(!c||!c.ok||c.lost||r.kind==='near')return '';return c.tR?' <span class="hxst ok" title="Cena se je že vrnila na CISD">CISD ✓ · retest ✓</span>':' <span class="hxst live" title="Cena se še ni vrnila na CISD – limit na CISD je še možen">CISD ✓ · čaka retest</span>'}
 function cisdTxt(r){const c=r.cisd;if(r.kind==='near')return ['–','mut'];if(!c)return ['…','mut'];if(c.na)return ['ni v obsegu','mut'];if(c.ok&&c.lost)return [fmt(c.lvl)+' · izgubljen','dn'];return [fmt(c.lvl)+(c.ok?' ✓':' · čaka'),c.ok?'up':'mut']}
 function card(r){const S=r.side==='short',ct=cisdTxt(r),nw=NEWK.has(r.key+'|'+r.kind);
  const stc=r.kind,lab=r.kind==='near'?'Blizu '+r.hits[0].name+' ('+r.hits[0].dist.toFixed(2)+' %)':KN[r.kind];
  return `<button class="hxc ${S?'S':'L'}${openK===r.key?' on':''}" data-k="${r.key}">${nw?'<span class="hxnew">NOVO</span>':''}
- <div class="hxh"><div><div class="coin">${r.base}</div><span class="side ${r.side}">${S?'SHORT':'LONG'}</span> <span class="hxst ${stc}">${lab}</span>${r.cisd&&r.cisd.ok&&!r.cisd.lost?' <span class="hxst ok">CISD ✓</span>':''}</div>
+ <div class="hxh"><div><div class="coin">${r.base}</div><span class="side ${r.side}">${S?'SHORT':'LONG'}</span> <span class="hxst ${stc}">${lab}</span>${rtPill(r)}</div>
  <div class="px"><b>${fmt(r.p)}</b><small class="${r.ch>=0?'up':'dn'}">${pc(r.ch)}</small></div></div>
  <div class="vbd">${lvChips(r)}</div>
  <div class="hxk"><div><span>${r.kind==='near'?'Nivo':'Ekstrem (za SL)'}</span><b>${fmt(r.kind==='near'?r.hits[0].lvl:r.ext)}</b></div><div><span>CISD ${LTF}m</span><b class="${ct[1]}">${ct[0]}</b></div><div><span>${r.kind==='near'?'Do nivoja':'Cena do CISD'}</span><b>${r.kind==='near'?r.hits[0].dist.toFixed(2)+' %':pc(r.toC)}</b></div></div>
  <div class="cf" style="display:flex;justify-content:space-between;font-size:12px;color:var(--mut)"><span>${r.tSw?'sweep '+dhm(r.tSw)+' · ':r.swOld?'sweep starejši · ':''}${r.depth!=null?'čez nivo '+r.depth.toFixed(2)+' %':''}</span><span>promet ${big(r.to)} $</span></div></button>`}
-const COLS=[['coin','Kovanec','l'],['side','Smer','l'],['kind','Stanje','l'],[null,'Nivoji','l'],['tsw','Sweep ob',''],[null,'Ekstrem',''],['cisd','CISD',''],['toc','Do CISD',''],['depth','Čez nivo',''],['ch','24h',''],['to','Promet','']];
+const COLS=[['coin','Kovanec','l'],['side','Smer','l'],['kind','Stanje','l'],[null,'Nivoji','l'],['tsw','Sweep ob',''],[null,'Ekstrem',''],['cisd','CISD',''],['rt','Retest',''],['toc','Do CISD',''],['depth','Čez nivo',''],['ch','24h',''],['to','Promet','']];
+function rtCell(r){const c=r.cisd;if(!c||!c.ok||c.lost||r.kind==='near')return '<span class="mut">–</span>';return c.tR?`<span class="up">✓ ${dhm(c.tR)}</span><small>${ago(c.tR)}</small>`:'<span style="color:var(--buoy);font-weight:700">čaka</span>'}
 function trow(r){const S=r.side==='short',ct=cisdTxt(r),nw=NEWK.has(r.key+'|'+r.kind),nr=r.kind==='near';
  const sw=r.tSw?`${dhm(r.tSw)}<small>${r.main.name} · ${ago(r.tSw)}</small>`:r.swOld?'<span class="mut">starejši</span>':'–';
  return `<tr class="rw${openK===r.key?' on':''}" data-k="${r.key}"><td class="l coin"><b>${r.base}</b>${nw?' <span class="hxnew" style="position:static;margin-left:4px">NOVO</span>':''}</td><td class="l"><span class="side ${r.side}">${S?'SHORT':'LONG'}</span></td>
  <td class="l"><span class="hxst ${r.kind}">${nr?'Blizu '+r.hits[0].dist.toFixed(2)+' %':KN[r.kind]}</span></td><td class="l">${lvChips(r)}</td><td>${sw}</td><td>${nr?'–':fmt(r.ext)}</td>
- <td class="${ct[1]}">${ct[0]}</td><td>${nr?'–':pc(r.toC)}</td><td>${r.depth!=null?r.depth.toFixed(2)+' %':'–'}</td><td class="${r.ch>=0?'up':'dn'}">${pc(r.ch)}</td><td>${big(r.to)}</td></tr>`}
+ <td class="${ct[1]}">${ct[0]}</td><td>${rtCell(r)}</td><td>${nr?'–':pc(r.toC)}</td><td>${r.depth!=null?r.depth.toFixed(2)+' %':'–'}</td><td class="${r.ch>=0?'up':'dn'}">${pc(r.ch)}</td><td>${big(r.to)}</td></tr>`}
 function table(L){return `<div class="tw"><table class="t"><thead><tr>${COLS.map(c=>c[0]?`<th class="srt ${c[2]}" data-s="${c[0]}" data-ar="${SORT===c[0]?(DIR<0?' ↓':' ↑'):''}">${c[1]}</th>`:`<th class="${c[2]}">${c[1]}</th>`).join('')}</tr></thead><tbody>${L.map(trow).join('')}</tbody></table></div>`}
 function render(soft){bar();const L=filt(),el=Q('#hxList');
  if(soft&&document.querySelector('#hxList .hxdet')){// med odprtim grafom osveži samo številke na karticah
@@ -1543,11 +1548,11 @@ function openDet(r,keep){openK=r.key;const el=Q('#hxList'),btn=el.querySelector(
  const tfb=[['5','5m'],['15','15m'],['60','1H'],['240','4H']].map(t=>`<button data-t="${t[0]}" class="${CTF===t[0]?'on':''}">${t[1]}</button>`).join('');
  const story=r.kind==='near'?`Cena je ${r.hits[0].dist.toFixed(2)} % od ${r.hits[0].name}. Sweepa še ni – čakaj, da sveča gre čez nivo in se vrne.`:
   `${r.hits.filter(h=>h.kind!=='near').map(h=>`${TFN[h.tf][0].toUpperCase()+TFN[h.tf].slice(1)} sveča je vzela ${h.name} ${fmt(h.lvl)}${h.kind==='conf'?' in zaprla nazaj (potrjeno, ICT X »2«)':h.kind==='live'?', cena je spet '+(S?'pod':'nad')+' nivojem':', cena je še '+(S?'nad':'pod')+' nivojem'}${h.ts&&h.ts.t?' (sweep '+dhm(h.ts.t)+')':''}`).join('. ')}. Ekstrem ${fmt(r.ext)}.`+
-  (c&&!c.na?` CISD ${LTF}m je ${fmt(c.lvl)}${c.ok?' – potrjen ob '+dhm(c.tC)+(c.lost?', a cena je spet '+(S?'nad':'pod')+' njim (CISD izgubljen)':''):' – še ni potrjen (čakaj zaprtje sveče '+(S?'pod':'nad')+' njim)'}.`:'');
+  (c&&!c.na?` CISD ${LTF}m je ${fmt(c.lvl)}${c.ok?' – potrjen ob '+dhm(c.tC)+(c.lost?', a cena je spet '+(S?'nad':'pod')+' njim (CISD izgubljen)':c.tR?'; retest CISD je že bil ob '+dhm(c.tR):'; retesta še ni – limit na CISD je še možen'):' – še ni potrjen (čakaj zaprtje sveče '+(S?'pod':'nad')+' njim)'}.`:'');
  d.innerHTML=`<h3>${r.base} · ${S?'SHORT':'LONG'} · ${KN[r.kind]}</h3><p class="story" style="margin:0 0 6px">${story}</p>
   <div class="tfs">${tfb}<a href="https://www.tradingview.com/chart/?symbol=BYBIT%3A${r.sym}.P" target="_blank" rel="noopener">TradingView ↗</a></div>
   <div id="hxCh"><div class="empty">Nalagam graf …</div></div><div class="hxleg" id="hxLeg"></div>
-  ${P?`<div class="hxplan"><div><span>Vstop (retest CISD)</span><b>${P.entry?fmt(P.entry):'čakaj CISD'}</b></div><div><span>SL (za ekstremom)</span><b class="dn">${fmt(P.sl)}</b></div><div><span>TP1 · 50 % sveče</span><b class="up">${fmt(P.mid)}</b>${P.rr1!=null?`<span>${P.rr1.toFixed(2)} R</span>`:''}</div><div><span>TP2 · ${S?'low':'high'} sveče</span><b class="up">${fmt(P.opp)}</b>${P.rr2!=null?`<span>${P.rr2.toFixed(2)} R</span>`:''}</div>${P.risk!=null?`<div><span>Razdalja do SL</span><b>${P.risk.toFixed(2)} %</b></div>`:''}</div>
+  ${P?`<div class="hxplan"><div><span>Vstop (retest CISD)</span><b>${P.entry?fmt(P.entry):'čakaj CISD'}</b>${P.entry?`<span>${c.tR?'retest že bil '+hm(c.tR):'retesta še ni'}</span>`:''}</div><div><span>SL (za ekstremom)</span><b class="dn">${fmt(P.sl)}</b></div><div><span>TP1 · 50 % sveče</span><b class="up">${fmt(P.mid)}</b>${P.rr1!=null?`<span>${P.rr1.toFixed(2)} R</span>`:''}</div><div><span>TP2 · ${S?'low':'high'} sveče</span><b class="up">${fmt(P.opp)}</b>${P.rr2!=null?`<span>${P.rr2.toFixed(2)} R</span>`:''}</div>${P.risk!=null?`<div><span>Razdalja do SL</span><b>${P.risk.toFixed(2)} %</b></div>`:''}</div>
   <p class="foot">Načrt po SMC X: vstop na retestu CISD, SL za svečo, ki je naredila sweep, tarča 50 % in nasprotni rob posweepane sveče. Pred vstopom preveri na TradingViewu.</p>`:''}`;
  d.querySelectorAll('.tfs button').forEach(b=>b.onclick=e=>{e.stopPropagation();CTF=b.dataset.t;ss('ctf',CTF);d.querySelectorAll('.tfs button').forEach(x=>x.classList.toggle('on',x===b));chart(r)});
  if(!keep)d.scrollIntoView({behavior:'smooth',block:'nearest'});chart(r)}
@@ -1581,7 +1586,7 @@ function wire(){seg('#hxSide',SIDE,v=>{SIDE=v;ss('side',v)});
  sel('#hxTf',TFF,v=>{TFF=v;ss('tf',v);render()});sel('#hxSt',STF,v=>{STF=v;ss('st',v);render()});
  sel('#hxUni',UNI,v=>{UNI=v;ss('uni',v);scan(true)});sel('#hxLtf',LTF,v=>{LTF=v;ss('ltf',v);scan(true)});
  const tog=(id,v,set)=>{const e=Q(id);e.classList.toggle('on',v);e.onclick=()=>{const n=!e.classList.contains('on');e.classList.toggle('on',n);set(n);render()}};
- tog('#hxCisd',ONLYC,v=>{ONLYC=v;ss('oc',v?'1':'0')});tog('#hxNear',NEAR,v=>{NEAR=v;ss('near',v?'1':'0')});
+ tog('#hxCisd',ONLYC,v=>{ONLYC=v;ss('oc',v?'1':'0')});tog('#hxRt',ONLYRT,v=>{ONLYRT=v;ss('rt',v?'1':'0')});tog('#hxNear',NEAR,v=>{NEAR=v;ss('near',v?'1':'0')});
  Q('#hxRf').onclick=()=>scan(true);
  seg('#hxView',VIEW,v=>{VIEW=v;ss('view',v)});
  Q('#hxList').onclick=e=>{if(e.target.closest('.hxdet'))return;const th=e.target.closest('th.srt');
