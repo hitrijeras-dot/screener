@@ -1485,7 +1485,12 @@ async function scan(force){if(busy)return;if(!force&&Date.now()-lastScan<170000)
   await pool(UNIV,8,async s=>{const [D,W,M]=await Promise.all([kl(s,'D',3),kl(s,'W',3),kl(s,'M',3)]);BARS[s]={D,W,M}},f=>{pr.style.width=(2+f*78)+'%'});
   CIS={};rebuild();
   const need=ROWS.filter(r=>r.kind==='live'||r.kind==='conf'||r.kind==='above'),now=Date.now(),iv=IVMS[LTF];
-  await pool(need,6,async r=>{const k=await kl(r.sym,LTF,1000),m=r.main;const c=CIS[r.key]=cisdOf(k,r.side,m.t0,m.t1,now,iv,m.ext);c.tm={};r.hits.filter(h=>h.kind!=='near').forEach(h=>{c.tm[h.tf+h.kind]=firstCross(k,r.side,h.lvl,h.t0,h.t1)})},f=>{pr.style.width=(80+f*20)+'%'});
+  // ena poizvedba na kovanec (long in short delita sveče); neuspele (omejitev Bybita) poskusi znova eno za drugo
+  const KC2={},getK=s=>KC2[s]||(KC2[s]=kl(s,LTF,1000).catch(e=>{delete KC2[s];throw e}));
+  const doC=async r=>{const k=await getK(r.sym),m=r.main;const c=CIS[r.key]=cisdOf(k,r.side,m.t0,m.t1,now,iv,m.ext);c.tm={};r.hits.filter(h=>h.kind!=='near').forEach(h=>{c.tm[h.tf+h.kind]=firstCross(k,r.side,h.lvl,h.t0,h.t1)})};
+  await pool(need,4,doC,f=>{pr.style.width=(80+f*18)+'%'});
+  for(const r of need.filter(r=>!CIS[r.key])){await new Promise(z=>setTimeout(z,400));try{await doC(r)}catch(e){CIS[r.key]={err:1}}}
+  if(false)await pool(need,6,async r=>{const k=await kl(r.sym,LTF,1000),m=r.main;const c=CIS[r.key]=cisdOf(k,r.side,m.t0,m.t1,now,iv,m.ext);c.tm={};r.hits.filter(h=>h.kind!=='near').forEach(h=>{c.tm[h.tf+h.kind]=firstCross(k,r.side,h.lvl,h.t0,h.t1)})},f=>{pr.style.width=(80+f*20)+'%'});
   rebuild();lastScan=Date.now();
   const keys=ROWS.filter(r=>r.kind==='live'||r.kind==='conf').map(r=>r.key+'|'+r.kind);
   NEWK=new Set(SEEN.size?keys.filter(k=>!SEEN.has(k)):[]);SEEN=new Set(keys);ss('seen',JSON.stringify(keys));
@@ -1507,7 +1512,7 @@ function bar(msg){const el=Q('#hxBar');if(msg){el.innerHTML=msg;return}
  el.innerHTML=lastScan?`<span><b>${UNIV.length}</b> kovancev</span><span><b>${sw.length}</b> sweepov · <b>${okc}</b> s CISD</span><span>skenirano ${hm(lastScan)}</span><span>naslednje čez ${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}</span>`:'nalagam …'}
 function lvChips(r){return r.hits.filter(h=>r.kind==='near'||h.kind!=='near').map(h=>`<span class="hit${h.kind==='above'?' ab':''}" title="${TFN[h.tf]} sveča · ${KN[h.kind]}">${h.name}${h.kind==='conf'?' ✓':''} ${fmt(h.lvl)}</span>`).join('')}
 function rtPill(r){const c=r.cisd;if(!c||!c.ok||c.lost||r.kind==='near')return '';return c.tR?' <span class="hxst ok" title="Cena se je že vrnila na CISD">CISD ✓ · retest ✓</span>':' <span class="hxst live" title="Cena se še ni vrnila na CISD – limit na CISD je še možen">CISD ✓ · čaka retest</span>'}
-function cisdTxt(r){const c=r.cisd;if(r.kind==='near')return ['–','mut'];if(!c)return ['…','mut'];if(c.na)return ['ni v obsegu','mut'];if(c.ok&&c.lost)return [fmt(c.lvl)+' · izgubljen','dn'];return [fmt(c.lvl)+(c.ok?' ✓':' · čaka'),c.ok?'up':'mut']}
+function cisdTxt(r){const c=r.cisd;if(r.kind==='near')return ['–','mut'];if(!c)return ['…','mut'];if(c.err)return ['napaka – ↻','dn'];if(c.na)return ['ni v obsegu','mut'];if(c.ok&&c.lost)return [fmt(c.lvl)+' · izgubljen','dn'];return [fmt(c.lvl)+(c.ok?' ✓':' · čaka'),c.ok?'up':'mut']}
 function card(r){const S=r.side==='short',ct=cisdTxt(r),nw=NEWK.has(r.key+'|'+r.kind);
  const stc=r.kind,lab=r.kind==='near'?'Blizu '+r.hits[0].name+' ('+r.hits[0].dist.toFixed(2)+' %)':KN[r.kind];
  return `<button class="hxc ${S?'S':'L'}${openK===r.key?' on':''}" data-k="${r.key}">${nw?'<span class="hxnew">NOVO</span>':''}
