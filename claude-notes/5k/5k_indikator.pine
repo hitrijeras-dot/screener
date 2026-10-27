@@ -329,9 +329,9 @@ f_htf() =>
     l2 = ta.valuewhen(not na(pl), pl, 1)
     int tr = h1 > h2 and l1 > l2 ? 1 : h1 < h2 and l1 < l2 ? -1 : 0
     a = ta.atr(14)
-    [open[1], close[1], tr[1], a[1]]
+    [open[1], close[1], high[1], low[1], time[1], tr[1], a[1]]
 
-[hO, hC, hTr, hAtr] = request.security(syminfo.tickerid, htfTf, f_htf(), lookahead = barmerge.lookahead_on)
+[hO, hC, hH, hL, hT, hTr, hAtr] = request.security(syminfo.tickerid, htfTf, f_htf(), lookahead = barmerge.lookahead_on)
 [mOf, mBT, mBB, mBTm, mST, mSB, mSTm, mLH, mLHT, mLL, mLLT, mAtr] = request.security(syminfo.tickerid, mtfTf, f_mtf(pivLen, obAge), lookahead = barmerge.lookahead_on)
 [lOf, lOfOB, lEv, lEl, lEt, lBT, lBB, lBTm, lST, lSB, lSTm, lLH, lLHT, lLL, lLLT, lAtr] = f_engine(pivLen, 400)
 
@@ -344,8 +344,14 @@ bool s1 = bias != 0 and rangeOk
 float liqMax = hAtr * liqMul
 float tgtL = not na(mLH) and mLH - close <= liqMax ? mLH : na
 float tgtS = not na(mLL) and close - mLL <= liqMax ? mLL : na
+// brez MTF likvidnosti v dosegu: prejšnji HTF high (zelena sveča) / low (rdeča), če je še pred ceno
+bool pdL = na(tgtL) and hH > close
+bool pdS = na(tgtS) and hL < close
+tgtL := pdL ? hH : tgtL
+tgtS := pdS ? hL : tgtS
 float tgt = bias == 1 ? tgtL : bias == -1 ? tgtS : na
-int tgtT = bias == 1 ? mLHT : bias == -1 ? mLLT : na
+int tgtT = bias == 1 ? (pdL ? hT : mLHT) : bias == -1 ? (pdS ? hT : mLLT) : na
+string tgtN = (bias == 1 and pdL) or (bias == -1 and pdS) ? "prejšnji " + htfN + (bias == 1 ? " high" : " low") : mtfN + " likvidnost"
 
 // ───────── Korak 3: lokacija ─────────
 bool ofOk = bias != 0 and mOf == bias
@@ -503,7 +509,7 @@ if showLiq and barstate.islast
     label.delete(lqLb)
     if not na(tgt) and not na(tgtT)
         lq := line.new(tgtT, tgt, time + 6 * barMs, tgt, xloc = xloc.bar_time, color = cLiq, style = line.style_dashed, width = 1)
-        lqLb := label.new(time + 6 * barMs, tgt, "cilj · " + mtfN + " likvidnost", xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = cLiq, size = size.tiny)
+        lqLb := label.new(time + 6 * barMs, tgt, "cilj · " + tgtN, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = cLiq, size = size.tiny)
 
 // ───────── Ozadje in sveče ─────────
 bgcolor(showKZ and intraTf ? (inNY ? cNY : inLon ? cLon : (inAsia and kzAsia) ? cAsia : na) : na, title = "Kill zone")
