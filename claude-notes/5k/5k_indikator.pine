@@ -379,41 +379,117 @@ bool inNews = not na(newsMin) and math.abs(nyH * 60 + nyM - newsMin) <= 60
 bool earlyMode = modeC == "Zgodnji" or (modeC == "Samodejno (novice → zgodnji)" and inNews)
 
 // ───────── Korak 5: potrditev ─────────
-var int zIdL = na
-var bool tapL = false
-var float extL = na
-var bool firedL = false
-var int zIdS = na
-var bool tapS = false
-var float extS = na
-var bool firedS = false
-
-if nz(mBTm, -1) != nz(zIdL, -1)
-    zIdL := mBTm
-    tapL := false
-    extL := na
-    firedL := false
-if nz(mSTm, -1) != nz(zIdS, -1)
-    zIdS := mSTm
-    tapS := false
-    extS := na
-    firedS := false
-
-if not na(mBT) and low <= mBT
-    tapL := true
-if tapL
-    extL := na(extL) ? low : math.min(extL, low)
-if not na(mSB) and high >= mSB
-    tapS := true
-if tapS
-    extS := na(extS) ? high : math.max(extS, high)
+// Ena funkcija na stran (lastno stanje). Računa v "short okvirju" (za long zrcali cene).
+// POTISK = od najnižjega lowa (od zadnjega notranjega preloma / začetka cone) do novega ekstrema po dotiku cone,
+// začne se s prvo zeleno svečo po tem lowu. CISD = zaprtje pod ODPRTJEM prve sveče potiska (neizpodbiten).
+// Zgodnji (novice) = zaprtje pod odprtjem zadnje zelene serije. Vstop = CISD linija, SL = ekstrem, TP = 2R.
+// En signal na potisk; po zadetem SL še en ponovni vstop v isti coni (nov ekstrem + nov CISD).
+f_side(int side, int zId, float zEdge, bool active, bool kz, bool early, int htfT) =>
+    float h_ = side == -1 ? high : -low
+    float l_ = side == -1 ? low : -high
+    float o_ = side == -1 ? open : -open
+    float c_ = side == -1 ? close : -close
+    var int curZ = na
+    var int curH = na
+    var int tapB = na
+    var float hi = na
+    var int anchor = na
+    var int anchorNext = na
+    var float pushLvl = na
+    var int pushT = na
+    var bool pushUsed = false
+    var float runOpen = na
+    var int runT = na
+    var int prevD = 0
+    var int nSig = 0
+    var int tSt = 0
+    var float tEn = na
+    var float tSl = na
+    var float tTp = na
+    var bool lastSL = false
+    bool sig = false
+    float en = na
+    float sl = na
+    float tp = na
+    int oT = na
+    int d = c_ > o_ ? 1 : c_ < o_ ? -1 : 0
+    if nz(zId, -1) != nz(curZ, -1) or nz(htfT, -1) != nz(curH, -1)
+        curZ := zId
+        curH := htfT
+        tapB := na
+        hi := na
+        anchor := bar_index
+        anchorNext := na
+        pushLvl := na
+        pushUsed := false
+        nSig := 0
+        tSt := 0
+        lastSL := false
+    // izid odprtega trejda (1 = čaka limit, 2 = odprt, 3 = zaključen)
+    if tSt == 1
+        if l_ <= tTp
+            tSt := 3
+        else if h_ >= tEn
+            tSt := 2
+    if tSt == 2
+        if h_ >= tSl
+            tSt := 3
+            lastSL := true
+        else if l_ <= tTp
+            tSt := 3
+    if na(tapB) and not na(zEdge) and h_ >= zEdge
+        tapB := bar_index
+    if not na(tapB)
+        if not na(runOpen) and c_ < runOpen and na(anchorNext)
+            anchorNext := bar_index
+        if na(hi) or h_ > hi
+            hi := h_
+            if not na(anchorNext)
+                anchor := anchorNext
+                anchorNext := na
+            int len = math.min(bar_index - anchor, 300)
+            int lowK = 0
+            float lowV = l_
+            for k = 0 to len
+                if l_[k] < lowV
+                    lowV := l_[k]
+                    lowK := k
+            int st = lowK
+            for k = lowK to 0
+                if c_[k] > o_[k]
+                    st := k
+                    break
+            pushLvl := o_[st]
+            pushT := time[st]
+            pushUsed := false
+        else if not pushUsed
+            float lvl = early ? runOpen : pushLvl
+            bool free = nSig == 0 or (lastSL and tSt == 3 and nSig < 2)
+            if not na(lvl) and c_ < lvl and lvl < hi and free and active and kz and barstate.isconfirmed
+                float r = hi - lvl
+                sig := true
+                en := lvl
+                sl := hi
+                tp := lvl - 2 * r
+                oT := early ? runT : pushT
+                pushUsed := true
+                nSig += 1
+                tSt := 1
+                tEn := en
+                tSl := sl
+                tTp := tp
+                lastSL := false
+    if d == 1 and prevD != 1
+        runOpen := o_
+        runT := time
+    if d != 0
+        prevD := d
+    float sgn = side == -1 ? 1.0 : -1.0
+    [sig, en * sgn, sl * sgn, tp * sgn, oT, not na(tapB), tSt]
 
 bool kzOk = not useKZ or inKZ
-bool evL = earlyMode ? lEv >= 1 : lEv == 2
-bool evS = earlyMode ? lEv <= -1 : lEv == -2
-
-bool sigL = barstate.isconfirmed and s1 and bias == 1 and mOf == 1 and tapL and not firedL and kzOk and evL and lEl > extL
-bool sigS = barstate.isconfirmed and s1 and bias == -1 and mOf == -1 and tapS and not firedS and kzOk and evS and lEl < extS
+[sigS, enS, slS, tpS, oTS, tapS, stS] = f_side(-1, mSTm, mSB, s1 and bias == -1 and mOf == -1, kzOk, earlyMode, hT)
+[sigL, enL, slL, tpL, oTL, tapL, stL] = f_side(1, mBTm, na(mBT) ? na : -mBT, s1 and bias == 1 and mOf == 1, kzOk, earlyMode, hT)
 
 var float pE = na
 var float pSL = na
@@ -429,26 +505,24 @@ f_pos(int dir, float e, float sl, float tp, int t0, string txt) =>
     line.new(t0, e, t1, e, xloc = xloc.bar_time, color = cEnt, width = 1)
     label.new(t1, tp, txt, xloc = xloc.bar_time, style = label.style_label_left, color = color.new(cTbg, 10), textcolor = cTxt, size = labSz)
 
+f_cisd(int t0, float lvl, int dir) =>
+    line.new(t0, lvl, time, lvl, xloc = xloc.bar_time, color = cCisd, style = line.style_dashed, width = 2)
+    label.new(t0, lvl, "CISD", xloc = xloc.bar_time, style = dir == 1 ? label.style_label_upper_left : label.style_label_lower_left, color = color(na), textcolor = cCisd, size = labSz)
+
 if sigL
-    firedL := true
-    float r = lEl - extL
-    float tp2 = lEl + 2 * r
-    pTP := tpMode == "Likvidnost (min 2R)" and not na(tgtL) and tgtL > tp2 ? tgtL : tp2
-    pE := lEl
-    pSL := extL
+    pTP := tpMode == "Likvidnost (min 2R)" and not na(tgtL) and tgtL > tpL ? tgtL : tpL
+    pE := enL
+    pSL := slL
     pDir := 1
-    line.new(lEt, lEl, time, lEl, xloc = xloc.bar_time, color = cCisd, style = line.style_dashed, width = 1)
+    f_cisd(oTL, enL, 1)
     f_pos(1, pE, pSL, pTP, time, "5K LONG · " + modeTxt + "\nvstop " + str.tostring(pE, format.mintick) + "\nSL " + str.tostring(pSL, format.mintick) + "  TP " + str.tostring(pTP, format.mintick))
     alert("5K LONG " + syminfo.ticker + " · CISD " + modeTxt + " · vstop " + str.tostring(pE, format.mintick) + " · SL " + str.tostring(pSL, format.mintick) + " · TP " + str.tostring(pTP, format.mintick), alert.freq_once_per_bar_close)
 if sigS
-    firedS := true
-    float r = extS - lEl
-    float tp2 = lEl - 2 * r
-    pTP := tpMode == "Likvidnost (min 2R)" and not na(tgtS) and tgtS < tp2 ? tgtS : tp2
-    pE := lEl
-    pSL := extS
+    pTP := tpMode == "Likvidnost (min 2R)" and not na(tgtS) and tgtS < tpS ? tgtS : tpS
+    pE := enS
+    pSL := slS
     pDir := -1
-    line.new(lEt, lEl, time, lEl, xloc = xloc.bar_time, color = cCisd, style = line.style_dashed, width = 1)
+    f_cisd(oTS, enS, -1)
     f_pos(-1, pE, pSL, pTP, time, "5K SHORT · " + modeTxt + "\nvstop " + str.tostring(pE, format.mintick) + "\nSL " + str.tostring(pSL, format.mintick) + "  TP " + str.tostring(pTP, format.mintick))
     alert("5K SHORT " + syminfo.ticker + " · CISD " + modeTxt + " · vstop " + str.tostring(pE, format.mintick) + " · SL " + str.tostring(pSL, format.mintick) + " · TP " + str.tostring(pTP, format.mintick), alert.freq_once_per_bar_close)
 
@@ -536,8 +610,9 @@ if showTbl and barstate.islast
     f_row(3, "3 Lokacija", t3, s3 ? (str.contains(zTxt, "V CONI") ? cUp : cTxt) : cMut)
     f_row(4, "4 Čas", (inKZ ? "✓ " : "✗ ") + kzName + (inNews ? " · novice" : ""), inKZ ? cUp : cMut)
     bool tapNow = bias == 1 ? tapL : bias == -1 ? tapS : false
-    bool firedNow = bias == 1 ? firedL : bias == -1 ? firedS : false
-    string t5 = firedNow and pDir == bias ? "✓ vstop " + str.tostring(pE, format.mintick) : tapNow ? "čaka " + ltfN + " CISD (" + modeTxt + ")" : "čaka dotik cone"
+    int stNow = bias == 1 ? stL : bias == -1 ? stS : 0
+    bool firedNow = stNow == 1 or stNow == 2
+    string t5 = stNow == 1 ? "✓ limit " + str.tostring(pE, format.mintick) : stNow == 2 ? "✓ v trejdu od " + str.tostring(pE, format.mintick) : stNow == 3 ? "trejd zaključen · čaka nov CISD" : tapNow ? "čaka " + ltfN + " CISD (" + modeTxt + ")" : "čaka dotik cone"
     f_row(5, "5 Potrditev", t5, firedNow ? cEnt : tapNow ? cTxt : cMut)
     string st = not s1 ? "✖ ni smeri / range" : not ofOk ? "✖ " + mtfN + " OF ne sovpada" : na(zTop) ? "✖ ni cone" : firedNow ? "🎯 VSTOP" : tapNow ? "🟢 V CONI" : "⚪ ČAKA"
     f_row(6, "Stanje", st, firedNow ? cEnt : tapNow ? cUp : cTxt)

@@ -332,29 +332,42 @@ function k5Eval(P,h,m,l,px,now){
   R.status=R.tapped?'zone':R.distAtr<=CFG.nearAtr?'near':'wait';
   return R;
 }
-// Korak 5 na LTF: dotik cone → CISD v smeri biasa v kill zoni → vstop/SL/TP (+ izid od takrat)
+// Korak 5 na LTF (kot indikator f_side): delamo v "short okvirju" (za long zrcalimo cene).
+// POTISK = sveče od najnižjega lowa (od zadnjega notranjega preloma / začetka) do novega ekstrema (high) po dotiku cone;
+// začne se s prvo zeleno svečo po tem lowu. CISD = zaprtje pod ODPRTJEM prve sveče potiska (neizpodbiten).
+// Zgodnji CISD (novice) = zaprtje pod odprtjem zadnje zelene serije. Vstop = CISD linija, SL = ekstrem, TP = 2R.
+// En signal na potisk; po zadetem SL je dovoljen še en ponovni vstop v isti coni (nov ekstrem + nov CISD).
 function k5Ltf(P,R,lb,now){
-  const long=R.bias===1,zt=R.zone.top,zb=R.zone.bot,E=k5Engine(lb,CFG.pivLen,CFG.ltfAge);R.lOf=E.of;
-  let tap=-1,ext=null,sig=null;
-  const evAt={};for(const e of E.evs)evAt[e.i]=e;
-  for(let i=0;i<lb.length;i++){const b=lb[i];if(b.t<R.from)continue;
-    if(tap<0&&(long?b.l<=zt:b.h>=zb))tap=i;
-    if(tap>=0)ext=ext==null?(long?b.l:b.h):(long?Math.min(ext,b.l):Math.max(ext,b.h));
-    const e=evAt[i];if(tap<0||!e)continue;
-    const early=earlyAt(b.t),ok=long?(early?e.ev>=1:e.ev===2):(early?e.ev<=-1:e.ev===-2);
-    if(!ok)continue;if(CFG.useKZ&&!kzOf(b.t))continue;
-    if(long?!(e.lvl>ext):!(e.lvl<ext))continue;
-    const r=Math.abs(e.lvl-ext),tp2=long?e.lvl+2*r:e.lvl-2*r;
-    sig={i,t:b.t,en:e.lvl,sl:ext,tp:tp2,oT:e.oT,early,und:Math.abs(e.ev)===2};break}
-  R.tapT=tap>=0?lb[tap].t:null;
-  if(tap>=0)R.tapped=true;
-  R.steps[4]=sig?1:R.tapped?0.5:0;
-  if(sig){R.sig=sig;let st='pend',fill=null;
-    for(let k=sig.i+1;k<lb.length;k++){const b=lb[k];
-      if(st==='pend'){if(long?b.h>=sig.tp:b.l<=sig.tp){st='miss';break}if(long?b.l<=sig.en:b.h>=sig.en){st='open';fill=b.t}}
-      if(st==='open'){if(long?b.l<=sig.sl:b.h>=sig.sl){st='sl';break}if(long?b.h>=sig.tp:b.l<=sig.tp){st='tp';break}}}
-    sig.res=st;sig.fill=fill;R.status=(st==='pend'||st==='open')?'entry':'done';
-  }else if(R.tapped)R.status='zone';
+  const long=R.bias===1,E=k5Engine(lb,CFG.pivLen,CFG.ltfAge);R.lOf=E.of;
+  const S=long?lb.map(b=>({t:b.t,o:-b.o,h:-b.l,l:-b.h,c:-b.c})):lb,bk=v=>v==null?null:(long?-v:v);
+  const zEdge=long?-R.zone.top:R.zone.bot,fromI=S.findIndex(b=>b.t>=R.from);
+  R.sigs=[];R.sig=null;R.tapT=null;
+  if(fromI<0){R.steps[4]=R.tapped?0.5:0;return R}
+  let tap=-1,hi=null,anchor=fromI,anchorNext=null,pushLvl=null,pushT=null,pushUsed=false,runOpen=null,runT=null,prevD=0,tr=null;
+  for(let i=fromI;i<S.length;i++){const b=S[i],d=b.c>b.o?1:b.c<b.o?-1:0;
+    // izid odprtega trejda
+    if(tr&&tr.st==='pend'){if(b.l<=tr.tp)tr.st='miss';else if(b.h>=tr.en){tr.st='open';tr.fill=b.t}}
+    if(tr&&tr.st==='open'){if(b.h>=tr.sl)tr.st='sl';else if(b.l<=tr.tp)tr.st='tp'}
+    if(tap<0&&b.h>=zEdge)tap=i;
+    if(tap>=0){
+      if(runOpen!=null&&b.c<runOpen&&anchorNext==null)anchorNext=i;
+      if(hi==null||b.h>hi){hi=b.h;if(anchorNext!=null){anchor=anchorNext;anchorNext=null}
+        let lowI=i;for(let k=i;k>=Math.max(anchor,i-300);k--)if(S[k].l<S[lowI].l)lowI=k;
+        let st=lowI;for(let k=lowI;k<=i;k++)if(S[k].c>S[k].o){st=k;break}
+        pushLvl=S[st].o;pushT=S[st].t;pushUsed=false}
+      else if(!pushUsed){const early=earlyAt(b.t),lvl=early?runOpen:pushLvl,oT=early?runT:pushT;
+        const free=!tr||(tr.st==='sl'&&R.sigs.length<2);
+        if(lvl!=null&&b.c<lvl&&lvl<hi&&free&&(!CFG.useKZ||kzOf(b.t))){const r=hi-lvl;
+          tr={i,t:b.t,en:lvl,sl:hi,tp:lvl-2*r,oT,early,und:!early,st:'pend',fill:null};R.sigs.push(tr);pushUsed=true}}
+    }
+    if(d===1&&prevD!==1){runOpen=b.o;runT=b.t}
+    if(d!==0)prevD=d;
+  }
+  if(tap>=0){R.tapT=S[tap].t;R.tapped=true}
+  R.sigs=R.sigs.map(g=>({i:g.i,t:g.t,en:bk(g.en),sl:bk(g.sl),tp:bk(g.tp),oT:g.oT,early:g.early,und:g.und,res:g.st,fill:g.fill}));
+  const g=R.sigs[R.sigs.length-1]||null;R.sig=g;
+  R.steps[4]=g?1:R.tapped?0.5:0;
+  if(g)R.status=(g.res==='pend'||g.res==='open')?'entry':'done';else if(R.tapped)R.status='zone';
   return R;
 }
 /*5K-CORE-END*/

@@ -40,12 +40,19 @@ Isto logiko imajo: TradingView indikator `5k_indikator.pine` (ta mapa) in screen
    Azija 20–24, London 2–5, New York 7–10. Pri nas (CET): Azija 02–06, London 08–11, NY 13–16
    (zadnji teden oktobra in prvi teden novembra 1 h prej).
 5. **Potrditev (LTF)** – ko je cena v coni (dotik), čakaj LTF CISD v smeri biasa v kill zoni.
-   - Na dan z rdečo USD novico (1 h pred do 1 h po njej) velja **zgodnji** CISD, drugače **neizpodbiten**.
-   - **Vstop**: limit na CISD liniji (zgornji rob prebitega OB).
-   - **SL**: za najbližjim swingom = najnižja cena (wick) od dotika cone (long) / najvišja (short).
-   - **TP**: 2R (privzeto) ali MTF likvidnost, če je dlje kot 2R.
+   - **CISD samo iz potiska, ki naredi ekstrem** (28. 10. 2026, Juretov CRV primer): potisk = sveče od najnižjega
+     lowa (od zadnjega notranjega preloma ali začetka cone) do novega high-a po dotiku cone; začne se s prvo zeleno
+     svečo po tem lowu. **Neizpodbiten CISD** = zaprtje pod odprtjem te prve sveče. Drobne serije (1 sveča, 1 tick)
+     sredi gibanja ne štejejo.
+   - Na dan z rdečo USD novico (1 h pred do 1 h po njej) velja **zgodnji** CISD = zaprtje pod odprtjem zadnje
+     zelene serije.
+   - **Vstop**: limit na CISD liniji (odprtje prve sveče potiska). Na grafu: linija "CISD" od te sveče do vstopa.
+   - **SL**: nad ekstremom potiska (wick). **TP**: 2R (privzeto) ali MTF likvidnost, če je dlje kot 2R.
+   - En signal na potisk. **Po zadetem SL je dovoljen en ponovni vstop** v isti coni (nov ekstrem + nov CISD).
+   - Primer CRVUSDT 27. 10. (Scalp 4H/15m/1m): potisk 13:47–13:56 (0.3349 → 0.3370, sweep vrha 0.3368),
+     CISD 14:04, vstop 0.3349 (fill 14:13), SL 0.3370, TP 0.3307 zadet ob 15:02.
 
-En signal na cono. Vse pogoje "da" → trejd. Kateri koli manjka → ni trejda, ne glede na občutek.
+Vse pogoje "da" → trejd. Kateri koli manjka → ni trejda, ne glede na občutek.
 
 ## Stanja v screenerju
 | Stanje | Pomen |
