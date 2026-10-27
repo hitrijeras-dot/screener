@@ -63,6 +63,8 @@ type SR
     float ext
     int   t
     int   bi
+    float rTop
+    int   rt
 
 type OB
     float top
@@ -84,6 +86,10 @@ f_engine(int L, int maxAge) =>
     var int bullCnt = 0
     var int bearCnt = 0
     var int prevD = 0
+    var float rnBO = na
+    var int rnBT = na
+    var float rnUO = na
+    var int rnUT = na
     var array<SR> bearS = array.new<SR>()
     var array<SR> bullS = array.new<SR>()
     var array<OB> bulls = array.new<OB>()
@@ -136,6 +142,7 @@ f_engine(int L, int maxAge) =>
     float obBT = na
     float obBB = na
     int obBt = na
+    int obBs = na
     if bearS.size() > 0
         for i = bearS.size() - 1 to 0
             s = bearS.get(i)
@@ -145,10 +152,11 @@ f_engine(int L, int maxAge) =>
                     lvB := s.top
                     exB := s.ext
                     tB := s.t
-                if na(obBt) or s.t > obBt
-                    obBT := s.top
+                if na(obBs) or s.t > obBs
+                    obBs := s.t
+                    obBT := s.rTop
                     obBB := s.ext
-                    obBt := s.t
+                    obBt := s.rt
                 bearS.remove(i)
             else if bar_index - s.bi > maxAge
                 bearS.remove(i)
@@ -159,6 +167,7 @@ f_engine(int L, int maxAge) =>
     float obUT = na
     float obUB = na
     int obUt = na
+    int obUs = na
     if bullS.size() > 0
         for i = bullS.size() - 1 to 0
             s = bullS.get(i)
@@ -168,10 +177,11 @@ f_engine(int L, int maxAge) =>
                     lvU := s.top
                     exU := s.ext
                     tU := s.t
-                if na(obUt) or s.t > obUt
-                    obUB := s.top
+                if na(obUs) or s.t > obUs
+                    obUs := s.t
+                    obUB := s.rTop
                     obUT := s.ext
-                    obUt := s.t
+                    obUt := s.rt
                 bullS.remove(i)
             else if bar_index - s.bi > maxAge
                 bullS.remove(i)
@@ -179,7 +189,12 @@ f_engine(int L, int maxAge) =>
     float evLvl = na
     int evT = na
     if nB > 0
-        bulls.push(OB.new(obBT, obBB, obBt, bar_index))
+        bool dupB = false
+        for o in bulls
+            if o.t == obBt
+                dupB := true
+        if not dupB
+            bulls.push(OB.new(obBT, obBB, obBt, bar_index))
         if of != 1
             of := 1
             bullCnt := nB
@@ -193,7 +208,12 @@ f_engine(int L, int maxAge) =>
             evLvl := lvB
             evT := tB
     if nU > 0
-        bears.push(OB.new(obUT, obUB, obUt, bar_index))
+        bool dupU = false
+        for o in bears
+            if o.t == obUt
+                dupU := true
+        if not dupU
+            bears.push(OB.new(obUT, obUB, obUt, bar_index))
         if ev == 0
             if of != -1
                 of := -1
@@ -253,14 +273,27 @@ f_engine(int L, int maxAge) =>
         ancTop := nsT
         ancBot := nsB
     // 4) serije: telesa trenutne sveče + nova serija
-    for s in bearS
-        s.ext := math.min(s.ext, bBot)
-    for s in bullS
-        s.ext := math.max(s.ext, bTop)
+    // zadnje zaporedne rdeče / zelene sveče (za OB samo iz teles zadnjih nasprotnih sveč pred impulzom)
     if d == -1 and prevD != -1
-        bearS.push(SR.new(open, bBot, time, bar_index))
+        rnBO := open
+        rnBT := time
     if d == 1 and prevD != 1
-        bullS.push(SR.new(open, bTop, time, bar_index))
+        rnUO := open
+        rnUT := time
+    for s in bearS
+        if bBot < s.ext
+            s.ext := bBot
+            s.rTop := rnBO
+            s.rt := rnBT
+    for s in bullS
+        if bTop > s.ext
+            s.ext := bTop
+            s.rTop := rnUO
+            s.rt := rnUT
+    if d == -1 and prevD != -1
+        bearS.push(SR.new(open, bBot, time, bar_index, open, time))
+    if d == 1 and prevD != 1
+        bullS.push(SR.new(open, bTop, time, bar_index, open, time))
     if d != 0
         prevD := d
     if bearS.size() > 30

@@ -20,9 +20,11 @@ Isto logiko imajo: TradingView indikator `5k_indikator.pine` (ta mapa) in screen
 - **CISD** = zaprtje telesa čez **odprtje prve sveče** zadnje nasprotne serije (kadr 24:50).
   - **Zgodnji CISD** = prvi tak prelom. **Neizpodbiten** = drugi zaporedni (ali ena sveča prebije dve seriji naenkrat).
   - Razlika do MSS: MSS je že wick čez swing; CISD je samo zaprtje telesa.
-- **OB** nastane ob CISD: **samo telesa zadnje prebite serije** (zadnje nasprotne sveče pred impulzom) – od odprtja
-  prve sveče do najnižjega (bull) / najvišjega (bear) telesa. Če velika sveča prebije več serij naenkrat, OB ni cel
-  padec, ampak samo zadnja serija (28. 10. 2026, Juretov primer Q: prej je cona zajela ves tedenski padec). Na grafu ima **črtkano 50 % linijo** in se podaljša v desno (kadri 7:03, 28:10, 31:08).
+- **OB** nastane ob CISD: **samo telesa zadnjih nasprotnih sveč pred impulzom** – zaporedne rdeče sveče (bull OB) /
+  zelene sveče (bear OB), med katerimi je bilo najnižje (najvišje) telo pred obratom. Zgoraj odprtje prve od teh sveč,
+  spodaj najnižje telo. Ne cel padec in ne cela serija (28. 10. 2026, Juretov primer Q 1H: prej 0.05398–0.18453 =
+  ves tedenski padec, zdaj 0.05398–0.05836 = zadnje rdeče sveče pred dvigom). Isti OB se ne doda dvakrat.
+  Na grafu ima **črtkano 50 % linijo** in se podaljša v desno (kadri 7:03, 28:10, 31:08).
 - **OB ni več veljaven**, ko sveča zapre čez njegov drugi rob (bull OB: zaprtje pod dnom). 3+ dotiki = šibek.
 - **Order flow (MTF)**: bullish, dokler se bull OB spoštujejo – natančneje: ostane bullish, dokler cena ne zapre
   pod **zaščiten bull OB** (OB, iz katerega je naredila zadnje najvišje zaprtje). Takrat postane bearish (in obratno).

@@ -250,7 +250,7 @@ function k5Piv(B,i,L,hi){ // pivot na i-L, potrjen na i (kot ta.pivothigh/ta.piv
   for(let k=p-L;k<=p+L;k++){if(k===p)continue;const w=hi?B[k].h:B[k].l;if(hi?(k<p?w>=v:w>v):(k<p?w<=v:w<v))return null}
   return v}
 function k5Engine(B,L,maxAge){
-  let of=0,ofOB=0,ofX=null,anc=null,bullCnt=0,bearCnt=0,prevD=0;const bearS=[],bullS=[];let bulls=[],bears=[];const phs=[],pls=[],evs=[];
+  let of=0,ofOB=0,ofX=null,anc=null,bullCnt=0,bearCnt=0,prevD=0,rnBO=null,rnBT=null,rnUO=null,rnUT=null;const bearS=[],bullS=[];let bulls=[],bears=[];const phs=[],pls=[],evs=[];
   const A=k5Atr(B);
   for(let i=0;i<B.length;i++){
     const b=B[i],bTop=Math.max(b.o,b.c),bBot=Math.min(b.o,b.c),d=b.c>b.o?1:b.c<b.o?-1:0;
@@ -261,16 +261,17 @@ function k5Engine(B,L,maxAge){
     bulls=bulls.filter(o=>!(b.c<o.bot||i-o.bi>maxAge));bears=bears.filter(o=>!(b.c>o.top||i-o.bi>maxAge));
 
     // 3) CISD
-    // OB = samo ZADNJA prebita serija pred impulzom (telesa), ne vse serije, ki jih je sveča prebila
+    // OB = samo telesa ZADNJIH nasprotnih sveč pred impulzom: zaporedne rdeče (bull OB) / zelene (bear OB) sveče,
+    // v katerih je bilo najnižje (najvišje) telo notranje (zadnje) prebite serije – ne cel padec/dvig
     let nB=0,lvB=null,exB=null,tB=null,oB=null;
     for(let k=bearS.length-1;k>=0;k--){const s=bearS[k];if(b.c>s.top){nB++;if(lvB==null||s.top>lvB){lvB=s.top;exB=s.ext;tB=s.t}if(!oB||s.t>oB.t)oB=s;bearS.splice(k,1)}else if(i-s.bi>maxAge)bearS.splice(k,1)}
     let nU=0,lvU=null,exU=null,tU=null,oU=null;
     for(let k=bullS.length-1;k>=0;k--){const s=bullS[k];if(b.c<s.top){nU++;if(lvU==null||s.top<lvU){lvU=s.top;exU=s.ext;tU=s.t}if(!oU||s.t>oU.t)oU=s;bullS.splice(k,1)}else if(i-s.bi>maxAge)bullS.splice(k,1)}
     let ev=0,lvl=null,eT=null;
-    if(nB>0){bulls.push({top:oB.top,bot:oB.ext,t:oB.t,bi:i,ct:b.t,taps:0});
+    if(nB>0){if(!bulls.some(o=>o.t===oB.rt))bulls.push({top:oB.rTop,bot:oB.ext,t:oB.rt,bi:i,ct:b.t,taps:0});
       if(of!==1){of=1;bullCnt=nB;bearCnt=0;ev=nB>=2?2:1;lvl=lvB;eT=tB}
       else if(bullCnt===1){bullCnt+=nB;ev=2;lvl=lvB;eT=tB}}
-    if(nU>0){bears.push({top:oU.ext,bot:oU.top,t:oU.t,bi:i,ct:b.t,taps:0});
+    if(nU>0){if(!bears.some(o=>o.t===oU.rt))bears.push({top:oU.ext,bot:oU.rTop,t:oU.rt,bi:i,ct:b.t,taps:0});
       if(ev===0){if(of!==-1){of=-1;bearCnt=nU;bullCnt=0;ev=nU>=2?-2:-1;lvl=lvU;eT=tU}
       else if(bearCnt===1){bearCnt+=nU;ev=-2;lvl=lvU;eT=tU}}}
     if(ev!==0)evs.push({i,t:b.t,ev,lvl,oT:eT});
@@ -281,9 +282,11 @@ function k5Engine(B,L,maxAge){
     else if(ofOB===-1){if(anc&&b.c>anc.top){ofOB=1;ofX=b.c;anc=nBull()}else if(b.c<ofX){ofX=b.c;const n=nBear();if(n)anc=n}}
     else if(invB>0&&invU===0){ofOB=1;ofX=b.c;anc=nBull()}else if(invU>0&&invB===0){ofOB=-1;ofX=b.c;anc=nBear()}
     // 4) serije
-    for(const s of bearS)s.ext=Math.min(s.ext,bBot);for(const s of bullS)s.ext=Math.max(s.ext,bTop);
-    if(d===-1&&prevD!==-1)bearS.push({top:b.o,ext:bBot,t:b.t,bi:i});
-    if(d===1&&prevD!==1)bullS.push({top:b.o,ext:bTop,t:b.t,bi:i});
+    if(d===-1&&prevD!==-1){rnBO=b.o;rnBT=b.t}if(d===1&&prevD!==1){rnUO=b.o;rnUT=b.t}
+    for(const s of bearS)if(bBot<s.ext){s.ext=bBot;s.rTop=rnBO;s.rt=rnBT}
+    for(const s of bullS)if(bTop>s.ext){s.ext=bTop;s.rTop=rnUO;s.rt=rnUT}
+    if(d===-1&&prevD!==-1)bearS.push({top:b.o,ext:bBot,t:b.t,bi:i,rTop:b.o,rt:b.t});
+    if(d===1&&prevD!==1)bullS.push({top:b.o,ext:bTop,t:b.t,bi:i,rTop:b.o,rt:b.t});
     if(d!==0)prevD=d;
     if(bearS.length>30)bearS.shift();if(bullS.length>30)bullS.shift();if(bulls.length>40)bulls.shift();if(bears.length>40)bears.shift();
     // 5) likvidnost
