@@ -492,8 +492,8 @@ if showZone and barstate.islast
             box.set_bgcolor(zb, color.new(zc, tr))
             line.set_xy1(zbMid, zT, (zTop + zBot) / 2)
             line.set_xy2(zbMid, time + 6 * barMs, (zTop + zBot) / 2)
-        label.set_xy(zbLb, time + 6 * barMs, bias == 1 ? zTop : zBot)
-        label.set_style(zbLb, bias == 1 ? label.style_label_lower_left : label.style_label_upper_left)
+        label.set_xy(zbLb, time, bias == 1 ? zTop : zBot)
+        label.set_style(zbLb, bias == 1 ? label.style_label_lower_right : label.style_label_upper_right)
         label.set_text(zbLb, mtfN + " OB · " + (ofOk ? "področje interesa" : "OF ne sovpada"))
         label.set_textcolor(zbLb, color.new(zc, 20))
     else
@@ -510,7 +510,7 @@ if showLiq and barstate.islast
     label.delete(lqLb)
     if not na(tgt) and not na(tgtT)
         lq := line.new(tgtT, tgt, time + 6 * barMs, tgt, xloc = xloc.bar_time, color = cLiq, style = line.style_dashed, width = 1)
-        lqLb := label.new(time + 6 * barMs, tgt, "cilj · " + tgtN, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = cLiq, size = labSz)
+        lqLb := label.new(time, tgt, "cilj · " + tgtN + " " + str.tostring(tgt, format.mintick), xloc = xloc.bar_time, style = bias == 1 ? label.style_label_lower_right : label.style_label_upper_right, color = color(na), textcolor = cLiq, size = labSz)
 
 // ───────── Ozadje in sveče ─────────
 bgcolor(showKZ and intraTf ? (inNY ? cNY : inLon ? cLon : (inAsia and kzAsia) ? cAsia : na) : na, title = "Kill zone")
