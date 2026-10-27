@@ -1,0 +1,482 @@
+//@version=6
+// ============================================================
+// 5K · Suenovih 5 korakov (ICT "3 % konceptov")
+// Smer (HTF) → Cilj (MTF likvidnost) → Lokacija (MTF OB + order flow) → Čas (kill zone) → Potrditev (LTF CISD)
+// Pravila: claude-notes/5k/pravila.md · isto logiko ima screener 5k/ (blok 5K-CORE)
+// Nočna paleta. Ni finančni nasvet.
+// ============================================================
+indicator("5K · Suen 5 korakov", shorttitle = "5K", overlay = true, max_boxes_count = 300, max_lines_count = 300, max_labels_count = 300, max_bars_back = 2000)
+
+// ───────── Nastavitve ─────────
+G1 = "Sistem"
+prof   = input.string("Intraday · 1D / 1H / 5m", "Profil", options = ["Intraday · 1D / 1H / 5m", "Scalp · 4H / 15m / 1m", "Swing · 1W / 4H / 15m"], group = G1)
+modeC  = input.string("Samodejno (novice → zgodnji)", "CISD način", options = ["Neizpodbiten", "Zgodnji", "Samodejno (novice → zgodnji)"], group = G1)
+newsT  = input.string("", "Rdeča USD novica danes (NY čas, npr. 08:30)", tooltip = "Pusti prazno, če danes ni novic. 1 h pred in po novici velja zgodnji CISD.", group = G1)
+useRng = input.bool(true, "Ne trguj, ko je HTF v rangu", group = G1)
+useKZ  = input.bool(true, "Vstop samo v kill zoni", group = G1)
+kzAsia = input.bool(true, "Azija šteje kot kill zona", group = G1)
+tpMode = input.string("2R", "Cilj (TP)", options = ["2R", "Likvidnost (min 2R)"], group = G1)
+liqMul = input.float(1.0, "Likvidnost največ (× HTF ATR)", step = 0.25, group = G1)
+pivLen = input.int(3, "Swing (likvidnost) – sveč levo/desno", minval = 1, group = G1)
+obAge  = input.int(200, "Najstarejši OB (sveč)", minval = 20, group = G1)
+
+G2 = "Prikaz"
+showZone = input.bool(true, "MTF cona (področje interesa)", group = G2)
+showLiq  = input.bool(true, "MTF likvidnost (cilj)", group = G2)
+showKZ   = input.bool(true, "Kill zone v ozadju", group = G2)
+showLtf  = input.bool(false, "Vsi LTF CISD (tudi brez setupa)", group = G2)
+showTbl  = input.bool(true, "Tabela 5 korakov", group = G2)
+tblPos   = input.string("Zgoraj desno", "Tabela", options = ["Zgoraj desno", "Spodaj desno", "Zgoraj levo"], group = G2)
+posBars  = input.int(24, "Dolžina long/short okvirja (sveč)", group = G2)
+useBar   = input.bool(true, "Nočne barve sveč", group = G2)
+dimOut   = input.bool(false, "Zatemni sveče izven kill zon", group = G2)
+
+G3 = "Barve (noč)"
+cUp   = input.color(#3ccfb4, "Sveča gor", group = G3)
+cDn   = input.color(#e8717d, "Sveča dol", group = G3)
+cLiq  = input.color(#e5c07b, "Likvidnost", group = G3)
+cCisd = input.color(#b4a7f5, "CISD linija", group = G3)
+cEnt  = input.color(#82aaff, "Vstop", group = G3)
+cAsia = input.color(color.new(#5b6ee1, 93), "Azija KZ", group = G3)
+cLon  = input.color(color.new(#e5c07b, 94), "London KZ", group = G3)
+cNY   = input.color(color.new(#3ccfb4, 94), "New York KZ", group = G3)
+cTxt  = #c9d1d9
+cMut  = #6e7681
+cTbg  = #10151d
+
+// ───────── Profil ─────────
+htfTf = prof == "Scalp · 4H / 15m / 1m" ? "240" : prof == "Swing · 1W / 4H / 15m" ? "W" : "D"
+mtfTf = prof == "Scalp · 4H / 15m / 1m" ? "15" : prof == "Swing · 1W / 4H / 15m" ? "240" : "60"
+ltfTf = prof == "Scalp · 4H / 15m / 1m" ? "1" : prof == "Swing · 1W / 4H / 15m" ? "15" : "5"
+htfN  = prof == "Scalp · 4H / 15m / 1m" ? "4H" : prof == "Swing · 1W / 4H / 15m" ? "1W" : "1D"
+mtfN  = prof == "Scalp · 4H / 15m / 1m" ? "15m" : prof == "Swing · 1W / 4H / 15m" ? "4H" : "1H"
+ltfN  = prof == "Scalp · 4H / 15m / 1m" ? "1m" : prof == "Swing · 1W / 4H / 15m" ? "15m" : "5m"
+
+// ───────── Jedro (isto v screenerju) ─────────
+// Kot v Suenovem videu: SERIJA = zaporedne sveče v eno smer (male nasprotne sveče vmes ne prekinejo serije,
+// dokler nobena ne zapre čez odprtje prve sveče). CISD = zaprtje telesa čez ODPRTJE PRVE sveče serije.
+// Ob CISD nastane OB = telesa cele serije (od odprtja prve sveče do najnižjega/najvišjega telesa).
+// Zgodnji CISD = prvi prelom, neizpodbiten = drugi zaporedni (ali več serij prebitih z eno svečo).
+type SR
+    float top
+    float ext
+    int   t
+    int   bi
+
+type OB
+    float top
+    float bot
+    int   t
+    int   bi
+    int   taps = 0
+
+// Vrne: of (po zgodnjih), ofU (po neizpodbitnih), ev (±1 zgodnji, ±2 neizpodbiten), evLvl, evT,
+//       bullTop, bullBot, bullT, bearTop, bearBot, bearT, liqH, liqHT, liqL, liqLT, atr
+f_engine(int L, int maxAge) =>
+    var int of = 0
+    var int ofU = 0
+    var int bullCnt = 0
+    var int bearCnt = 0
+    var int prevD = 0
+    var array<SR> bearS = array.new<SR>()
+    var array<SR> bullS = array.new<SR>()
+    var array<OB> bulls = array.new<OB>()
+    var array<OB> bears = array.new<OB>()
+    var array<float> phL = array.new<float>()
+    var array<int> phT = array.new<int>()
+    var array<float> plL = array.new<float>()
+    var array<int> plT = array.new<int>()
+    a = ta.atr(14)
+    ph = ta.pivothigh(high, L, L)
+    pl = ta.pivotlow(low, L, L)
+    tL = time[L]
+    lo1 = low[1]
+    hi1 = high[1]
+    bTop = math.max(open, close)
+    bBot = math.min(open, close)
+    d = close > open ? 1 : close < open ? -1 : 0
+    // 1) dotiki obstoječih OB (za pravilo "3+ dotiki = šibek")
+    for o in bulls
+        if low <= o.top and lo1 > o.top
+            o.taps += 1
+    for o in bears
+        if high >= o.bot and hi1 < o.bot
+            o.taps += 1
+    // 2) OB, ki niso več veljavni (zaprtje telesa skozi celo cono)
+    if bulls.size() > 0
+        for i = bulls.size() - 1 to 0
+            o = bulls.get(i)
+            if close < o.bot or bar_index - o.bi > maxAge
+                bulls.remove(i)
+    if bears.size() > 0
+        for i = bears.size() - 1 to 0
+            o = bears.get(i)
+            if close > o.top or bar_index - o.bi > maxAge
+                bears.remove(i)
+    // 3) CISD: zaprtje čez odprtje prve sveče serije
+    int nB = 0
+    float lvB = na
+    float exB = na
+    int tB = na
+    if bearS.size() > 0
+        for i = bearS.size() - 1 to 0
+            s = bearS.get(i)
+            if close > s.top
+                nB += 1
+                if na(lvB) or s.top > lvB
+                    lvB := s.top
+                    exB := s.ext
+                    tB := s.t
+                bearS.remove(i)
+            else if bar_index - s.bi > maxAge
+                bearS.remove(i)
+    int nU = 0
+    float lvU = na
+    float exU = na
+    int tU = na
+    if bullS.size() > 0
+        for i = bullS.size() - 1 to 0
+            s = bullS.get(i)
+            if close < s.top
+                nU += 1
+                if na(lvU) or s.top < lvU
+                    lvU := s.top
+                    exU := s.ext
+                    tU := s.t
+                bullS.remove(i)
+            else if bar_index - s.bi > maxAge
+                bullS.remove(i)
+    int ev = 0
+    float evLvl = na
+    int evT = na
+    if nB > 0
+        bulls.push(OB.new(lvB, exB, tB, bar_index))
+        if of != 1
+            of := 1
+            bullCnt := nB
+            bearCnt := 0
+            ev := nB >= 2 ? 2 : 1
+            evLvl := lvB
+            evT := tB
+        else if bullCnt == 1
+            bullCnt += nB
+            ev := 2
+            evLvl := lvB
+            evT := tB
+    if nU > 0
+        bears.push(OB.new(exU, lvU, tU, bar_index))
+        if ev == 0
+            if of != -1
+                of := -1
+                bearCnt := nU
+                bullCnt := 0
+                ev := nU >= 2 ? -2 : -1
+                evLvl := lvU
+                evT := tU
+            else if bearCnt == 1
+                bearCnt += nU
+                ev := -2
+                evLvl := lvU
+                evT := tU
+    if ev == 2
+        ofU := 1
+    if ev == -2
+        ofU := -1
+    // 4) serije: telesa trenutne sveče + nova serija
+    for s in bearS
+        s.ext := math.min(s.ext, bBot)
+    for s in bullS
+        s.ext := math.max(s.ext, bTop)
+    if d == -1 and prevD != -1
+        bearS.push(SR.new(open, bBot, time, bar_index))
+    if d == 1 and prevD != 1
+        bullS.push(SR.new(open, bTop, time, bar_index))
+    if d != 0
+        prevD := d
+    if bearS.size() > 30
+        bearS.shift()
+    if bullS.size() > 30
+        bullS.shift()
+    if bulls.size() > 40
+        bulls.shift()
+    if bears.size() > 40
+        bears.shift()
+    // 5) likvidnost (neprebiti swingi; prebit = wick čez)
+    if not na(ph)
+        phL.push(ph)
+        phT.push(tL)
+    if not na(pl)
+        plL.push(pl)
+        plT.push(tL)
+    if phL.size() > 0
+        for i = phL.size() - 1 to 0
+            if high > phL.get(i)
+                phL.remove(i)
+                phT.remove(i)
+    if plL.size() > 0
+        for i = plL.size() - 1 to 0
+            if low < plL.get(i)
+                plL.remove(i)
+                plT.remove(i)
+    if phL.size() > 60
+        phL.shift()
+        phT.shift()
+    if plL.size() > 60
+        plL.shift()
+        plT.shift()
+    float liqH = na
+    int liqHT = na
+    float liqL = na
+    int liqLT = na
+    if phL.size() > 0
+        for i = 0 to phL.size() - 1
+            v = phL.get(i)
+            if v > close and (na(liqH) or v < liqH)
+                liqH := v
+                liqHT := phT.get(i)
+    if plL.size() > 0
+        for i = 0 to plL.size() - 1
+            v = plL.get(i)
+            if v < close and (na(liqL) or v > liqL)
+                liqL := v
+                liqLT := plT.get(i)
+    // 6) najbližji veljaven OB (manj kot 3 dotiki)
+    float zBT = na
+    float zBB = na
+    int zBTm = na
+    for o in bulls
+        if o.taps < 3 and (na(zBT) or o.top > zBT)
+            zBT := o.top
+            zBB := o.bot
+            zBTm := o.t
+    float zST = na
+    float zSB = na
+    int zSTm = na
+    for o in bears
+        if o.taps < 3 and (na(zSB) or o.bot < zSB)
+            zST := o.top
+            zSB := o.bot
+            zSTm := o.t
+    [of, ofU, ev, evLvl, evT, zBT, zBB, zBTm, zST, zSB, zSTm, liqH, liqHT, liqL, liqLT, a]
+
+// MTF: vrednosti zadnje ZAPRTE sveče (brez repaint)
+f_mtf(int L, int age) =>
+    [of, ofU, ev, el, et, bt, bb, btm, st, sb, stm, lh, lht, ll, llt, a] = f_engine(L, age)
+    [ofU[1], bt[1], bb[1], btm[1], st[1], sb[1], stm[1], lh[1], lht[1], ll[1], llt[1], a[1]]
+
+// HTF: barva zadnje zaprte sveče + struktura (zadnja dva swinga)
+f_htf() =>
+    ph = ta.pivothigh(high, 2, 2)
+    pl = ta.pivotlow(low, 2, 2)
+    h1 = ta.valuewhen(not na(ph), ph, 0)
+    h2 = ta.valuewhen(not na(ph), ph, 1)
+    l1 = ta.valuewhen(not na(pl), pl, 0)
+    l2 = ta.valuewhen(not na(pl), pl, 1)
+    int tr = h1 > h2 and l1 > l2 ? 1 : h1 < h2 and l1 < l2 ? -1 : 0
+    a = ta.atr(14)
+    [open[1], close[1], tr[1], a[1]]
+
+[hO, hC, hTr, hAtr] = request.security(syminfo.tickerid, htfTf, f_htf(), lookahead = barmerge.lookahead_on)
+[mOf, mBT, mBB, mBTm, mST, mSB, mSTm, mLH, mLHT, mLL, mLLT, mAtr] = request.security(syminfo.tickerid, mtfTf, f_mtf(pivLen, obAge), lookahead = barmerge.lookahead_on)
+[lOf, lOfU, lEv, lEl, lEt, lBT, lBB, lBTm, lST, lSB, lSTm, lLH, lLHT, lLL, lLLT, lAtr] = f_engine(pivLen, 400)
+
+// ───────── Korak 1: smer ─────────
+int bias = hC > hO ? 1 : hC < hO ? -1 : 0
+bool rangeOk = not useRng or hTr != 0
+bool s1 = bias != 0 and rangeOk
+
+// ───────── Korak 2: cilj ─────────
+float liqMax = hAtr * liqMul
+float tgtL = not na(mLH) and mLH - close <= liqMax ? mLH : na
+float tgtS = not na(mLL) and close - mLL <= liqMax ? mLL : na
+float tgt = bias == 1 ? tgtL : bias == -1 ? tgtS : na
+int tgtT = bias == 1 ? mLHT : bias == -1 ? mLLT : na
+
+// ───────── Korak 3: lokacija ─────────
+bool ofOk = bias != 0 and mOf == bias
+float zTop = bias == 1 ? mBT : bias == -1 ? mST : na
+float zBot = bias == 1 ? mBB : bias == -1 ? mSB : na
+int zT = bias == 1 ? mBTm : bias == -1 ? mSTm : na
+bool s3 = ofOk and not na(zTop)
+
+// ───────── Korak 4: čas ─────────
+nyH = hour(time, "America/New_York")
+nyM = minute(time, "America/New_York")
+bool inAsia = nyH >= 20
+bool inLon = nyH >= 2 and nyH < 5
+bool inNY = nyH >= 7 and nyH < 10
+bool inKZ = (kzAsia and inAsia) or inLon or inNY
+bool intraTf = timeframe.in_seconds() <= 3600
+string kzName = inNY ? "New York" : inLon ? "London" : inAsia ? "Azija" : "izven"
+float newsMin = na
+if str.length(newsT) >= 4
+    parts = str.split(newsT, ":")
+    if parts.size() == 2
+        newsMin := str.tonumber(parts.get(0)) * 60 + str.tonumber(parts.get(1))
+bool inNews = not na(newsMin) and math.abs(nyH * 60 + nyM - newsMin) <= 60
+bool earlyMode = modeC == "Zgodnji" or (modeC == "Samodejno (novice → zgodnji)" and inNews)
+
+// ───────── Korak 5: potrditev ─────────
+var int zIdL = na
+var bool tapL = false
+var float extL = na
+var bool firedL = false
+var int zIdS = na
+var bool tapS = false
+var float extS = na
+var bool firedS = false
+
+if nz(mBTm, -1) != nz(zIdL, -1)
+    zIdL := mBTm
+    tapL := false
+    extL := na
+    firedL := false
+if nz(mSTm, -1) != nz(zIdS, -1)
+    zIdS := mSTm
+    tapS := false
+    extS := na
+    firedS := false
+
+if not na(mBT) and low <= mBT
+    tapL := true
+if tapL
+    extL := na(extL) ? low : math.min(extL, low)
+if not na(mSB) and high >= mSB
+    tapS := true
+if tapS
+    extS := na(extS) ? high : math.max(extS, high)
+
+bool kzOk = not useKZ or inKZ
+bool evL = earlyMode ? lEv >= 1 : lEv == 2
+bool evS = earlyMode ? lEv <= -1 : lEv == -2
+
+bool sigL = barstate.isconfirmed and s1 and bias == 1 and mOf == 1 and tapL and not firedL and kzOk and evL and lEl > extL
+bool sigS = barstate.isconfirmed and s1 and bias == -1 and mOf == -1 and tapS and not firedS and kzOk and evS and lEl < extS
+
+var float pE = na
+var float pSL = na
+var float pTP = na
+var int pDir = 0
+string modeTxt = earlyMode ? "zgodnji" : "neizpodbiten"
+int barMs = timeframe.in_seconds() * 1000
+
+f_pos(int dir, float e, float sl, float tp, int t0, string txt) =>
+    int t1 = t0 + posBars * barMs
+    box.new(t0, dir == 1 ? tp : e, t1, dir == 1 ? e : tp, xloc = xloc.bar_time, bgcolor = color.new(cUp, 82), border_color = color.new(cUp, 55))
+    box.new(t0, dir == 1 ? e : sl, t1, dir == 1 ? sl : e, xloc = xloc.bar_time, bgcolor = color.new(cDn, 82), border_color = color.new(cDn, 55))
+    line.new(t0, e, t1, e, xloc = xloc.bar_time, color = cEnt, width = 1)
+    label.new(t1, tp, txt, xloc = xloc.bar_time, style = label.style_label_left, color = color.new(cTbg, 10), textcolor = cTxt, size = size.small)
+
+if sigL
+    firedL := true
+    float r = lEl - extL
+    float tp2 = lEl + 2 * r
+    pTP := tpMode == "Likvidnost (min 2R)" and not na(tgtL) and tgtL > tp2 ? tgtL : tp2
+    pE := lEl
+    pSL := extL
+    pDir := 1
+    line.new(lEt, lEl, time, lEl, xloc = xloc.bar_time, color = cCisd, style = line.style_dashed, width = 1)
+    f_pos(1, pE, pSL, pTP, time, "5K LONG · " + modeTxt + "\nvstop " + str.tostring(pE, format.mintick) + "\nSL " + str.tostring(pSL, format.mintick) + "  TP " + str.tostring(pTP, format.mintick))
+    alert("5K LONG " + syminfo.ticker + " · CISD " + modeTxt + " · vstop " + str.tostring(pE, format.mintick) + " · SL " + str.tostring(pSL, format.mintick) + " · TP " + str.tostring(pTP, format.mintick), alert.freq_once_per_bar_close)
+if sigS
+    firedS := true
+    float r = extS - lEl
+    float tp2 = lEl - 2 * r
+    pTP := tpMode == "Likvidnost (min 2R)" and not na(tgtS) and tgtS < tp2 ? tgtS : tp2
+    pE := lEl
+    pSL := extS
+    pDir := -1
+    line.new(lEt, lEl, time, lEl, xloc = xloc.bar_time, color = cCisd, style = line.style_dashed, width = 1)
+    f_pos(-1, pE, pSL, pTP, time, "5K SHORT · " + modeTxt + "\nvstop " + str.tostring(pE, format.mintick) + "\nSL " + str.tostring(pSL, format.mintick) + "  TP " + str.tostring(pTP, format.mintick))
+    alert("5K SHORT " + syminfo.ticker + " · CISD " + modeTxt + " · vstop " + str.tostring(pE, format.mintick) + " · SL " + str.tostring(pSL, format.mintick) + " · TP " + str.tostring(pTP, format.mintick), alert.freq_once_per_bar_close)
+
+plotshape(sigL, "5K long", shape.triangleup, location.belowbar, cUp, size = size.tiny)
+plotshape(sigS, "5K short", shape.triangledown, location.abovebar, cDn, size = size.tiny)
+alertcondition(sigL, "5K LONG", "5K LONG {{ticker}} – CISD potrjen v coni")
+alertcondition(sigS, "5K SHORT", "5K SHORT {{ticker}} – CISD potrjen v coni")
+
+// cena je prišla v cono (koraki 1–3 OK) → opozorilo
+bool zoneHitL = s1 and bias == 1 and ofOk and tapL and not tapL[1] and nz(mBTm) == nz(mBTm[1])
+bool zoneHitS = s1 and bias == -1 and ofOk and tapS and not tapS[1] and nz(mSTm) == nz(mSTm[1])
+alertcondition(zoneHitL or zoneHitS, "5K v coni", "5K {{ticker}} je v " + "MTF coni – čakaj CISD")
+if zoneHitL or zoneHitS
+    alert("5K " + syminfo.ticker + " je v " + mtfN + " coni (" + (zoneHitL ? "long" : "short") + ") – čakaj CISD v kill zoni", alert.freq_once_per_bar_close)
+
+// LTF CISD (vsi) – neobvezno
+if showLtf and lEv != 0
+    line.new(lEt, lEl, time, lEl, xloc = xloc.bar_time, color = color.new(lEv > 0 ? cUp : cDn, 45), style = line.style_dotted, width = 1)
+
+// ───────── Risanje: cona, likvidnost ─────────
+var box zb = na
+var int zbId = na
+var label zbLb = na
+var line zbMid = na
+if showZone and barstate.islast
+    if not na(zTop) and not na(zT)
+        color zc = bias == 1 ? cUp : cDn
+        int tr = ofOk ? 84 : 93
+        if nz(zbId, -1) != zT or na(zb)
+            box.delete(zb)
+            label.delete(zbLb)
+            zb := box.new(zT, zTop, time + 6 * barMs, zBot, xloc = xloc.bar_time, bgcolor = color.new(zc, tr), border_color = color.new(zc, 50), border_style = line.style_solid)
+            zbLb := label.new(time + 6 * barMs, zTop, "", xloc = xloc.bar_time, style = label.style_label_left, color = color(na), size = size.tiny)
+            zbId := zT
+            line.delete(zbMid)
+            zbMid := line.new(zT, (zTop + zBot) / 2, time + 6 * barMs, (zTop + zBot) / 2, xloc = xloc.bar_time, color = color.new(zc, 40), style = line.style_dashed, width = 1)
+        else
+            box.set_top(zb, zTop)
+            box.set_bottom(zb, zBot)
+            box.set_right(zb, time + 6 * barMs)
+            box.set_bgcolor(zb, color.new(zc, tr))
+            line.set_xy1(zbMid, zT, (zTop + zBot) / 2)
+            line.set_xy2(zbMid, time + 6 * barMs, (zTop + zBot) / 2)
+        label.set_xy(zbLb, time + 6 * barMs, bias == 1 ? zTop : zBot)
+        label.set_style(zbLb, bias == 1 ? label.style_label_lower_left : label.style_label_upper_left)
+        label.set_text(zbLb, mtfN + " OB · " + (ofOk ? "področje interesa" : "OF ne sovpada"))
+        label.set_textcolor(zbLb, color.new(zc, 20))
+    else
+        box.delete(zb)
+        label.delete(zbLb)
+        line.delete(zbMid)
+        zb := na
+        zbId := na
+
+var line lq = na
+var label lqLb = na
+if showLiq and barstate.islast
+    line.delete(lq)
+    label.delete(lqLb)
+    if not na(tgt) and not na(tgtT)
+        lq := line.new(tgtT, tgt, time + 6 * barMs, tgt, xloc = xloc.bar_time, color = cLiq, style = line.style_dashed, width = 1)
+        lqLb := label.new(time + 6 * barMs, tgt, "cilj · " + mtfN + " likvidnost", xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = cLiq, size = size.tiny)
+
+// ───────── Ozadje in sveče ─────────
+bgcolor(showKZ and intraTf ? (inNY ? cNY : inLon ? cLon : (inAsia and kzAsia) ? cAsia : na) : na, title = "Kill zone")
+color bc = close >= open ? cUp : cDn
+barcolor(useBar ? (dimOut and intraTf and not inKZ ? color.new(bc, 55) : bc) : na, title = "Nočne sveče")
+
+// ───────── Tabela 5 korakov ─────────
+var table tb = table.new(tblPos == "Spodaj desno" ? position.bottom_right : tblPos == "Zgoraj levo" ? position.top_left : position.top_right, 2, 8, bgcolor = cTbg, border_color = #1f2733, border_width = 1, frame_color = #2a3442, frame_width = 1)
+f_row(int r, string k, string v, color c) =>
+    table.cell(tb, 0, r, k, text_color = cMut, text_size = size.small, text_halign = text.align_left)
+    table.cell(tb, 1, r, v, text_color = c, text_size = size.small, text_halign = text.align_left)
+
+if showTbl and barstate.islast
+    string dirTxt = bias == 1 ? "LONG ▲" : bias == -1 ? "SHORT ▼" : "—"
+    string strTxt = hTr == 1 ? "trend ↑" : hTr == -1 ? "trend ↓" : "range"
+    table.cell(tb, 0, 0, "5K · " + htfN + " / " + mtfN + " / " + ltfN, text_color = cTxt, text_size = size.small, text_halign = text.align_left)
+    table.cell(tb, 1, 0, timeframe.period == ltfTf ? "" : "graf naj bo " + ltfN, text_color = cLiq, text_size = size.small)
+    f_row(1, "1 Smer", dirTxt + " · " + strTxt, s1 ? (bias == 1 ? cUp : cDn) : cMut)
+    string t2 = not na(tgt) ? str.tostring(tgt, format.mintick) + "  (" + str.tostring(math.abs(tgt / close - 1) * 100, "#.##") + " %)" : "ni blizu → 2R"
+    f_row(2, "2 Cilj", t2, not na(tgt) ? cLiq : cMut)
+    string zTxt = na(zTop) ? "ni cone" : (bias == 1 ? (low <= zTop ? "V CONI" : str.tostring((close / zTop - 1) * 100, "#.##") + " % do cone") : (high >= zBot ? "V CONI" : str.tostring((1 - close / zBot) * 100, "#.##") + " % do cone"))
+    string t3 = (ofOk ? mtfN + " OF ✓ · " : mtfN + " OF ✗ · ") + zTxt
+    f_row(3, "3 Lokacija", t3, s3 ? (str.contains(zTxt, "V CONI") ? cUp : cTxt) : cMut)
+    f_row(4, "4 Čas", (inKZ ? "✓ " : "✗ ") + kzName + (inNews ? " · novice" : ""), inKZ ? cUp : cMut)
+    bool tapNow = bias == 1 ? tapL : bias == -1 ? tapS : false
+    bool firedNow = bias == 1 ? firedL : bias == -1 ? firedS : false
+    string t5 = firedNow and pDir == bias ? "✓ vstop " + str.tostring(pE, format.mintick) : tapNow ? "čaka " + ltfN + " CISD (" + modeTxt + ")" : "čaka dotik cone"
+    f_row(5, "5 Potrditev", t5, firedNow ? cEnt : tapNow ? cTxt : cMut)
+    string st = not s1 ? "✖ ni smeri / range" : not ofOk ? "✖ " + mtfN + " OF ne sovpada" : na(zTop) ? "✖ ni cone" : firedNow ? "🎯 VSTOP" : tapNow ? "🟢 V CONI" : "⚪ ČAKA"
+    f_row(6, "Stanje", st, firedNow ? cEnt : tapNow ? cUp : cTxt)
+    f_row(7, "Kill zone (CET)", "London 08–11 · NY 13–16", cMut)
