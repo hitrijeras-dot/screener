@@ -56,7 +56,7 @@ ltfN  = prof == "Scalp · 4H / 15m / 1m" ? "1m" : prof == "Swing · 1W / 4H / 15
 // ───────── Jedro (isto v screenerju) ─────────
 // Kot v Suenovem videu: SERIJA = zaporedne sveče v eno smer (male nasprotne sveče vmes ne prekinejo serije,
 // dokler nobena ne zapre čez odprtje prve sveče). CISD = zaprtje telesa čez ODPRTJE PRVE sveče serije.
-// Ob CISD nastane OB = telesa cele serije (od odprtja prve sveče do najnižjega/najvišjega telesa).
+// Ob CISD nastane OB = telesa ZADNJE prebite serije (zadnje nasprotne sveče pred impulzom), samo telesa.
 // Zgodnji CISD = prvi prelom, neizpodbiten = drugi zaporedni (ali več serij prebitih z eno svečo).
 type SR
     float top
@@ -133,6 +133,9 @@ f_engine(int L, int maxAge) =>
     float lvB = na
     float exB = na
     int tB = na
+    float obBT = na
+    float obBB = na
+    int obBt = na
     if bearS.size() > 0
         for i = bearS.size() - 1 to 0
             s = bearS.get(i)
@@ -142,6 +145,10 @@ f_engine(int L, int maxAge) =>
                     lvB := s.top
                     exB := s.ext
                     tB := s.t
+                if na(obBt) or s.t > obBt
+                    obBT := s.top
+                    obBB := s.ext
+                    obBt := s.t
                 bearS.remove(i)
             else if bar_index - s.bi > maxAge
                 bearS.remove(i)
@@ -149,6 +156,9 @@ f_engine(int L, int maxAge) =>
     float lvU = na
     float exU = na
     int tU = na
+    float obUT = na
+    float obUB = na
+    int obUt = na
     if bullS.size() > 0
         for i = bullS.size() - 1 to 0
             s = bullS.get(i)
@@ -158,6 +168,10 @@ f_engine(int L, int maxAge) =>
                     lvU := s.top
                     exU := s.ext
                     tU := s.t
+                if na(obUt) or s.t > obUt
+                    obUB := s.top
+                    obUT := s.ext
+                    obUt := s.t
                 bullS.remove(i)
             else if bar_index - s.bi > maxAge
                 bullS.remove(i)
@@ -165,7 +179,7 @@ f_engine(int L, int maxAge) =>
     float evLvl = na
     int evT = na
     if nB > 0
-        bulls.push(OB.new(lvB, exB, tB, bar_index))
+        bulls.push(OB.new(obBT, obBB, obBt, bar_index))
         if of != 1
             of := 1
             bullCnt := nB
@@ -179,7 +193,7 @@ f_engine(int L, int maxAge) =>
             evLvl := lvB
             evT := tB
     if nU > 0
-        bears.push(OB.new(exU, lvU, tU, bar_index))
+        bears.push(OB.new(obUT, obUB, obUt, bar_index))
         if ev == 0
             if of != -1
                 of := -1
