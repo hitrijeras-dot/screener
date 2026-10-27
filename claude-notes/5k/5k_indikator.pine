@@ -30,6 +30,7 @@ tblPos   = input.string("Zgoraj desno", "Tabela", options = ["Zgoraj desno", "Sp
 posBars  = input.int(24, "Dolžina long/short okvirja (sveč)", group = G2)
 useBar   = input.bool(true, "Nočne barve sveč", group = G2)
 dimOut   = input.bool(false, "Zatemni sveče izven kill zon", group = G2)
+labSz    = input.int(16, "Velikost napisov na linijah (pt)", minval = 8, maxval = 40, group = G2)
 
 G3 = "Barve (noč)"
 cUp   = input.color(#3ccfb4, "Sveča gor", group = G3)
@@ -426,7 +427,7 @@ f_pos(int dir, float e, float sl, float tp, int t0, string txt) =>
     box.new(t0, dir == 1 ? tp : e, t1, dir == 1 ? e : tp, xloc = xloc.bar_time, bgcolor = color.new(cUp, 82), border_color = color.new(cUp, 55))
     box.new(t0, dir == 1 ? e : sl, t1, dir == 1 ? sl : e, xloc = xloc.bar_time, bgcolor = color.new(cDn, 82), border_color = color.new(cDn, 55))
     line.new(t0, e, t1, e, xloc = xloc.bar_time, color = cEnt, width = 1)
-    label.new(t1, tp, txt, xloc = xloc.bar_time, style = label.style_label_left, color = color.new(cTbg, 10), textcolor = cTxt, size = size.small)
+    label.new(t1, tp, txt, xloc = xloc.bar_time, style = label.style_label_left, color = color.new(cTbg, 10), textcolor = cTxt, size = labSz)
 
 if sigL
     firedL := true
@@ -480,7 +481,7 @@ if showZone and barstate.islast
             box.delete(zb)
             label.delete(zbLb)
             zb := box.new(zT, zTop, time + 6 * barMs, zBot, xloc = xloc.bar_time, bgcolor = color.new(zc, tr), border_color = color.new(zc, 50), border_style = line.style_solid)
-            zbLb := label.new(time + 6 * barMs, zTop, "", xloc = xloc.bar_time, style = label.style_label_left, color = color(na), size = size.tiny)
+            zbLb := label.new(time + 6 * barMs, zTop, "", xloc = xloc.bar_time, style = label.style_label_left, color = color(na), size = labSz)
             zbId := zT
             line.delete(zbMid)
             zbMid := line.new(zT, (zTop + zBot) / 2, time + 6 * barMs, (zTop + zBot) / 2, xloc = xloc.bar_time, color = color.new(zc, 40), style = line.style_dashed, width = 1)
@@ -509,7 +510,7 @@ if showLiq and barstate.islast
     label.delete(lqLb)
     if not na(tgt) and not na(tgtT)
         lq := line.new(tgtT, tgt, time + 6 * barMs, tgt, xloc = xloc.bar_time, color = cLiq, style = line.style_dashed, width = 1)
-        lqLb := label.new(time + 6 * barMs, tgt, "cilj · " + tgtN, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = cLiq, size = size.tiny)
+        lqLb := label.new(time + 6 * barMs, tgt, "cilj · " + tgtN, xloc = xloc.bar_time, style = label.style_label_left, color = color(na), textcolor = cLiq, size = labSz)
 
 // ───────── Ozadje in sveče ─────────
 bgcolor(showKZ and intraTf ? (inNY ? cNY : inLon ? cLon : (inAsia and kzAsia) ? cAsia : na) : na, title = "Kill zone")
