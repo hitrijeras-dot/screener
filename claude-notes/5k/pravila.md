@@ -14,15 +14,18 @@ Isto logiko imajo: TradingView indikator `5k_indikator.pine` (ta mapa) in screen
 | Swing | 1W | 4H | 15m |
 
 ## Gradniki (vse samo na ZAPRTIH svečah, vse po TELESIH sveč)
-- **Serija**: zaporedne sveče iste barve. Zgornji rob = najvišje telo, spodnji = najnižje telo.
-- **Bullish OB**: zadnja serija rdečih sveč, nad katero je kasneje sveča **zaprla** (impulz gor). Cona = telesa te serije.
-- **Bearish OB**: zadnja serija zelenih sveč, pod katero je kasneje sveča zaprla.
-- **OB ni več veljaven** (disrespected), ko sveča zapre čez njegov drugi rob (bull OB: zaprtje pod dnom).
-- **Order flow**: bullish, ko se bull OB-ji spoštujejo in bear OB-ji prebijajo (in obratno).
-- **CISD** = sprememba order flowa: prvo **zaprtje telesa skozi celo telo nasprotnega OB**.
-  - **Zgodnji CISD** = prvi prebit nasprotni OB.
-  - **Neizpodbiten CISD** = drugi zaporedni prebit OB (ali en prebit dveh OB naenkrat).
+(Preverjeno na kadrih iz videa – 7:35, 18:10, 24:50, 28:10, 31:08, 36:20.)
+- **Serija**: zaporedne sveče v eno smer. Male nasprotne sveče vmes je NE prekinejo, dokler nobena ne zapre
+  čez odprtje prve sveče serije (kadr 18:10: H1 bullish OB vsebuje tudi dve mali zeleni sveči).
+- **CISD** = zaprtje telesa čez **odprtje prve sveče** zadnje nasprotne serije (kadr 24:50).
+  - **Zgodnji CISD** = prvi tak prelom. **Neizpodbiten** = drugi zaporedni (ali ena sveča prebije dve seriji naenkrat).
   - Razlika do MSS: MSS je že wick čez swing; CISD je samo zaprtje telesa.
+- **OB** nastane ob CISD: telesa cele prebite serije – od odprtja prve sveče do najnižjega (bull) / najvišjega
+  (bear) telesa. Na grafu ima **črtkano 50 % linijo** in se podaljša v desno (kadri 7:03, 28:10, 31:08).
+- **OB ni več veljaven**, ko sveča zapre čez njegov drugi rob (bull OB: zaprtje pod dnom). 3+ dotiki = šibek.
+- **Order flow (MTF)**: bullish, dokler se bull OB spoštujejo – natančneje: ostane bullish, dokler cena ne zapre
+  pod **zaščiten bull OB** (OB, iz katerega je naredila zadnje najvišje zaprtje). Takrat postane bearish (in obratno).
+  Zato popravek v cono order flowa ne obrne (CISD na 1H bi ga obrnil pri vsakem popravku).
 - **Likvidnost**: neprebit swing high/low (pivot 3 sveče levo/desno). Prebit = wick čez nivo.
 
 ## 5 korakov
@@ -39,7 +42,7 @@ Isto logiko imajo: TradingView indikator `5k_indikator.pine` (ta mapa) in screen
 5. **Potrditev (LTF)** – ko je cena v coni (dotik), čakaj LTF CISD v smeri biasa v kill zoni.
    - Na dan z rdečo USD novico (1 h pred do 1 h po njej) velja **zgodnji** CISD, drugače **neizpodbiten**.
    - **Vstop**: limit na CISD liniji (zgornji rob prebitega OB).
-   - **SL**: za najbližjim swingom = najnižja cena od dotika cone (long) / najvišja (short).
+   - **SL**: za najbližjim swingom = najnižja cena (wick) od dotika cone (long) / najvišja (short).
    - **TP**: 2R (privzeto) ali MTF likvidnost, če je dlje kot 2R.
 
 En signal na cono. Vse pogoje "da" → trejd. Kateri koli manjka → ni trejda, ne glede na občutek.
@@ -52,3 +55,12 @@ En signal na cono. Vse pogoje "da" → trejd. Kateri koli manjka → ni trejda, 
 | 🟡 Blizu cone | koraki 1–3 OK, cena je do 1 × MTF ATR nad/pod cono |
 | ⚪ Čaka | koraki 1–3 OK, cona je še daleč |
 | ✖ | range, OF ne sovpada ali ni cone |
+
+## Datoteke
+- `5k_indikator.pine` – TradingView indikator (na Juretovem računu shranjen kot »5K · Suen 5 korakov«).
+- `../../5k/` – screener aplikacija (https://hitrijeras-dot.github.io/screener/5k/), PWA, nočna paleta.
+- Kadri iz videa niso v repu (repo je javen) – Jure jih ima v pogovoru.
+
+## Barve (noč)
+ozadje #0a0d13 · sveča gor #3ccfb4 · sveča dol #e8717d · likvidnost #e5c07b · CISD #b4a7f5 · vstop #82aaff ·
+kill zone: Azija #5b6ee1, London #e5c07b, NY #3ccfb4 (zelo prosojne).

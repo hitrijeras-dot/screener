@@ -1,0 +1,11 @@
+{
+  "name": "5K · Suen 5 korakov", "short_name": "5K",
+  "description": "Screener po Suenovih 5 korakih: smer, cilj, cona, kill zona, CISD (Bybit USDT perp).",
+  "lang": "sl", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "any",
+  "background_color": "#0a0d13", "theme_color": "#0a0d13",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

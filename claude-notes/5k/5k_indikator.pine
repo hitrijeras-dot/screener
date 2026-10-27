@@ -70,11 +70,16 @@ type OB
     int   bi
     int   taps = 0
 
-// Vrne: of (po zgodnjih), ofU (po neizpodbitnih), ev (±1 zgodnji, ±2 neizpodbiten), evLvl, evT,
+// ofOB = order flow po OB: ostane bullish, dokler cena ne ZAPRE pod zaščiten bull OB (iz katerega je naredila
+// zadnje najvišje zaprtje); takrat postane bearish (in obratno).
+// Vrne: of (po CISD), ofOB, ev (±1 zgodnji, ±2 neizpodbiten), evLvl, evT,
 //       bullTop, bullBot, bullT, bearTop, bearBot, bearT, liqH, liqHT, liqL, liqLT, atr
 f_engine(int L, int maxAge) =>
     var int of = 0
-    var int ofU = 0
+    var int ofOB = 0
+    var float ofX = na
+    var float ancTop = na
+    var float ancBot = na
     var int bullCnt = 0
     var int bearCnt = 0
     var int prevD = 0
@@ -103,16 +108,25 @@ f_engine(int L, int maxAge) =>
         if high >= o.bot and hi1 < o.bot
             o.taps += 1
     // 2) OB, ki niso več veljavni (zaprtje telesa skozi celo cono)
+    int invU = 0
+    int invB = 0
     if bulls.size() > 0
         for i = bulls.size() - 1 to 0
             o = bulls.get(i)
-            if close < o.bot or bar_index - o.bi > maxAge
+            if close < o.bot
+                invU += 1
+                bulls.remove(i)
+            else if bar_index - o.bi > maxAge
                 bulls.remove(i)
     if bears.size() > 0
         for i = bears.size() - 1 to 0
             o = bears.get(i)
-            if close > o.top or bar_index - o.bi > maxAge
+            if close > o.top
+                invB += 1
                 bears.remove(i)
+            else if bar_index - o.bi > maxAge
+                bears.remove(i)
+
     // 3) CISD: zaprtje čez odprtje prve sveče serije
     int nB = 0
     float lvB = na
@@ -178,10 +192,51 @@ f_engine(int L, int maxAge) =>
                 ev := -2
                 evLvl := lvU
                 evT := tU
-    if ev == 2
-        ofU := 1
-    if ev == -2
-        ofU := -1
+    // 3b) order flow po OB (zaščiten OB)
+    float nbT = na
+    float nbB = na
+    for o in bulls
+        if na(nbT) or o.top > nbT
+            nbT := o.top
+            nbB := o.bot
+    float nsT = na
+    float nsB = na
+    for o in bears
+        if na(nsB) or o.bot < nsB
+            nsT := o.top
+            nsB := o.bot
+    if ofOB == 1
+        if not na(ancBot) and close < ancBot
+            ofOB := -1
+            ofX := close
+            ancTop := nsT
+            ancBot := nsB
+        else if close > ofX
+            ofX := close
+            if not na(nbT)
+                ancTop := nbT
+                ancBot := nbB
+    else if ofOB == -1
+        if not na(ancTop) and close > ancTop
+            ofOB := 1
+            ofX := close
+            ancTop := nbT
+            ancBot := nbB
+        else if close < ofX
+            ofX := close
+            if not na(nsB)
+                ancTop := nsT
+                ancBot := nsB
+    else if invB > 0 and invU == 0
+        ofOB := 1
+        ofX := close
+        ancTop := nbT
+        ancBot := nbB
+    else if invU > 0 and invB == 0
+        ofOB := -1
+        ofX := close
+        ancTop := nsT
+        ancBot := nsB
     // 4) serije: telesa trenutne sveče + nova serija
     for s in bearS
         s.ext := math.min(s.ext, bBot)
@@ -257,12 +312,12 @@ f_engine(int L, int maxAge) =>
             zST := o.top
             zSB := o.bot
             zSTm := o.t
-    [of, ofU, ev, evLvl, evT, zBT, zBB, zBTm, zST, zSB, zSTm, liqH, liqHT, liqL, liqLT, a]
+    [of, ofOB, ev, evLvl, evT, zBT, zBB, zBTm, zST, zSB, zSTm, liqH, liqHT, liqL, liqLT, a]
 
 // MTF: vrednosti zadnje ZAPRTE sveče (brez repaint)
 f_mtf(int L, int age) =>
-    [of, ofU, ev, el, et, bt, bb, btm, st, sb, stm, lh, lht, ll, llt, a] = f_engine(L, age)
-    [ofU[1], bt[1], bb[1], btm[1], st[1], sb[1], stm[1], lh[1], lht[1], ll[1], llt[1], a[1]]
+    [of, ofOB, ev, el, et, bt, bb, btm, st, sb, stm, lh, lht, ll, llt, a] = f_engine(L, age)
+    [ofOB[1], bt[1], bb[1], btm[1], st[1], sb[1], stm[1], lh[1], lht[1], ll[1], llt[1], a[1]]
 
 // HTF: barva zadnje zaprte sveče + struktura (zadnja dva swinga)
 f_htf() =>
@@ -278,7 +333,7 @@ f_htf() =>
 
 [hO, hC, hTr, hAtr] = request.security(syminfo.tickerid, htfTf, f_htf(), lookahead = barmerge.lookahead_on)
 [mOf, mBT, mBB, mBTm, mST, mSB, mSTm, mLH, mLHT, mLL, mLLT, mAtr] = request.security(syminfo.tickerid, mtfTf, f_mtf(pivLen, obAge), lookahead = barmerge.lookahead_on)
-[lOf, lOfU, lEv, lEl, lEt, lBT, lBB, lBTm, lST, lSB, lSTm, lLH, lLHT, lLL, lLLT, lAtr] = f_engine(pivLen, 400)
+[lOf, lOfOB, lEv, lEl, lEt, lBT, lBB, lBTm, lST, lSB, lSTm, lLH, lLHT, lLL, lLLT, lAtr] = f_engine(pivLen, 400)
 
 // ───────── Korak 1: smer ─────────
 int bias = hC > hO ? 1 : hC < hO ? -1 : 0
@@ -479,4 +534,7 @@ if showTbl and barstate.islast
     f_row(5, "5 Potrditev", t5, firedNow ? cEnt : tapNow ? cTxt : cMut)
     string st = not s1 ? "✖ ni smeri / range" : not ofOk ? "✖ " + mtfN + " OF ne sovpada" : na(zTop) ? "✖ ni cone" : firedNow ? "🎯 VSTOP" : tapNow ? "🟢 V CONI" : "⚪ ČAKA"
     f_row(6, "Stanje", st, firedNow ? cEnt : tapNow ? cUp : cTxt)
-    f_row(7, "Kill zone (CET)", "London 08–11 · NY 13–16", cMut)
+    int ny0 = timestamp("America/New_York", year(timenow, "America/New_York"), month(timenow, "America/New_York"), dayofmonth(timenow, "America/New_York"), 0, 0)
+    string tz = "Europe/Ljubljana"
+    string kzT = "London " + str.format_time(ny0 + 2 * 3600000, "HH:mm", tz) + "–" + str.format_time(ny0 + 5 * 3600000, "HH:mm", tz) + " · NY " + str.format_time(ny0 + 7 * 3600000, "HH:mm", tz) + "–" + str.format_time(ny0 + 10 * 3600000, "HH:mm", tz)
+    f_row(7, "Kill zone (naš čas)", kzT, cMut)
