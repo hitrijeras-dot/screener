@@ -521,6 +521,10 @@ function drawChart(){
   // pogled: zadnjih ~150 sveč
   const n=BARS.length;CH.timeScale().setVisibleLogicalRange({from:Math.max(0,n-150),to:n+12});
   [60,250,700,1500].forEach(ms=>setTimeout(drawOv,ms));
+  // cenovna os se lahko spremeni brez premika časa (povečava osi s prsti, samodejno merilo) → spremljaj in nariši znova
+  const me=CH,ref=BARS[n-1].c;let k0='';
+  const watch=()=>{if(CH!==me)return;const k=[SER.priceToCoordinate(ref),SER.priceToCoordinate(ref*1.01),CH.timeScale().logicalToCoordinate(n-1),box.clientWidth,box.clientHeight].join('|');
+    if(k!==k0){k0=k;drawOv()}requestAnimationFrame(watch)};requestAnimationFrame(watch);
 }
 function prec(B){const p=B.length?B[B.length-1].c:1;return p>=1000?1:p>=100?2:p>=1?3:p>=0.1?4:p>=0.01?5:p>=0.001?6:7}
 function drawOv(){
