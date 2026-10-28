@@ -48,7 +48,7 @@ def bn_k(sym, iv, a, b):
     out = {}; base = 'https://data.binance.vision/data/futures/um'
     d = dt.datetime.utcfromtimestamp(a / 1000).replace(day=1)
     last = dt.datetime.utcfromtimestamp((b - 1) / 1000)
-    cur_month = dt.datetime.utcfromtimestamp(now / 1000).replace(day=1)
+    cur_month = dt.datetime.utcfromtimestamp(now / 1000).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     while d <= last:
         ym = d.strftime('%Y-%m')
         if d < cur_month:
@@ -81,7 +81,7 @@ for s in syms:
     try:
         d = {'D': fn(s, ivs['D'], start1d, end), '60': fn(s, ivs['60'], start1h, end), '5': fn(s, ivs['5'], start5, end)}
         if len(d['5']) < 1000 or len(d['60']) < 500: log[s] = 'premalo podatkov'; continue
-        json.dump(d, open(f'{OUT}/{s}.json', 'w')); meta['syms'].append(s); print(s, len(d['D']), len(d['60']), len(d['5']), flush=True)
+        json.dump(d, open(f'{OUT}/{s}.json', 'w')); meta['syms'].append(s); meta.setdefault('cnt', {})[s] = {k: [len(v), v[-1][0] if v else 0] for k, v in d.items()}; print(s, len(d['D']), len(d['60']), len(d['5']), flush=True)
     except Exception as e:
         log[s] = str(e); print(s, 'ERR', e, flush=True)
 json.dump(meta, open(f'{OUT}/meta.json', 'w'))
