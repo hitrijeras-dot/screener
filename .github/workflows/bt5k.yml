@@ -1,0 +1,27 @@
+name: 5K backtest
+on:
+  push:
+    branches: [backtest]
+    paths: ['bt/**', '.github/workflows/bt5k.yml']
+permissions:
+  contents: write
+jobs:
+  bt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Podatki
+        env: { BT_DAYS: '60', BT_COINS: '30' }
+        run: python3 bt/fetch.py /tmp/data
+      - name: Backtest
+        run: mkdir -p bt/out && node bt/run.js /tmp/data bt/out/rezultat.json && cp /tmp/data/meta.json bt/out/meta.json
+      - name: Shrani
+        run: |
+          git config user.name "5k-backtest"
+          git config user.email "actions@users.noreply.github.com"
+          git add bt/out
+          git commit -m "5K backtest rezultat" || true
+          git push
