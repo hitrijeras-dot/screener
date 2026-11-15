@@ -1,0 +1,27 @@
+{
+"top": [
+"Vseh 11 kovancev je v dnevnem trendu dol, večina v spodnji četrtini 7-dnevnega rangea.",
+"<b>Short s trendom (A+):</b> XMR (EQH 507,3, +1,3 %, nad njim FVG 514–516), UNI (EQH 5,207, trije wicki, +0,6 %, 1H FVG nad njim). BTC (EQH 66.179, +2 %, 1H FVG) je takoj za njima.",
+"<b>Long proti trendu:</b> ETH, HYPE, NEAR in PEPE imajo EQL tik pod ceno s FVG. Če sploh, samo hiter trejd po sweepu z manjšo pozicijo.",
+"LIT (fokus): nič blizu. Zgoraj EQH 3,068 (+8 %), spodaj PDL 2,6429 (−7 %)."
+],
+"LIT": {
+"bias": "Dol",
+"cena": "2,836, v spodnjem delu dneva in pod 1H EMA50 2,988. Zlomljen PWL 2,998 je zdaj odpor.",
+"likv": "<b>Zgoraj:</b> EQH 3,068 (+8,2 %), nato EQH 3,398. Nad njima ni FVG potrditve.<br><b>Spodaj:</b> enaki dni 2,7945 so že pobrani. Naslednji cilj je PDL 2,6429 (−6,8 %).",
+"plan": "<b>Short:</b> sweep EQH 3,068 ali zavrnitev pri PWL 2,998 in obrat na 5m, takrat market short. SL nad wickom, cilj 2,79, nato 2,64.<br><b>Long:</b> samo po sweepu PDL 2,6429 in obratu strukture na 5m."
+},
+"XMR": {
+"bias": "Dol",
+"cena": "500,9, pod 1H EMA50 506,8. Ponoči so bili pobrani enaki dni 494 in 488.",
+"likv": "<b>Zgoraj:</b> EQH 507,3 (+1,3 %), nad njim padajoči FVG 514,4–515,5 (✚ A+). Nato EQH 536 (PDH) in 540,5.<br><b>Spodaj:</b> nepobranih EQL ni, Azija L 463,2, PDL 455,4.",
+"plan": "<b>Short (A+, s trendom):</b> sweep 507,3 do FVG 514–516 in obrat na 5m, takrat market short. SL nad wickom (~517), cilj 494, nato 488.<br><b>Long:</b> ne."
+},
+"UNI": {
+"bias": "Dol",
+"cena": "5,174, +6 % odboj v 24 h, a pod 1H EMA50 5,268 in v spodnjih 22 % rangea.",
+"likv": "<b>Zgoraj:</b> EQH 5,207 (trije wicki, +0,6 %) z 1H FVG 5,185–5,331 (✚ A+), nato EQH 5,641 (+9 %).<br><b>Spodaj:</b> Azija L 4,672, PDL 4,614.",
+"plan": "<b>Short (A+, s trendom):</b> sweep 5,207 v FVG (5,26–5,33) in obrat na 5m, takrat market short. SL nad 5,34, cilj 5,02, nato 4,79.<br>Pozor: odboj je močan, zato ne vstopaj pred obratom strukture."
+},
+"gen": 1794772825
+}
