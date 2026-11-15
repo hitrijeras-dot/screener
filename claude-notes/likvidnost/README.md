@@ -17,5 +17,5 @@ Graf: TradingView Lightweight Charts v4.1.3 (lokalna kopija `lightweight-charts.
 - 1D trend: včerajšnje zaprtje proti EMA20 na dnevnih zaprtjih.
 
 **Plan (opombe):** `notes.json` = {gen, top[], <KOVANEC>:{bias,cena,likv,plan}} – piše ga Claude (jutranje opravilo ob 07:02 ali na zahtevo).
-Aplikacija ga prikaže, če je mlajši od 20 h; sicer samodejni plan iz podatkov v živo.
+Aplikacija ga prikaže, če je mlajši od 8 h (ravni se med dnevom premikajo); sicer samodejni plan iz podatkov v živo.
 Jure trejda samo z **market** vstopi: sweep ravni + obrat strukture na 5m → market.
