@@ -81,6 +81,8 @@ main{padding:14px 16px 40px;display:flex;flex-direction:column;gap:12px;min-widt
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted)}
 .sw{width:16px;height:3px;display:inline-block;border-radius:2px;margin-right:5px;vertical-align:middle}
 .foot{font-size:12px;color:var(--muted)}
+.cd{font-family:var(--mono);font-size:13px;color:var(--muted);display:inline-flex;gap:10px;flex-wrap:wrap;align-items:center}
+.cd b{color:var(--ink);font-weight:600}
 .lhead{display:none;align-items:center;justify-content:space-between;padding:10px 14px 4px;font-size:13px;color:var(--muted)}
 .back{display:none}
 .empty{padding:30px;text-align:center;color:var(--muted)}
@@ -116,13 +118,14 @@ main{padding:14px 16px 40px;display:flex;flex-direction:column;gap:12px;min-widt
   <div class="bar" id="bar"></div>
   <div class="bar">
     <div class="btns" role="group" aria-label="Časovni okvir" id="tfs"></div>
+    <span class="cd" id="cd" aria-live="off"></span>
     <span class="spacer"></span>
     <button type="button" class="tool back" id="back">↑ Lista</button>
     <button type="button" class="tool" id="fit">Ponastavi zoom</button>
     <button type="button" class="tool" id="big">⤢ Povečaj</button>
   </div>
   <div class="chartwrap" id="wrap">
-    <div class="bigbar"><b id="bigtitle"></b><div class="btns" id="tfs2"></div><span class="spacer"></span><button type="button" class="tool" id="close">✕ Zapri</button></div>
+    <div class="bigbar"><b id="bigtitle"></b><div class="btns" id="tfs2"></div><span class="cd" id="cd2"></span><span class="spacer"></span><button type="button" class="tool" id="close">✕ Zapri</button></div>
     <div id="chart" role="img" aria-label="Graf z ravnmi likvidnosti"></div>
   </div>
   <div class="hint">Zoom: kolešček ali dva prsta · premik: povleci graf · os cene povleci gor/dol · podatki se osvežujejo sami (cena vsakih 30 s, ravni vsake 3 min)</div>
@@ -240,7 +243,7 @@ function select(k,keepView){if(!DATA[k])k=ORDER[0];const same=k===CUR;CUR=k;docu
   const cn=NOTES&&NOTES[k]&&Date.now()/1000-NOTES.gen<20*3600?NOTES[k]:null,n=cn||autoNote(c);
   document.getElementById("notes").innerHTML=`<div class="note"><span class="tag">Kje je cena</span>${n.cena||""}</div><div class="note"><span class="tag">Kje je likvidnost</span>${n.likv||""}</div><div class="note"><span class="tag">Scenarij · market vstop</span>${n.plan||""}</div><div class="src">${cn?"Plan napisal Claude ob "+fmtT(NOTES.gen,{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"}):"Plan samodejno iz podatkov v živo"}</div>`;
   draw(same&&keepView)}
-function draw(keepView){const el=document.getElementById("chart");let vr=null;if(chart){if(keepView)try{vr=chart.timeScale().getVisibleLogicalRange()}catch(e){}chart.remove();chart=null;cs=null}
+function draw(keepView){const el=document.getElementById("chart");let vr=null;if(chart){if(keepView)try{vr=chart.timeScale().getVisibleLogicalRange()}catch(e){}chart.remove();chart=null;cs=null;cdLine=null}
   const c=DATA[CUR],R=RAW[CUR]&&RAW[CUR][TF];if(!c||!R||!R.length||!window.LightweightCharts){el.innerHTML='<div class="empty">Graf ni na voljo.</div>';return}
   el.innerHTML="";const step=TFIV[TF][1],show={"5m":144,"15m":160,"1H":168,"1D":60}[TF];
   const B=R.slice(-Math.max(show,R.length>300?300:R.length)).map(b=>({time:b[0],open:b[1],high:b[2],low:b[3],close:b[4]}));
@@ -263,8 +266,15 @@ function draw(keepView){const el=document.getElementById("chart");let vr=null;if
   vis.filter(x=>x.k==="eq").forEach(L=>{const col=L.taken?mut:(L.n==="EQH"?css("--bsl"):css("--ssl"));line(L.p,(L.pts&&L.pts[0][0])||L.t||t0,col,L.taken?1:2,L.taken?2:0,L.taken?"":L.n);
     (L.pts||[]).forEach(([t])=>{if(t>=t0&&t<=B.at(-1).time)mk.push({time:Math.floor(t/step)*step,position:L.n==="EQH"?"aboveBar":"belowBar",color:col,shape:"circle",size:.7})})});
   mk.sort((a,b)=>a.time-b.time);cs.setMarkers(mk);
-  if(vr)chart.timeScale().setVisibleLogicalRange(vr);else chart.timeScale().setVisibleLogicalRange({from:Math.max(0,B.length-show),to:B.length+18})}
+  countdown();if(vr)chart.timeScale().setVisibleLogicalRange(vr);else chart.timeScale().setVisibleLogicalRange({from:Math.max(0,B.length-show),to:B.length+18})}
 
+const fmtLeft=s=>{s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+":"+String(m).padStart(2,"0"):String(m).padStart(2,"0"))+":"+String(x).padStart(2,"0")};
+let cdLine=null;
+function countdown(){const now=Date.now()/1000;const left=f=>TFIV[f][1]-now%TFIV[f][1];
+  const main=`⏱ do zaprtja ${TF} sveče: <b>${fmtLeft(left(TF))}</b>`,other=["5m","15m","1H","1D"].filter(f=>f!==TF).map(f=>`${f} ${fmtLeft(left(f))}`).join(" · ");
+  document.getElementById("cd").innerHTML=main+` <span>${other}</span>`;document.getElementById("cd2").innerHTML=`⏱ <b>${fmtLeft(left(TF))}</b>`;
+  if(cs&&RAW[CUR]&&RAW[CUR][TF]){try{const p=RAW[CUR][TF].at(-1)[4];if(!cdLine)cdLine=cs.createPriceLine({price:p,color:"rgba(0,0,0,0)",lineVisible:false,axisLabelVisible:true,title:fmtLeft(left(TF)),axisLabelColor:css("--ink"),axisLabelTextColor:css("--bg")});else cdLine.applyOptions({price:p,title:fmtLeft(left(TF))})}catch(e){}}}
+setInterval(countdown,1000);
 document.getElementById("refresh").addEventListener("click",scanAll);
 document.getElementById("back").addEventListener("click",()=>document.getElementById("list").scrollIntoView({behavior:"smooth"}));
 document.getElementById("fit").addEventListener("click",()=>{if(chart){chart.timeScale().fitContent();chart.priceScale("right").applyOptions({autoScale:true})}});
