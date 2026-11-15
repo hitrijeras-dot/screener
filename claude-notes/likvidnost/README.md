@@ -19,3 +19,14 @@ Graf: TradingView Lightweight Charts v4.1.3 (lokalna kopija `lightweight-charts.
 **Plan (opombe):** `notes.json` = {gen, top[], <KOVANEC>:{bias,cena,likv,plan}} – piše ga Claude (jutranje opravilo ob 07:02 ali na zahtevo).
 Aplikacija ga prikaže, če je mlajši od 8 h (ravni se med dnevom premikajo); sicer samodejni plan iz podatkov v živo.
 Jure trejda samo z **market** vstopi: sweep ravni + obrat strukture na 5m → market.
+
+## Signal za vstop (15. 11. 2026, 23:30)
+`findSignal` (v LIQ-CORE): zadnjih 36 zaprtih 5m sveč (3 h). Raven (EQH/EQL, PDH/PDL, PWH/PWL, Azija), ki je bila do okna nepobrana
+(preverjeno na 15m od `from`). **Sweep** = 5m wick čez raven in zaprtje nazaj. **Obrat** = v ≤ 12 svečah zaprtje čez razpon zadnjih 6 sveč do sweepa
+(short: pod najnižji low, long: nad najvišji high) → **⚡ VSTOP (market)**. Pade, če zapre 0,4 % čez raven. SL = ekstrem sweepa ± 0,1 %,
+TP = najbližja nepobrana likvidnost z R:R 1,5–8 (sicer 2R, »ni likvidnosti«). Rezultat sledi: v teku / TP / SL. Vstop velja 2 h.
+Isto pravilo kot backtest LIT 9.–15. 11. 2026. Signali se osvežijo vsako minuto (zadnjih 24 5m sveč za vse kovance).
+
+## Kalkulator in obvestila
+- Kalkulator: tveganje € (privzeto 5, shrani se), vstop/SL/TP (iz signala; vstop = trenutna cena), leverage → velikost pozicije = tveganje / SL %, marža, R:R, dobiček pri TP, taker provizija, največji varen leverage (0,8 / SL %, največ 100x).
+- 🔔 Obvestila: toast v aplikaciji + sistemsko obvestilo (če dovoljeno; na iPhonu le v nameščeni PWA in ko je aplikacija odprta/v ozadju). Ključi v localStorage `liq_*`.
