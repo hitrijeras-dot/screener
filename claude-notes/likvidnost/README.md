@@ -30,3 +30,10 @@ Isto pravilo kot backtest LIT 9.–15. 11. 2026. Signali se osvežijo vsako minu
 ## Kalkulator in obvestila
 - Kalkulator: tveganje € (privzeto 5, shrani se), vstop/SL/TP (iz signala; vstop = trenutna cena), leverage → velikost pozicije = tveganje / SL %, marža, R:R, dobiček pri TP, taker provizija, največji varen leverage (0,8 / SL %, največ 100x).
 - 🔔 Obvestila: toast v aplikaciji + sistemsko obvestilo (če dovoljeno; na iPhonu le v nameščeni PWA in ko je aplikacija odprta/v ozadju). Ključi v localStorage `liq_*`.
+
+## 4H trend · EMA cross (16. 11. 2026)
+`trendX(H4,now)` – 1000 zaprtih 4H sveč z Bybita, EMA 20/50/200. Za par 20/50 in 50/200: smer (▲ long / ▼ short), čas in cena zaprtja sveče s crossom (= vstop),
+razmik EMA, »cross blizu« (razmik < 1 % in se oža). Prikaz: oznaka v listi (4H ▲▼: prvi = 20/50, drugi = 50/200, NOV = cross v 24 h), kartica »4H trend«,
+okvir 4H na grafu z EMA20/50/200 in puščicami crossov, vrstica v »Na kratko«, obvestilo ob novem crossu (do 8 h star).
+Backtest (TV podatki, Top 10, 8/2024–11/2026, vedno v trgu, 100 € na kovanec, provizija 0,11 %): 20/50 +2.233 € (931 trejdov, 30 % uspešnih),
+50/200 +2.283 € (267, 31 %). Pozitivno na vseh 11 kovancih. Stoch RSI pike (Ehlers [Krypt]) same niso imele prednosti na 15m/1H/4H (1.170 kombinacij).

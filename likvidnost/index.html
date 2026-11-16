@@ -158,6 +158,8 @@ main{padding:14px 16px 40px;display:flex;flex-direction:column;gap:12px;min-widt
     <div class="card"><h3>Ravni</h3><div class="ladder" id="ladder"></div></div>
     <div class="card"><h3>Plan</h3><div class="notes" id="notes"></div></div>
   </div>
+  <div class="card"><h3>4H trend · EMA cross</h3><div id="xcard"></div>
+    <div class="src">Pravilo: hitra EMA prekriža počasno navzgor → long, navzdol → short (zapreš in obrneš). Šteje zaprta 4H sveča. Backtest Top 10, avg. 2024 – nov. 2026, 100 € na kovanec: 20/50 +2.233 €, 50/200 +2.283 € (30 % uspešnih – veliko malih izgub, nekaj velikih trendov). Funding ni vštet. Ni finančni nasvet.</div></div>
   <div class="card"><h3>Kalkulator pozicije</h3>
     <div class="calc">
       <label for="c-risk">Tveganje (€)<input id="c-risk" type="number" inputmode="decimal" step="0.5" min="0"></label>
@@ -237,6 +239,13 @@ function findSignal(c,R5,R15,now){
   const ent=out.filter(s=>s.state==="entry"&&s.age<=2*3600).sort((a,b)=>b.tE-a.tE)[0];if(ent)return ent;
   return out.filter(s=>s.state==="sweep").sort((a,b)=>b.tS-a.tS)[0]||null}
 /*LIQ-CORE-END*/
+/* 4H TREND: EMA 20/50 in 50/200 cross (backtest 16. 11. 2026: Top 10, 8/2024–11/2026, vedno v trgu, obrat ob crossu).
+   Šteje samo zaprta 4H sveča. Vstop = zaprtje sveče s crossom. */
+const emaS=(a,n)=>{let e=null;const k=2/(n+1);return a.map(v=>e=e==null?v:e+k*(v-e))};
+function trendX(H4,now){const B=(H4||[]).filter(b=>b[0]+14400<=now);if(B.length<260)return null;const C=B.map(b=>b[4]);const E={20:emaS(C,20),50:emaS(C,50),200:emaS(C,200)};const out={};
+  for(const [f,s] of [[20,50],[50,200]]){const F=E[f],S=E[s],n=B.length-1;const L=F[n]>S[n];let i=n;while(i>200&&(F[i]>S[i])===L)i--;
+    const gap=(F[n]-S[n])/S[n],gap1=(F[n-1]-S[n-1])/S[n-1];out[f+"/"+s]={L,t:B[i+1][0]+14400,e:B[i+1][4],gap,closing:Math.abs(gap)<Math.abs(gap1),bars:n-i}}
+  out.ema={20:E[20],50:E[50],200:E[200],t:B.map(b=>b[0])};return out}
 
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const TZ="Europe/Ljubljana";
@@ -246,16 +255,16 @@ const pc=v=>(v>0?"+":"")+v.toFixed(2).replace(".",",")+" %";
 const stc=s=>s==="A+ blizu"?"aplus":s==="blizu"?"near":s==="pripravi se"?"prep":"wait";
 const nm=L=>L.k==="eq"?(L.n==="EQH"?"EQH · stopi shortov":"EQL · stopi longov"):L.n;
 const key=s=>s.replace("USDT","").replace("1000","");
-const TFIV={"5m":["5",300],"15m":["15",900],"1H":["60",3600],"1D":["D",86400]};
+const TFIV={"5m":["5",300],"15m":["15",900],"1H":["60",3600],"4H":["240",14400],"1D":["D",86400]};
 let DATA={},RAW={},ORDER=[],CUR=FOCUS,TF="15m",chart=null,cs=null,NOTES=null,lastScan=0,busy=false;
 const live=document.getElementById("live"),livetxt=document.getElementById("livetxt");
 function setLive(state,txt){live.className="live "+state;livetxt.textContent=txt}
 
 async function scanAll(){if(busy)return;busy=true;setLive("load","osvežujem…");const now=Date.now()/1000;let ok=0;
   await Promise.all(COINS.map(async(sym,idx)=>{await new Promise(r=>setTimeout(r,idx*120));
-    const [D,H,M,F5]=await Promise.all([kl(sym,"D",60),kl(sym,"60",240),kl(sym,"15",300),kl(sym,"5",144)]);
+    const [D,H,M,F5,H4]=await Promise.all([kl(sym,"D",60),kl(sym,"60",240),kl(sym,"15",300),kl(sym,"5",144),kl(sym,"240",1000)]);
     if(D.length<3||H.length<20||M.length<20)return;
-    RAW[key(sym)]={"1D":D,"1H":H,"15m":M,"5m":F5};const c=analyse(D,H,M,F5,now);c.sig=findSignal(c,F5,M,now);DATA[key(sym)]=c;ok++}));
+    RAW[key(sym)]={"1D":D,"1H":H,"15m":M,"5m":F5,"4H":H4};const c=analyse(D,H,M,F5,now);c.sig=findSignal(c,F5,M,now);c.x=trendX(H4,now);DATA[key(sym)]=c;ok++}));
   busy=false;lastScan=Date.now();
   if(!ok){setLive("err","Bybit ni dosegljiv – poskusim znova");return}
   sortOrder();renderList();select(CUR,true);stamp();notifySignals()}
@@ -280,18 +289,21 @@ function autoNote(c){const u=c.eqU,d=c.eqD;
   plan:c.near&&c.status!=="čakaj"?`Najbližja je <b>${c.near.n} ${fp(c.near.p)}</b> (${pc(c.near.d)}) → ${c.smer}${c.zTrend?" (s trendom)":" (proti trendu, manjša pozicija)"}: počakaj sweep ${c.near.cf?"v FVG "+fp(c.near.cf.lo)+"–"+fp(c.near.cf.hi)+" ":""}in obrat strukture na 5m, nato market vstop. SL za sweep wickom.`:"Nič blizu. Počakaj, da se cena približa likvidnosti."}}
 function sigChip(c){const s=c.sig;if(!s)return"";if(s.state==="entry")return `<span class="sgw"><span class="sg ${s.res==="v teku"?(s.dir==="short"?"s":"l"):"done"}">⚡ ${s.dir.toUpperCase()} ${s.res==="v teku"?"· vstop pred "+Math.round(s.age/60)+" min":"· "+s.res}</span></span>`;
   return `<span class="sgw"><span class="sg w">SWEEP ${s.lvl.n} · čakaj obrat (${s.left*5} min)</span></span>`}
+function xChip(c){if(!c.x)return"";const a=(k)=>{const x=c.x[k];const nw=Date.now()/1000-x.t<86400;return `<b class="${x.L?"pos":"neg"}">${x.L?"▲":"▼"}</b>${nw?"<b>NOV</b>":""}`};return `4H ${a("20/50")}${a("50/200")}`}
 function renderList(){const list=document.getElementById("list");list.innerHTML="";document.getElementById("cnt").textContent=ORDER.length+" kovancev · tapni za graf";
   ORDER.forEach(k=>{const c=DATA[k],n=c.near;const b=document.createElement("button");b.type="button";b.className="item";b.setAttribute("role","listitem");b.dataset.k=k;b.setAttribute("aria-current",k===CUR);
-    b.innerHTML=`<b>${k}</b><span class="st ${stc(c.status)}">${c.status}</span><span class="num">${fp(c.p)} <span class="${c.ch>=0?"pos":"neg"}">${pc(c.ch)}</span></span><span class="chip ${c.trend==="Gor"?"gor":"dol"}">${c.trend}</span><span class="sub">${n?n.n+" "+fp(n.p)+" ("+pc(n.d)+")"+(n.conf?" ✚ FVG":""):"–"}</span>${sigChip(c)}`;
+    b.innerHTML=`<b>${k}</b><span class="st ${stc(c.status)}">${c.status}</span><span class="num">${fp(c.p)} <span class="${c.ch>=0?"pos":"neg"}">${pc(c.ch)}</span></span><span class="chip ${c.trend==="Gor"?"gor":"dol"}">${c.trend}</span><span class="sub">${n?n.n+" "+fp(n.p)+" ("+pc(n.d)+")"+(n.conf?" ✚ FVG":""):"–"} · ${xChip(c)}</span>${sigChip(c)}`;
     b.addEventListener("click",()=>{select(k);if(innerWidth<900)document.getElementById("bar").scrollIntoView({behavior:"smooth"})});list.appendChild(b)});
   const ap=ORDER.filter(k=>DATA[k].status==="A+ blizu");
   const fresh=NOTES&&NOTES.top&&Date.now()/1000-NOTES.gen<8*3600;
   const top=[
     `A+ blizu: ${ap.length?ap.map(k=>k+" ("+DATA[k].smer.split(" ")[0]+(DATA[k].zTrend?", s trendom":", proti trendu")+")").join(", "):"nič"}.`,
     `Dnevni trend: ${ORDER.filter(k=>DATA[k].trend==="Gor").length} gor, ${ORDER.filter(k=>DATA[k].trend==="Dol").length} dol.`,
+    (()=>{const X=ORDER.filter(k=>DATA[k].x);const cnt=p=>{const l=X.filter(k=>DATA[k].x[p].L).length;return `${p}: ${l} ▲ / ${X.length-l} ▼`};const nw=X.flatMap(k=>["20/50","50/200"].filter(p=>Date.now()/1000-DATA[k].x[p].t<86400).map(p=>k+" "+p+(DATA[k].x[p].L?" ▲":" ▼")));const near=X.filter(k=>["20/50","50/200"].some(p=>DATA[k].x[p].closing&&Math.abs(DATA[k].x[p].gap)<0.01));
+      return `4H EMA cross – ${cnt("20/50")} · ${cnt("50/200")}.`+(nw.length?` <b>Nov cross (24 h):</b> ${nw.join(", ")}.`:" Ni novih crossov v 24 h.")+(near.length?` Cross blizu: ${near.join(", ")}.`:"")})(),
     `${FOCUS}: ${DATA[FOCUS]?DATA[FOCUS].status+(DATA[FOCUS].near?", najbližje "+DATA[FOCUS].near.n+" "+fp(DATA[FOCUS].near.p)+" ("+pc(DATA[FOCUS].near.d)+")":""):"–"}.`];
   document.getElementById("ov").innerHTML="<b>Na kratko · v živo</b><ul>"+top.map(x=>"<li>"+x+"</li>").join("")+"</ul>"+(fresh?"<b>Claudov plan ("+fmtT(NOTES.gen,{hour:"2-digit",minute:"2-digit"})+")</b><ul>"+NOTES.top.map(x=>"<li>"+x+"</li>").join("")+"</ul>":"")}
-function tfButtons(el){el.innerHTML=["5m","15m","1H","1D"].map(f=>`<button type="button" data-tf="${f}" aria-pressed="${f===TF}">${f}</button>`).join("");
+function tfButtons(el){el.innerHTML=["5m","15m","1H","4H","1D"].map(f=>`<button type="button" data-tf="${f}" aria-pressed="${f===TF}">${f}</button>`).join("");
   el.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{TF=b.dataset.tf;["tfs","tfs2"].forEach(id=>document.querySelectorAll("#"+id+" button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.tf===TF)));draw()}))}
 function select(k,keepView){if(!DATA[k])k=ORDER[0];const same=k===CUR;CUR=k;document.querySelectorAll(".item").forEach(x=>x.setAttribute("aria-current",x.dataset.k===k));const c=DATA[k];
   document.getElementById("bar").innerHTML=`<h2>${k}</h2><span class="price">${fp(c.p)}</span><span class="num ${c.ch>=0?"pos":"neg"}">${pc(c.ch)} / 24 h</span><span class="chip ${c.trend==="Gor"?"gor":"dol"}">1D ${c.trend}</span><span class="st ${stc(c.status)}">${c.status}</span>`;
@@ -301,13 +313,17 @@ function select(k,keepView){if(!DATA[k])k=ORDER[0];const same=k===CUR;CUR=k;docu
   document.getElementById("ladder").innerHTML=lad.map(x=>x.now?`<div class="row now"><span>▶ cena zdaj</span><span class="num">${fp(x.p)}</span><span></span></div>`:`<div class="row ${x.taken?"taken":""}"><span><i class="dot" style="background:${x.taken||x.k!=="eq"?"var(--muted)":x.n==="EQH"?"var(--bsl)":"var(--ssl)"}"></i>${nm(x)}</span><span class="num">${fp(x.p)}</span><span class="num mut">${pc(x.d)}</span>${x.conf?`<span class="conf">✚ potrditev: ${x.conf}</span>`:""}</div>`).join("");
   const cn=NOTES&&NOTES[k]&&Date.now()/1000-NOTES.gen<8*3600?NOTES[k]:null,n=cn||autoNote(c);
   document.getElementById("notes").innerHTML=`<div class="note"><span class="tag">Kje je cena</span>${n.cena||""}</div><div class="note"><span class="tag">Kje je likvidnost</span>${n.likv||""}</div><div class="note"><span class="tag">Scenarij · market vstop</span>${n.plan||""}</div><div class="src">${cn?"Plan napisal Claude ob "+fmtT(NOTES.gen,{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"}):"Plan samodejno iz podatkov v živo"}</div>`;
-  renderSignal(c);fillCalc(c,!(same&&keepView));
+  renderSignal(c);fillCalc(c,!(same&&keepView));renderX(c);
   draw(same&&keepView)}
 function renderSignal(c){const el=document.getElementById("sig"),s=c.sig,tm=t=>fmtT(t,{hour:"2-digit",minute:"2-digit"});
   if(!s){el.className="banner none";el.innerHTML=`Ni signala. ${c.near?"Čakam sweep "+c.near.n+" "+fp(c.near.p)+" ("+pc(c.near.d)+")":"Nič blizu."} Signal = 5m sveča pobere raven in zapre nazaj, nato obrat strukture → market vstop.`;return}
   if(s.state==="sweep"){el.className="banner sweep";el.innerHTML=`<span class="big">SWEEP ${s.lvl.n} ${fp(s.lvl.p)}</span><span>ob ${tm(s.tS)} · ${s.dir==="short"?"pričakujem short":"pričakujem long"}${s.withTrend?" (s trendom)":" (proti trendu)"}</span><span class="kv">sprožilec: 5m zaprtje ${s.dir==="short"?"pod":"nad"} <b>${fp(s.trig)}</b></span><span class="kv">še ${s.left*5} min</span><span>Ko se 5m sveča zapre ${s.dir==="short"?"pod":"nad"} sprožilcem → market vstop. Če cena zapre 0,4 % čez raven, setup pade.</span>`;return}
   const live=s.res==="v teku";el.className="banner "+(live?s.dir:"none");
   el.innerHTML=`<span class="big">${live?"⚡ VSTOP "+s.dir.toUpperCase()+" (market)":"Zadnji signal "+s.dir+" · "+s.res}</span><span>sweep ${s.lvl.n} ${fp(s.lvl.p)} ob ${tm(s.tS)}, obrat ob ${tm(s.tE)} (pred ${Math.round(s.age/60)} min)${s.withTrend?" · s trendom":" · proti trendu – manjša pozicija"}</span><span class="kv">vstop <b>${fp(s.e)}</b> · SL <b class="neg">${fp(s.sl)}</b> · TP <b class="pos">${fp(s.tp)}</b> (${s.tpn}) · R:R <b>${s.rr.toFixed(1).replace(".",",")}</b></span>${live&&Math.abs(c.p/s.e-1)>0.3*Math.abs(s.e/s.sl-1)?`<span class="warn">Cena (${fp(c.p)}) je že precej od vstopa – preveri R:R v kalkulatorju.</span>`:""}`}
+function renderX(c){const el=document.getElementById("xcard");if(!c.x){el.innerHTML='<p class="src">Premalo 4H podatkov.</p>';return}
+  const tm=t=>fmtT(t,{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"});
+  el.innerHTML='<div class="res">'+["20/50","50/200"].map(k=>{const x=c.x[k],pnl=(x.L?c.p/x.e-1:x.e/c.p-1)*100,nw=Date.now()/1000-x.t<86400;
+    return `<div><span>EMA ${k}${nw?" · <b style='display:inline;font-size:12px;color:var(--accent)'>NOV CROSS</b>":""}</span><b class="${x.L?"pos":"neg"}">${x.L?"▲ LONG":"▼ SHORT"}</b>od ${tm(x.t)} · vstop ${fp(x.e)}<br>od vstopa <b style="display:inline;font-size:13px" class="${pnl>=0?"pos":"neg"}">${pc(pnl)}</b> · razmik EMA ${pc(x.gap*100)}${x.closing&&Math.abs(x.gap)<0.01?" · <b style='display:inline;font-size:12px'>cross blizu</b>":""}</div>`}).join("")+'</div>'}
 let calcFor=null;
 function fillCalc(c,force){const s=c.sig&&c.sig.state==="entry"&&c.sig.res==="v teku"?c.sig:null;const id=CUR+(s?s.tE:"");if(!force&&calcFor===id)return calcCompute();calcFor=id;
   const g=i=>document.getElementById(i);let risk=5,lev=20;try{risk=+localStorage.getItem("liq_risk")||5;lev=+localStorage.getItem("liq_lev")||20}catch(e){}
@@ -327,7 +343,7 @@ function calcCompute(){const g=i=>+document.getElementById(i).value;const risk=g
 ["c-risk","c-e","c-sl","c-tp","c-lev"].forEach(id=>document.getElementById(id).addEventListener("input",calcCompute));
 function draw(keepView){const el=document.getElementById("chart");let vr=null;if(chart){if(keepView)try{vr=chart.timeScale().getVisibleLogicalRange()}catch(e){}chart.remove();chart=null;cs=null;cdLine=null}
   const c=DATA[CUR],R=RAW[CUR]&&RAW[CUR][TF];if(!c||!R||!R.length||!window.LightweightCharts){el.innerHTML='<div class="empty">Graf ni na voljo.</div>';return}
-  el.innerHTML="";const step=TFIV[TF][1],show={"5m":144,"15m":160,"1H":168,"1D":60}[TF];
+  el.innerHTML="";const step=TFIV[TF][1],show={"5m":144,"15m":160,"1H":168,"4H":180,"1D":60}[TF];
   const B=R.slice(-Math.max(show,R.length>300?300:R.length)).map(b=>({time:b[0],open:b[1],high:b[2],low:b[3],close:b[4]}));
   const LC=window.LightweightCharts,mut=css("--muted"),grid=css("--line");
   chart=LC.createChart(el,{autoSize:true,layout:{background:{type:"solid",color:css("--panel")},textColor:mut,fontFamily:"ui-monospace, Consolas, monospace",fontSize:11},
@@ -338,7 +354,7 @@ function draw(keepView){const el=document.getElementById("chart");let vr=null;if
   cs=chart.addCandlestickSeries({upColor:css("--up"),downColor:css("--dn"),borderVisible:false,wickUpColor:css("--up"),wickDownColor:css("--dn"),priceFormat:pf});
   cs.setData(B);
   const t0=B[0].time,tEnd=B.at(-1).time+20*step,snap=t=>Math.max(t0,Math.floor(t/step)*step);
-  const rng={"5m":6,"15m":9,"1H":16,"1D":40}[TF];
+  const rng={"5m":6,"15m":9,"1H":16,"4H":25,"1D":40}[TF];
   const line=(p,from,color,w,style,title)=>{const s=chart.addLineSeries({color,lineWidth:w,lineStyle:style,priceLineVisible:false,lastValueVisible:!!title,title:title||"",crosshairMarkerVisible:false,priceFormat:pf});const a=snap(from);s.setData(a<tEnd?[{time:a,value:p},{time:tEnd,value:p}]:[{time:tEnd,value:p}])};
   const vis=c.lv.filter(x=>Math.abs(x.d)<rng);
   vis.filter(x=>x.k!=="eq").forEach(L=>line(L.p,L.t||t0,mut,1,L.taken?2:1,L.taken?"":L.n));
@@ -351,13 +367,15 @@ function draw(keepView){const el=document.getElementById("chart");let vr=null;if
     if(s.state==="entry"&&s.tE-300>=t0)mk.push({time:Math.floor((s.tE-300)/st)*st,position:s.dir==="short"?"aboveBar":"belowBar",color:s.dir==="short"?css("--dn"):css("--up"),shape:s.dir==="short"?"arrowDown":"arrowUp",text:"vstop"})}
   if(s&&s.state==="entry"&&s.res==="v teku"){[[s.e,"vstop",css("--ink")],[s.sl,"SL",css("--dn")],[s.tp,"TP",css("--up")]].forEach(([p,ti,col])=>cs.createPriceLine({price:p,color:col,lineWidth:1,lineStyle:0,axisLabelVisible:true,title:ti}))}
   else if(s&&s.state==="sweep")cs.createPriceLine({price:s.trig,color:css("--bsl"),lineWidth:1,lineStyle:2,axisLabelVisible:true,title:"sprožilec"});
+  if(TF==="4H"&&c.x){const E=c.x.ema;[[20,"#e0a030"],[50,"#4a8be8"],[200,"#a06ad8"]].forEach(([n,col])=>{const s=chart.addLineSeries({color:col,lineWidth:n===200?2:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,priceFormat:pf,title:"EMA"+n});s.setData(E.t.map((t,i)=>({time:t,value:E[n][i]})).filter(p=>p.time>=t0))});
+    for(let i=1;i<E.t.length;i++){for(const [f,s,lab] of [[20,50,"20/50"],[50,200,"50/200"]]){const a=E[f][i]>E[s][i],b=E[f][i-1]>E[s][i-1];if(a!==b&&E.t[i]>=t0)mk.push({time:E.t[i],position:a?"belowBar":"aboveBar",color:a?css("--up"):css("--dn"),shape:a?"arrowUp":"arrowDown",text:lab+(a?" long":" short")})}}}
   mk.sort((a,b)=>a.time-b.time);cs.setMarkers(mk);
   countdown();if(vr)chart.timeScale().setVisibleLogicalRange(vr);else chart.timeScale().setVisibleLogicalRange({from:Math.max(0,B.length-show),to:B.length+18})}
 
 const fmtLeft=s=>{s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+":"+String(m).padStart(2,"0"):String(m).padStart(2,"0"))+":"+String(x).padStart(2,"0")};
 let cdLine=null;
 function countdown(){const now=Date.now()/1000;const left=f=>TFIV[f][1]-now%TFIV[f][1];
-  const main=`⏱ do zaprtja ${TF} sveče: <b>${fmtLeft(left(TF))}</b>`,other=["5m","15m","1H","1D"].filter(f=>f!==TF).map(f=>`${f} ${fmtLeft(left(f))}`).join(" · ");
+  const main=`⏱ do zaprtja ${TF} sveče: <b>${fmtLeft(left(TF))}</b>`,other=["5m","15m","1H","4H","1D"].filter(f=>f!==TF).map(f=>`${f} ${fmtLeft(left(f))}`).join(" · ");
   document.getElementById("cd").innerHTML=main+` <span>${other}</span>`;document.getElementById("cd2").innerHTML=`⏱ <b>${fmtLeft(left(TF))}</b>`;
   if(cs&&RAW[CUR]&&RAW[CUR][TF]){try{const p=RAW[CUR][TF].at(-1)[4];if(!cdLine)cdLine=cs.createPriceLine({price:p,color:"rgba(0,0,0,0)",lineVisible:false,axisLabelVisible:true,title:fmtLeft(left(TF)),axisLabelColor:css("--ink"),axisLabelTextColor:css("--bg")});else cdLine.applyOptions({price:p,title:fmtLeft(left(TF))})}catch(e){}}}
 setInterval(countdown,1000);
@@ -370,6 +388,8 @@ function notifySignals(){let seen={};try{seen=JSON.parse(localStorage.getItem("l
   ORDER.forEach(k=>{const s=DATA[k].sig;if(!s)return;const id=k+":"+s.state+":"+(s.tE||s.tS);if(seen[id])return;if(s.state==="entry"&&s.res!=="v teku")return;seen[id]=Date.now();
     const msg=s.state==="entry"?`⚡ ${k} ${s.dir.toUpperCase()} – vstop (market) · SL ${fp(s.sl)} · TP ${fp(s.tp)} · R:R ${s.rr.toFixed(1)}`:`${k}: SWEEP ${s.lvl.n} ${fp(s.lvl.p)} – čakaj obrat (sprožilec ${fp(s.trig)})`;
     toast(msg,k);if(notifOn&&"serviceWorker" in navigator)navigator.serviceWorker.getRegistration().then(r=>{const o={body:msg,tag:id,icon:"icon-192.png"};if(r&&r.showNotification)r.showNotification("Likvidnost",o);else new Notification("Likvidnost",o)}).catch(()=>{})});
+  ORDER.forEach(k=>{const x=DATA[k].x;if(!x)return;["20/50","50/200"].forEach(p=>{const z=x[p];if(Date.now()/1000-z.t>8*3600)return;const id=k+":x"+p+":"+z.t;if(seen[id])return;seen[id]=Date.now();
+    const msg=`📈 ${k} 4H EMA ${p} cross → ${z.L?"LONG":"SHORT"} @ ${fp(z.e)}`;toast(msg,k);if(notifOn&&"serviceWorker" in navigator)navigator.serviceWorker.getRegistration().then(r=>{const o={body:msg,tag:id,icon:"icon-192.png"};if(r&&r.showNotification)r.showNotification("Likvidnost",o);else new Notification("Likvidnost",o)}).catch(()=>{})})});
   const cut=Date.now()-86400000;Object.keys(seen).forEach(x=>{if(seen[x]<cut)delete seen[x]});try{localStorage.setItem("liq_seen",JSON.stringify(seen))}catch(e){}}
 document.getElementById("refresh").addEventListener("click",scanAll);
 document.getElementById("back").addEventListener("click",()=>document.getElementById("list").scrollIntoView({behavior:"smooth"}));
