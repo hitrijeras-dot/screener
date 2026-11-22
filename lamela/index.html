@@ -62,12 +62,22 @@ canvas{display:block;width:100%;height:auto}
 .picker h2{margin:0;font-family:var(--f-display);font-size:24px;text-transform:uppercase;letter-spacing:.02em}
 .presets{display:flex;gap:8px;flex-wrap:wrap}
 .presets button{border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:7px 12px;font-weight:600;font-size:14px}
-.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
-.mt{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:10px;text-align:left;display:grid;gap:2px;min-height:58px}
-.mt b{font-size:15.5px}
-.mt span{font-size:12px;color:var(--muted)}
-.mt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
-.mt[aria-pressed="true"] b::before{content:"✓ ";color:var(--accent)}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mt{position:relative;border:2px solid var(--line);background:var(--sunk);border-radius:14px;padding:8px 6px 8px;text-align:center;display:grid;justify-items:center;gap:1px;color:var(--ink);font:inherit;cursor:pointer;transition:transform .12s,border-color .12s,background .12s}
+.mt svg{width:100%;max-width:74px;height:auto;display:block;margin-bottom:4px}
+.mt b{font-size:14.5px;line-height:1.15}
+.mt span{font-size:11.5px;color:var(--muted)}
+.mt:active{transform:scale(.96)}
+.mt[aria-pressed="true"]{border-color:var(--mc);background:color-mix(in srgb,var(--mc) 16%,var(--surface))}
+.mt[aria-pressed="true"]::after{content:"✓";position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:var(--mc);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center}
+.selmap{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center;background:var(--sunk);border-radius:14px;padding:10px}
+.selmap figure{margin:0;display:grid;justify-items:center;gap:2px}.selmap svg{width:64px;height:auto}
+.selmap figcaption{font-size:11px;color:var(--muted);font-weight:600}
+.sellist{display:flex;flex-wrap:wrap;gap:4px 6px;align-content:center;font-size:13px;min-width:0}
+.sellist b{width:100%;font-family:var(--f-display);font-size:19px;text-transform:uppercase;letter-spacing:.02em}
+.sellist span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+.new{display:inline-block;vertical-align:2px;background:var(--accent);color:var(--accent-ink);font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;text-transform:uppercase;letter-spacing:.04em}
+.mode.goal{margin-top:12px;grid-template-columns:1fr 1fr}.mode.goal button{font-family:var(--f-body);font-size:15px;font-weight:600}
 .go{border:0;border-radius:12px;padding:14px;background:var(--accent);color:var(--accent-ink);font-family:var(--f-display);font-weight:800;font-size:21px;letter-spacing:.05em;text-transform:uppercase}
 .go:disabled{opacity:.35;cursor:default}
 
@@ -141,6 +151,7 @@ h2.sec{font-family:var(--f-display);font-weight:800;font-size:25px;margin:22px 0
 .filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-top:14px}
 .filters button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:600;font-size:14px}
 .filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.filters button::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--mc,var(--muted));margin-right:6px;vertical-align:0}
 .prog{display:grid;gap:10px}
 .pcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
 .pcard h3{margin:0 0 8px;font-family:var(--f-display);font-size:24px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;text-transform:uppercase}
@@ -229,11 +240,15 @@ h2.sec{font-family:var(--f-display);font-weight:800;font-size:25px;margin:22px 0
 (function(){
 "use strict";
 // ================= Mišice =================
+// c = barva mišice na sliki telesa, v = pogled (F spredaj, B zadaj)
 const MUS=[
- {k:"prsa",n:"Prsa",big:1},{k:"hrbet",n:"Hrbet",big:1},{k:"ramena",n:"Ramena"},{k:"biceps",n:"Biceps"},{k:"triceps",n:"Triceps"},
- {k:"kvad",n:"Noge spredaj",big:1},{k:"zadnja",n:"Noge zadaj"},{k:"zadnjica",n:"Zadnjica"},{k:"meca",n:"Meča",tiny:1},{k:"trebuh",n:"Trebuh",tiny:1},{k:"krizni",n:"Spodnji hrbet",tiny:1}];
+ {k:"prsa",n:"Prsa",big:1,c:"#FF5C7A",v:"F"},{k:"hrbet",n:"Hrbet",big:1,c:"#3BA3F2",v:"B"},{k:"ramena",n:"Ramena",c:"#FF8C42",v:"F"},{k:"trapez",n:"Trapez",tiny:1,c:"#4CCB78",v:"B"},
+ {k:"biceps",n:"Biceps",c:"#8466FF",v:"F"},{k:"triceps",n:"Triceps",c:"#22BFAE",v:"B"},{k:"podlakti",n:"Podlakti",tiny:1,c:"#C55FEF",v:"F"},
+ {k:"trebuh",n:"Trebuh",tiny:1,c:"#9BD53A",v:"F"},{k:"krizni",n:"Spodnji hrbet",tiny:1,c:"#E0A030",v:"B"},
+ {k:"kvad",n:"Noge spredaj",big:1,c:"#F5C518",v:"F"},{k:"zadnja",n:"Noge zadaj",c:"#EC6FB0",v:"B"},{k:"zadnjica",n:"Zadnjica",c:"#E2533F",v:"B"},{k:"meca",n:"Meča",tiny:1,c:"#3FC9EE",v:"B"}];
 const MN=Object.fromEntries(MUS.map(m=>[m.k,m.n]));
-const PRESETS=[{n:"Prsa + triceps",m:["prsa","triceps"]},{n:"Hrbet + biceps",m:["hrbet","biceps"]},{n:"Noge",m:["kvad","zadnja","zadnjica","meca"]},{n:"Ramena + roke",m:["ramena","biceps","triceps"]},{n:"Zgornji del",m:["prsa","hrbet","ramena"]}];
+const MC=Object.fromEntries(MUS.map(m=>[m.k,m.c]));
+const PRESETS=[{n:"Prsa + triceps",m:["prsa","triceps"]},{n:"Hrbet + biceps",m:["hrbet","biceps"]},{n:"Noge",m:["kvad","zadnja","zadnjica","meca"]},{n:"Ramena + trapez",m:["ramena","trapez"]},{n:"Roke",m:["biceps","triceps","podlakti"]},{n:"Zgornji del",m:["prsa","hrbet","ramena"]}];
 
 // ================= Katalog vaj z animacijami =================
 // Poze (pogled od strani, obrnjen desno). Koti v stopinjah: 0 = desno, 90 = dol, -90 = gor.
@@ -269,7 +284,7 @@ const EX={
  armcurl:{n:"Arm Curl",t:"tg",mus:["biceps"],sets:2,lo:10,hi:15,rest:75,st:5,d:15,
   how:["Sedež nastavi tako, da nadlahti v celoti ležita na blazini.","Primi ročaja, komolci v osi naprave.","Upogni do konca in stisni biceps.","Spuščaj počasi, brez zamaha s telesom."],
   a:{root:"hip",A:{x:126,y:148,to:-92,th:0,sh:90,ft:0,ua:35,fa:40},B:{fa:-115},hl:["ua"],scene:"armcurl"}},
- hammer:{n:"Kladivo upogib z ročkama",t:"fw",mus:["biceps"],sets:2,lo:10,hi:12,rest:75,st:2,d:10,
+ hammer:{n:"Kladivo upogib z ročkama",t:"fw",mus:["biceps","podlakti"],sets:2,lo:10,hi:12,rest:75,st:2,d:10,
   how:["Stoj vzravnano, ročki ob telesu, dlani obrnjeni druga proti drugi.","Komolci ostanejo ob telesu.","Upogni do ramen.","Počasi spusti."],
   a:{root:"ankle",A:{x:150,y:190,to:-90,th:90,sh:90,ft:0,ua:92,fa:88},B:{ua:96,fa:-65},hl:["ua"],scene:"dumbbell"}},
  shoulderpress:{n:"Shoulder Press",t:"tg",mus:["ramena","triceps"],sets:2,lo:8,hi:12,rest:90,st:5,d:20,
@@ -313,7 +328,25 @@ const EX={
   a:{root:"hip",A:{x:150,y:186,to:180,th:0,sh:0,ft:-90,ua:6,fa:2},B:{th:-82,sh:-86,ft:0},hl:["low","th"],scene:"mat"}},
  lowerback:{n:"Lower Back",t:"tg",mus:["krizni"],sets:2,lo:12,hi:15,rest:60,st:5,d:30,
   how:["Os naprave poravnaj z boki.","Roke prekriži na prsih.","Počasi se nagni nazaj do pokončnega položaja.","Ne pretegni hrbta, nazaj počasi."],
-  a:{root:"hip",armRel:1,A:{x:130,y:148,to:-55,th:0,sh:90,ft:0,ua:60,fa:-130},B:{to:-100},hl:["low"],scene:"lowerback"}}
+  a:{root:"hip",armRel:1,A:{x:130,y:148,to:-55,th:0,sh:90,ft:0,ua:60,fa:-130},B:{to:-100},hl:["low"],scene:"lowerback"}},
+ extrot:{n:"Potisk z zunanjo rotacijo",t:"fw",mus:["ramena","triceps"],sets:3,lo:8,hi:12,rest:90,st:2,d:8,nw:1,
+  how:["Sedi na klop z naslonom pokonci, ročki držiš ob straneh.","Dvigni komolce v stran do višine ramen, podlakti visijo navzdol.","Zavrti podlakti navzgor (zunanja rotacija), da ročki prideta v višino ušes.","Potisni nad glavo, nato počasi nazaj: dol do ušes, zavrti navzdol."],
+  a:{front:1,A:{ua:2,fa:88},B:{ua:-62,fa:-78},hl:["delt"],scene:"front"}},
+ isolat:{n:"Odročenje z zadržkom, izmenično",t:"fw",mus:["ramena","trapez"],sets:3,lo:8,hi:12,rest:75,st:1,d:5,nw:1,
+  how:["Sedi ali stoj vzravnano, obe ročki dvigni v stran do višine ramen.","Eno roko drži zgoraj (zadržek), z drugo naredi eno ponovitev dol in gor.","Nato zamenjaj: druga roka drži, prva dela.","Lahka teža, brez zamaha. Ponovitev šteje na vsako stran."],
+  a:{front:1,alt:1,A:{ua:88,fa:88},B:{ua:-2,fa:-6},hl:["delt"],scene:"front"}},
+ incfront:{n:"Prednoročenje leže na poševni klopi",t:"fw",mus:["ramena","prsa"],sets:2,lo:10,hi:15,rest:60,st:1,d:5,nw:1,
+  how:["Naslon nastavi na približno 30–45°, uleži se nanj s prsmi, stopala na tleh.","Ročki visita navzdol, dlani obrnjeni navzdol.","Dvigni iztegnjeni roki naprej do višine glave.","Počasi spusti. Prsi ostanejo na naslonu, brez zamaha."],
+  a:{root:"hip",A:{x:118,y:114,to:-38,th:118,sh:100,ft:10,ua:92,fa:92},B:{ua:-10,fa:-10},hl:["delt"],scene:"incfront"}},
+ dbcurl:{n:"Upogib z ročkama",t:"fw",mus:["biceps","podlakti"],sets:2,lo:10,hi:12,rest:75,st:2,d:10,nw:1,
+  how:["Stoj vzravnano, ročki ob telesu, dlani obrnjeni naprej.","Komolci ostanejo ob telesu.","Upogni do ramen in na vrhu stisni biceps.","Spuščaj počasi, 2 sekundi, brez zamaha s hrbtom."],
+  a:{root:"ankle",A:{x:150,y:190,to:-90,th:90,sh:90,ft:0,ua:92,fa:88},B:{ua:96,fa:-65},hl:["ua"],scene:"dumbbell"}},
+ shrug:{n:"Skomig z ročkama",t:"fw",mus:["trapez"],sets:3,lo:10,hi:15,rest:60,st:2,d:20,nw:1,
+  how:["Stoj vzravnano, ročki ob bokih, roke iztegnjene.","Dvigni ramena naravnost proti ušesom.","Na vrhu sekundo zadrži in stisni.","Počasi spusti. Ramen ne vrti, glava ostane mirna."],
+  a:{front:1,shrug:9,A:{ua:84,fa:86},B:{ua:84,fa:86},hl:["trap"],scene:"front"}},
+ wristcurl:{n:"Upogib zapestij z ročkama",t:"fw",mus:["podlakti"],sets:2,lo:12,hi:20,rest:45,st:1,d:8,nw:1,
+  how:["Sedi na klop, podlakti nasloni na stegna, zapestja gledajo čez kolena.","Ročki držiš z dlanmi navzgor.","Upogni zapestji čim višje.","Počasi spusti do raztega. Gibljejo se samo zapestja."],
+  a:{root:"hip",A:{x:132,y:148,to:-76,th:0,sh:90,ft:0,el:[10,50],wr:[31,-1]},B:{},hl:["fa"],scene:"wristcurl"}}
 };
 const WK={A:["legpress","chestpress","latmachine","shoulderpress","legcurl","armcurl","abcrunch"],B:["rdl","inclinedb","lowrow","legext","lateral","armext","calf"],C:["gobletsq","dbbench","dbrow","reardelt","legcurl","hammer","lowerback"]};
 const WK_FOCUS={A:"Naprave: noge, prsi, hrbet, ramena",B:"Zadnja stran nog, zgornji del prsi, veslanje",C:"Proste uteži: počep, potisk, veslanje"};
@@ -340,7 +373,11 @@ function phaseOf(n){
   return {k:"build",label:"Gradnja",detail:`${Math.floor(m/3)+1}. teden od 6`,setsMax:9,rir:"1–2"};
 }
 const ph=()=>phaseOf(S.state.done);
-const plan=id=>{const e=EX[id],p=ph();return {sets:Math.min(e.sets,p.setsMax),lo:e.lo,hi:e.hi,rest:e.rest};};
+// cilj: "def" (definicija, privzeto) ali "masa"
+const goal=()=>S.state.goal==="masa"?"masa":"def";
+const plan=id=>{const e=EX[id],p=ph();let lo=e.lo,hi=e.hi,rest=e.rest;
+  if(goal()==="def"){rest=Math.max(45,Math.round(e.rest*0.75/15)*15); if(e.sets<3&&e.lo>=10){lo=Math.max(lo,12);hi=Math.max(hi,20);}}
+  return {sets:Math.min(e.sets,p.setsMax),lo,hi,rest};};
 const rnd=(w,st)=>Math.max(st,Math.round(w/st)*st);
 const unit=id=>EX[id].t==="fw"?(id==="gobletsq"||id==="ohext"||id==="hipthrust"?"kg":"kg / ročka"):"kg";
 const fmt=w=>(Math.round(w*10)/10).toString().replace(".",",");
@@ -490,14 +527,18 @@ const SCENES={
   hipthrust(g,P){g.bench(52,112,156);},
   abcrunch(g,P,p,t){g.seat(P.hip);g.stack(252,t*14);g.cable([P.wr,[265,26]]);g.handle(P.wr);},
   lowerback(g,P,p,t){g.seat(P.hip);g.stack(252,t*14);const r=add(add(P.hip,p.to,46),p.to-90,10);g.lever(P.hip,r);g.roller(r);},
-  mat(g){g.rr(40,GROUND-4,220,6,3,COL.pad);}
+  mat(g){g.rr(40,GROUND-4,220,6,3,COL.pad);},
+  incfront(g,P,p){const n=dir(p.to+90),a=add(P.hip,p.to,-4),b=add(P.hip,p.to,50);g.ln([a[0]+n[0]*11,a[1]+n[1]*11],[b[0]+n[0]*11,b[1]+n[1]*11],10,COL.pad);
+    const m=add(P.hip,p.to,30);g.ln([m[0]+n[0]*16,m[1]+n[1]*16],[m[0]+n[0]*16,GROUND],4,COL.frame);g.ln([a[0]+n[0]*16,a[1]+n[1]*16],[a[0]-26,GROUND],4,COL.frame);g.ln([a[0]-34,GROUND],[m[0]+n[0]*16+14,GROUND],4,COL.frame);},
+  wristcurl(g,P,p,t){g.seat(P.hip);const h=add(P.wr,lerp(70,-55,t),11);g.ln(P.wr,h,5.5,COL.fig);g.db(h);}
 };
-function drawFront(g,an,p,hl){
-  const cx=150,hy=120,sy=60;
+function drawFront(g,an,p,hl,t,k){
+  const cx=150,hy=120,sy=60-(an.shrug?an.shrug*t:0),hold=an.alt?Object.assign({},an.A,an.B):null;
   g.ln([cx-10,hy],[cx-12,GROUND-2],10,COL.fig);g.ln([cx+10,hy],[cx+12,GROUND-2],10,COL.fig);
-  g.ln([cx,sy+6],[cx,hy-4],30,COL.fig);g.ci([cx,sy-20],10,COL.fig);
+  g.ln([cx,sy+6],[cx,hy-4],30,COL.fig);g.ci([cx,40],10,COL.fig);g.ln([cx,46],[cx,sy+4],8,COL.fig);
+  if(hl.includes("trap")){g.ln([cx-5,49],[cx-17,sy+1],7,COL.hl);g.ln([cx+5,49],[cx+17,sy+1],7,COL.hl);}
   const sides=[[1,[cx+18,sy]],[-1,[cx-18,sy]]];
-  sides.forEach(([s,S0])=>{const a1=s>0?p.ua:180-p.ua,a2=s>0?p.fa:180-p.fa;const el=add(S0,a1,30),wr=add(el,a2,28);
+  sides.forEach(([s,S0])=>{const q=(hold&&s===(k%2?1:-1))?hold:p;const a1=s>0?q.ua:180-q.ua,a2=s>0?q.fa:180-q.fa;const el=add(S0,a1,30),wr=add(el,a2,28);
     g.ln(S0,el,8.5,hl.includes("ua")?COL.hl:COL.fig);g.ln(el,wr,7.5,COL.fig);if(hl.includes("delt"))g.ci(S0,7,COL.hl);
     if(an.back) g.handle(wr); else {g.rr(wr[0]-3,wr[1]-8,6,16,2,COL.frame);}});
   if(an.back){g.ln([cx-50,22],[cx+50,22],4,COL.frame);}
@@ -506,9 +547,9 @@ function drawEx(ctx,id,ms,W,H){
   const an=EX[id].a, t=cyc(ms), p=mix(an.A,an.B,t), g=G(ctx);
   ctx.clearRect(0,0,W,H);ctx.save();const s=Math.min(W/300,H/210);ctx.translate((W-300*s)/2,(H-210*s)/2);ctx.scale(s,s);
   g.floor();
-  if(an.front){drawFront(g,an,p,an.hl);}
+  if(an.front){drawFront(g,an,p,an.hl,t,Math.floor(Math.max(0,ms)/3800));}
   else{const P=solve(an,p);(SCENES[an.scene]||(()=>{}))(g,P,p,t);drawFig(g,P,an.hl);
-    if(an.scene==="dumbbell"||an.scene==="dbbench"||an.scene==="inclinedb"||an.scene==="ohext"||an.scene==="dbshoulder"||an.scene==="dbrow"||an.scene==="hipthrust") g.db(P.wr);}
+    if(an.scene==="dumbbell"||an.scene==="dbbench"||an.scene==="inclinedb"||an.scene==="ohext"||an.scene==="dbshoulder"||an.scene==="dbrow"||an.scene==="hipthrust"||an.scene==="incfront") g.db(P.wr);}
   if(an.back){ctx.fillStyle=COL.muted;ctx.font="600 11px Barlow, sans-serif";ctx.fillText("pogled od zadaj",10,18);}
   ctx.restore();
 }
@@ -558,13 +599,14 @@ const BODY=`<ellipse cx="50" cy="14" rx="8.5" ry="10.5"/><rect x="45.5" y="23" w
 <ellipse cx="41" cy="177" rx="5.5" ry="3"/><ellipse cx="59" cy="177" rx="5.5" ry="3"/>`;
 const DELT=`<ellipse cx="30.5" cy="37" rx="6" ry="6.5"/><ellipse cx="69.5" cy="37" rx="6" ry="6.5"/>`;
 const UARM=`<ellipse cx="26" cy="53" rx="4.3" ry="9" transform="rotate(8 26 53)"/><ellipse cx="74" cy="53" rx="4.3" ry="9" transform="rotate(-8 74 53)"/>`;
-const MAP_F={ramena:DELT,
+const FARM=`<ellipse cx="23.6" cy="73" rx="3.5" ry="9" transform="rotate(5 23.6 73)"/><ellipse cx="76.4" cy="73" rx="3.5" ry="9" transform="rotate(-5 76.4 73)"/>`;
+const MAP_F={ramena:DELT,trapez:`<path d="M45.5 25L36.5 30.6L46 31.5Z"/><path d="M54.5 25L63.5 30.6L54 31.5Z"/>`,podlakti:FARM,
   prsa:`<path d="M49 34C43 32.5 37 33 35 38C34.5 45 39 50 49 49.5Z"/><path d="M51 34C57 32.5 63 33 65 38C65.5 45 61 50 51 49.5Z"/>`,
   biceps:UARM,
   trebuh:`<rect x="42.5" y="52" width="15" height="31" rx="5"/>`,
   kvad:`<path d="M38 104C36 116 37 130 40 138L45.5 138C47 128 48 114 48.5 106Z"/><path d="M62 104C64 116 63 130 60 138L54.5 138C53 128 52 114 51.5 106Z"/>`};
-const MAP_B={hrbet:`<path d="M50 27L61 33L50 47L39 33Z"/><path d="M36.5 37C34 47 36 58 43 66L48.5 50L41 37Z"/><path d="M63.5 37C66 47 64 58 57 66L51.5 50L59 37Z"/>`,
-  ramena:DELT, triceps:UARM,
+const MAP_B={trapez:`<path d="M50 24L61 32.5L50 47L39 32.5Z"/>`,hrbet:`<path d="M36.5 37C34 47 36 58 43 66L48.5 50L41 37Z"/><path d="M63.5 37C66 47 64 58 57 66L51.5 50L59 37Z"/>`,
+  ramena:DELT, triceps:UARM, podlakti:FARM,
   krizni:`<rect x="43.5" y="66" width="13" height="20" rx="4"/>`,
   zadnjica:`<ellipse cx="44" cy="97" rx="7" ry="8"/><ellipse cx="56" cy="97" rx="7" ry="8"/>`,
   zadnja:`<path d="M38 110C36 120 37 131 40 140L46 140C47 131 48 120 48.5 112Z"/><path d="M62 110C64 120 63 131 60 140L54 140C53 131 52 120 51.5 112Z"/>`,
@@ -574,6 +616,8 @@ function bodySvg(R,mus,label,sync){
     return `<g fill="${on?"var(--accent)":"var(--musc)"}"${on&&!pri?' fill-opacity=".45"':""}${pri?` data-pulse="${sync?"sync":"1"}"`:""}>${s}</g>`;}).join("");
   return `<figure><svg viewBox="0 0 100 184" aria-hidden="true"><g fill="var(--body)">${BODY}</g>${g}</svg><figcaption>${label}</figcaption></figure>`;
 }
+// slika telesa z barvami izbranih mišic (izbira po mišicah)
+function colorSvg(R,keys){return `<svg viewBox="0 0 100 184" aria-hidden="true"><g fill="var(--body)">${BODY}</g>${Object.entries(R).map(([k,s])=>`<g fill="${keys.includes(k)?MC[k]:"var(--musc)"}">${s}</g>`).join("")}</svg>`;}
 const bodyMap=(id,big)=>{const m=EX[id].mus;return `<div class="bodymap${big?" big":""}" role="img" aria-label="Mišice: ${esc(m.map(k=>MN[k]).join(", "))}">${bodySvg(MAP_F,m,"Spredaj",big)}${bodySvg(MAP_B,m,"Zadaj",big)}</div>`;};
 const musText=id=>{const m=EX[id].mus;return `<div><b>Glavna:</b> ${esc(MN[m[0]])}</div>${m.length>1?`<div><b>Pomožne:</b> ${esc(m.slice(1).map(k=>MN[k]).join(", "))}</div>`:""}`;};
 function mediaBlock(id,ofs){
@@ -583,7 +627,7 @@ function mediaBlock(id,ofs){
 }
 
 // ================= Celozaslonski vodnik =================
-const guideDefault=id=>exIds().includes(id)?cur(id).r:Math.round((EX[id].lo+EX[id].hi)/2);
+const guideDefault=id=>exIds().includes(id)?cur(id).r:Math.round((plan(id).lo+plan(id).hi)/2);
 function sheetHtml(){
   const id=S.sheet,e=EX[id],ph=PHOTO[id],mode=ph?S.sheetMode:"anim",g=S.guide&&S.guide.id===id?S.guide:null,run=!!(g&&g.run),inToday=exIds().includes(id),st=S.state.ex[id]||{};
   const msg=run?"Sledi animaciji. Pisk visoko = napni, nizko = počasi nazaj.":g&&g.done?(inToday?`Serija končana: ${g.n} ponovitev. Spodaj pritisni Nazaj in vpiši, kako je šlo.`:`Serija končana: ${g.n} ponovitev.`):"App šteje ponovitve in vodi tempo. Najprej 3 sekunde za pripravo.";
@@ -655,7 +699,7 @@ function viewToday(){
     <div class="meta">Naslednji po programu: <b>Trening ${esc(S.state.next)}</b>. Nove teže app predlaga glede na današnje ponovitve.</div>
     <div><button class="link" type="button" data-act="closesum">Zapri</button></div></section>`;}
   h+=`<section class="hero"><div class="meta">${dateLong()}</div><h1>${esc(title())}</h1>
-   <div class="row"><span class="chip phase">${esc(p.label)} · ${esc(p.detail)}</span><span class="chip">RIR ${p.rir}</span><span class="chip">${exIds().length} vaj</span></div>
+   <div class="row"><span class="chip phase">${esc(p.label)} · ${esc(p.detail)}</span><span class="chip">${goal()==="def"?"Definicija":"Masa"}</span><span class="chip">RIR ${p.rir}</span><span class="chip">${exIds().length} vaj</span></div>
    <div class="mode" role="group" aria-label="Izberi trening">${["A","B","C"].map(k=>`<button type="button" aria-pressed="${k===wk}" data-act="wk" data-v="${k}">${k}</button>`).join("")}<button type="button" class="mus" aria-pressed="${wk==="X"||S.picker}" data-act="picker">Po mišicah</button></div>
    <div class="bar" aria-label="Opravljene serije"><i style="width:${tt.t?Math.round(tt.d/tt.t*100):0}%"></i></div>
    <div class="count num">${tt.d} od ${tt.t} serij${wk!=="X"?" · "+esc(WK_FOCUS[wk]):""}</div></section>`;
@@ -671,8 +715,9 @@ function pickerHtml(){
   const n=S.pick.length, prev=n?buildCustom(S.pick):[];
   return `<section class="picker"><h2>Kaj danes treniraš?</h2>
   <div class="presets">${PRESETS.map((pr,i)=>`<button type="button" data-act="preset" data-v="${i}">${esc(pr.n)}</button>`).join("")}</div>
-  <div class="mgrid">${MUS.map(m=>`<button type="button" class="mt" aria-pressed="${S.pick.includes(m.k)}" data-act="pickm" data-v="${m.k}"><b>${esc(m.n)}</b><span>${anyMus(m.k).length} vaj</span></button>`).join("")}</div>
-  ${n?`<div class="meta">${prev.map(id=>esc(EX[id].n)).join(" · ")}</div>`:`<div class="meta">Izberi eno ali več skupin. App sestavi trening z napravami in prostimi utežmi, velike mišice najprej.</div>`}
+  <div class="mgrid">${MUS.map(m=>`<button type="button" class="mt" style="--mc:${m.c}" aria-pressed="${S.pick.includes(m.k)}" data-act="pickm" data-v="${m.k}">${colorSvg(m.v==="B"?MAP_B:MAP_F,[m.k])}<b>${esc(m.n)}</b><span>${anyMus(m.k).length} vaj</span></button>`).join("")}</div>
+  ${n?`<div class="selmap"><figure>${colorSvg(MAP_F,S.pick)}<figcaption>Spredaj</figcaption></figure><figure>${colorSvg(MAP_B,S.pick)}<figcaption>Zadaj</figcaption></figure>
+    <div class="sellist"><b>${esc(labelFor(S.pick))}</b>${prev.map(id=>`<span>${esc(EX[id].n)}</span>`).join("")}</div></div>`:`<div class="meta">Tapni mišice, ki jih danes treniraš (lahko več). App sestavi trening z napravami in prostimi utežmi, velike mišice najprej.</div>`}
   <button class="go" type="button" data-act="build" ${n?"":"disabled"}>Sestavi trening${n?` (${prev.length} vaj)`:""}</button>
   <button class="link" type="button" data-act="picker">Zapri</button></section>`;
 }
@@ -698,12 +743,12 @@ function exCard(id,orig,i){
   return h+`</article>`;
 }
 function viewLib(){
-  let h=`<div class="filters" role="group" aria-label="Mišice">${MUS.map(m=>`<button type="button" aria-pressed="${S.lib===m.k}" data-act="lib" data-v="${m.k}">${esc(m.n)}</button>`).join("")}</div>`;
+  let h=`<div class="filters" role="group" aria-label="Mišice">${MUS.map(m=>`<button type="button" style="--mc:${m.c}" aria-pressed="${S.lib===m.k}" data-act="lib" data-v="${m.k}">${esc(m.n)}</button>`).join("")}</div>`;
   const ids=anyMus(S.lib).sort((a,b)=>(EX[a].mus[0]===S.lib?0:1)-(EX[b].mus[0]===S.lib?0:1));
   h+=`<h2 class="sec">${esc(MN[S.lib])}</h2><div class="list" style="margin-top:0">`;
   ids.forEach((id,i)=>{const e=EX[id],open=S.libOpen===id,inToday=exIds().includes(id);
     h+=`<article class="ex"><button class="exhead" type="button" data-act="libopen" data-v="${id}" aria-expanded="${open}"><div class="thumb">${phTb(id,open?`<div style="aspect-ratio:300/210;display:grid;place-items:center;color:var(--muted);font-size:12px">spodaj ↓</div>`:cv(id,i*500))}</div>
-      <div style="min-width:0"><div class="exname">${esc(e.n)}</div><div class="exsub">${e.t==="tg"?"Technogym naprava":"Proste uteži"} · ${e.lo}–${e.hi} ponovitev</div><div class="tags">${tags(id)}</div></div><div></div></button>`;
+      <div style="min-width:0"><div class="exname">${esc(e.n)}${e.nw?` <span class="new">Novo</span>`:""}</div><div class="exsub">${e.t==="tg"?"Technogym naprava":"Proste uteži"} · ${plan(id).lo}–${plan(id).hi} ponovitev</div><div class="tags">${tags(id)}</div></div><div></div></button>`;
     if(open) h+=`<div class="body">${mediaBlock(id)}<ol class="howto">${e.how.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
       ${inToday?`<div class="hint">Že v današnjem treningu.</div>`:`<button class="addbtn" type="button" data-act="addtoday" data-v="${id}">Dodaj v današnji trening</button>`}</div>`;
     h+=`</article>`;});
@@ -711,8 +756,11 @@ function viewLib(){
 }
 function viewProgram(){
   const p=ph();
-  let h=`<section class="hero"><div class="meta">3 treningi na teden</div><h1>Program za maso</h1>
-  <div class="row"><span class="chip phase">Zdaj: ${esc(p.label)} · ${esc(p.detail)}</span><span class="chip">Naslednji: Trening ${esc(S.state.next)}</span></div></section>
+  const df=goal()==="def";
+  let h=`<section class="hero"><div class="meta">3 treningi na teden</div><h1>Program za ${df?"definicijo":"maso"}</h1>
+  <div class="row"><span class="chip phase">Zdaj: ${esc(p.label)} · ${esc(p.detail)}</span><span class="chip">Naslednji: Trening ${esc(S.state.next)}</span></div>
+  <div class="mode goal" role="group" aria-label="Cilj"><button type="button" aria-pressed="${df}" data-act="goal" data-v="def">Definicija</button><button type="button" aria-pressed="${!df}" data-act="goal" data-v="masa">Masa</button></div></section>
+  <div class="note">${df?"<b>Definicija.</b> Velike vaje ostanejo težke, da obdržiš mišice. Manjše vaje delaš z več ponovitvami (12–20), počitki so za četrtino krajši. Maščobo pa največ kuri prehrana: rahel kalorični primanjkljaj in dovolj beljakovin.":"<b>Masa.</b> Klasični razponi ponovitev in polni počitki, teža raste postopoma."}</div>
   <h2 class="sec">Celo telo A · B · C</h2><div class="prog">`;
   ["A","B","C"].forEach(k=>{h+=`<div class="pcard"><h3>Trening ${k} <small>${esc(WK_FOCUS[k])}</small></h3><div class="pl">${WK[k].map(id=>{const q=plan(id);return `<span>${esc(EX[id].n)}</span><span class="num">${q.sets} × ${q.lo}–${q.hi}</span>`}).join("")}</div></div>`;});
   h+=`</div><div class="note">Lahko pa trening sestaviš sam: na zavihku Danes pritisni <b>Po mišicah</b> in izberi npr. prsa + triceps.</div>
@@ -777,6 +825,7 @@ document.addEventListener("click",ev=>{
     S.guide={id:S.sheet,n:S.guideN,run:true,t0:performance.now()+3000,lp:-1,cd:0,done:false};
     if(S.sheetMode==="photo"&&!PHOTO[S.sheet])S.sheetMode="anim";keepAwake();renderSheet();return;}
   if(a==="tab"){S.view=id;render();window.scrollTo(0,0);return;}
+  if(a==="goal"){S.state.goal=id;saveState();S.draft.cur={};saveDraft();render();return;}
   if(a==="rest30"){if(S.rest){S.rest.end=Math.max(S.rest.end,Date.now())+30000;S.rest.total+=30;S.rest.beeped=false;}tickRest();return;}
   if(a==="restskip"){stopRest();return;}
   if(a==="closesum"){S.summary=null;render();return;}
